@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title data-i18n="newTabTitle">Новая вкладка</title>
+  <link rel="stylesheet" href="newtab.css" />
+</head>
+<body>
+  <div id="bg"></div>
+
+  <header class="topbar">
+    <div id="clockWidget" class="clock-widget" aria-label="Clock">
+      <div id="clockTime" class="clock-time">--:--</div>
+      <div id="clockDate" class="clock-date">—</div>
+    </div>
+    <form id="quickGo" class="quick-go" autocomplete="off">
+      <input id="quickGoInput" type="text"
+             data-i18n-placeholder="search"
+             placeholder="Поиск или введите URL"
+             spellcheck="false" />
+    </form>
+    <div id="weatherWidget" class="weather-widget" role="link" tabindex="0" aria-label="Weather" data-i18n-title="weatherOpenExternal" title="Открыть подробный прогноз">
+      <span id="weatherIcon" class="weather-icon">⏳</span>
+      <div class="weather-text">
+        <div class="weather-line weather-line-main">
+          <span id="weatherTemp" class="weather-temp">—</span>
+          <span id="weatherDesc" class="weather-desc">—</span>
+        </div>
+        <div id="weatherCity" class="weather-city">—</div>
+      </div>
+    </div>
+  </header>
+
+
+  <button id="optsBtn" class="icon-btn opts-fab" data-i18n-title="settings" title="Настройки">⚙</button>
+
+  <main id="gridWrap" class="grid-wrap">
+    <div id="grid" class="grid"></div>
+  </main>
+
+  <nav id="sheetBar" class="sheet-bar" aria-label="Sheets">
+    <button id="sheetScrollLeft" class="sheet-scroll" data-i18n-title="scrollLeft" title="Прокрутить влево" aria-label="Scroll left">‹</button>
+    <div id="sheetTabs" class="sheet-tabs"></div>
+    <button id="sheetScrollRight" class="sheet-scroll" data-i18n-title="scrollRight" title="Прокрутить вправо" aria-label="Scroll right">›</button>
+    <button id="addSheetBtn" class="sheet-add" data-i18n-title="addSheet" title="Добавить лист">＋</button>
+  </nav>
+
+  <!-- Edit bookmark modal -->
+  <div id="modal" class="modal" hidden>
+    <div class="modal-card">
+      <h2 id="modalTitle" data-i18n="modalAdd">Добавить закладку</h2>
+      <form id="tabForm">
+        <label><span data-i18n="fieldTitle">Название</span><input name="title" type="text" required maxlength="80"
+               data-i18n-placeholder="placeholderTitle" placeholder="Название" /></label>
+        <label><span data-i18n="fieldUrl">URL</span><input name="url" type="text" required
+               data-i18n-placeholder="placeholderUrl" placeholder="https://example.com" /></label>
+        <div class="modal-actions">
+          <button type="button" id="cancelBtn" class="btn" data-i18n="cancel">Отмена</button>
+          <button type="submit" class="btn primary" data-i18n="save">Сохранить</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Filled cell context menu -->
+  <ul id="ctxMenu" class="ctx-menu" hidden>
+    <li data-act="open"><span class="ctx-icon" data-i18n="iconOpen">🔗</span><span data-i18n="open">Открыть</span></li>
+    <li data-act="open-new"><span class="ctx-icon" data-i18n="iconOpenNew">↗</span><span data-i18n="openInNewTab">Открыть в новой вкладке</span></li>
+    <li data-act="edit"><span class="ctx-icon" data-i18n="iconEdit">✏️</span><span data-i18n="edit">Изменить</span></li>
+    <li data-act="duplicate"><span class="ctx-icon" data-i18n="iconDuplicate">⎘</span><span data-i18n="duplicate">Дублировать</span></li>
+    <li data-act="delete" class="danger"><span class="ctx-icon" data-i18n="iconDelete">🗑</span><span data-i18n="delete">Удалить</span></li>
+  </ul>
+
+  <!-- Empty cell context menu -->
+  <ul id="ctxMenuEmpty" class="ctx-menu" hidden>
+    <li data-act="add"><span class="ctx-icon" data-i18n="iconAdd">➕</span><span data-i18n="addHere">Добавить сюда</span></li>
+  </ul>
+
+  <!-- Sheet context menu -->
+  <ul id="sheetCtx" class="ctx-menu" hidden>
+    <li data-act="rename"><span class="ctx-icon" data-i18n="iconRename">✏️</span><span data-i18n="renameSheet">Переименовать лист</span></li>
+    <li data-act="icon"><span class="ctx-icon" data-i18n="iconIcon">😀</span><span data-i18n="sheetIcon">Иконка листа</span></li>
+    <li data-act="delete" class="danger"><span class="ctx-icon" data-i18n="iconDelete">🗑</span><span data-i18n="deleteSheet">Удалить лист</span></li>
+  </ul>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="lib/browser.js"></script>
+  <script src="lib/storage.js"></script>
+  <script src="newtab.js"></script>
+</body>
+</html>

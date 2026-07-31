@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title data-i18n="settingsTitle">Tabula — Настройки</title>
+  <link rel="stylesheet" href="options.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">▦</span>
+      <h1 data-i18n="settingsTitle">Tabula — Настройки</h1>
+    </div>
+    <div class="topbar-actions">
+      <span id="autoSaveHint" class="autosave-pill" data-i18n="savedAuto">Автосохранение</span>
+      <a class="btn ghost" href="newtab.html" target="_blank" data-i18n="backToGrid">Открыть новую вкладку</a>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <nav id="sideNav">
+        <a href="#grid"        class="nav-item" data-i18n="navGrid">Сетка</a>
+        <a href="#typography"  class="nav-item" data-i18n="navTypography">Текст</a>
+        <a href="#background"  class="nav-item" data-i18n="navBackground">Фон</a>
+        <a href="#behaviour"   class="nav-item" data-i18n="navBehaviour">Поведение</a>
+        <a href="#widgets"     class="nav-item" data-i18n="navWidgets">Виджеты</a>
+        <a href="#language"    class="nav-item" data-i18n="navLanguage">Язык</a>
+        <a href="#data"        class="nav-item" data-i18n="navData">Данные</a>
+        <a href="#about"       class="nav-item" data-i18n="navAbout">О расширении</a>
+      </nav>
+    </aside>
+
+    <main>
+      <section id="grid" class="panel">
+        <h2 data-i18n="sectionGrid">Сетка</h2>
+        <p class="hint" data-i18n="hintDefaultColumns">используется при создании новых листов</p>
+
+        <div class="grid-2">
+          <label>
+            <span class="row">
+              <span data-i18n="labelDefaultColumns">Колонок по умолчанию</span>
+              <output data-out="defaultColumns"></output>
+            </span>
+            <input type="range" name="defaultColumns" min="3" max="12" step="1" />
+          </label>
+          <label>
+            <span class="row">
+              <span data-i18n="labelCellHeight">Размер ячеек</span>
+              <output data-out="cellHeight"></output>
+            </span>
+            <input type="range" name="cellHeight" min="20" max="200" step="5" />
+          </label>
+        </div>
+        <div class="checks" style="margin-top:12px">
+          <label class="check"><input type="checkbox" name="showGrid" /> <span data-i18n="optShowGrid">Показывать линии сетки</span></label>
+        </div>
+      </section>
+
+      <section id="typography" class="panel">
+        <h2 data-i18n="sectionTypography">Текст</h2>
+
+        <div class="grid-2">
+          <label class="full">
+            <span class="row">
+              <span data-i18n="labelFontFamily">Шрифт</span>
+              <span class="hint" data-i18n="labelFontFamilyHint">Шрифт системный</span>
+            </span>
+            <select name="fontFamilyKey" id="fontFamilyKeySelect">
+              <!-- options injected from FONT_FAMILIES in options.js -->
+            </select>
+          </label>
+          <label class="full" id="fontFamilyCustomWrap" hidden>
+            <span class="row">
+              <span data-i18n="labelFontFamily">Шрифт</span>
+              <span class="hint" data-i18n="labelFontFamilyHint">Название шрифта или CSS-список</span>
+            </span>
+            <input type="text" name="fontFamily" placeholder='system-ui, sans-serif' />
+          </label>
+          <label>
+            <span class="row">
+              <span data-i18n="labelFontSize">Размер шрифта</span>
+              <span class="hint" data-i18n="unitPx">пикс.</span>
+              <output data-out="fontSize"></output>
+            </span>
+            <input type="range" name="fontSize" min="10" max="20" step="1" />
+          </label>
+          <label>
+            <span class="row"><span data-i18n="labelTextColor">Цвет текста</span></span>
+            <input type="color" name="textColor" />
+          </label>
+          <label class="full page-title-field">
+            <span class="row">
+              <span data-i18n="labelPageTitle">Заголовок вкладки</span>
+              <span class="hint" data-i18n="pageTitleHint">Используется как заголовок окна и вкладки</span>
+            </span>
+            <input type="text" name="pageTitle" placeholder="Новая вкладка" />
+          </label>
+        </div>
+
+        <div class="preview-box font-preview" id="fontPreview">Aa</div>
+      </section>
+
+      <section id="background" class="panel">
+        <h2 data-i18n="sectionBackground">Фон</h2>
+
+        <label class="full">
+          <span class="row"><span data-i18n="labelBgType">Тип фона</span></span>
+          <select name="backgroundType" id="bgTypeSelect">
+            <option value="color"       data-i18n="bgColor">Сплошной цвет</option>
+            <option value="gradient"    data-i18n="bgGradient">Градиент</option>
+            <option value="imageUrl"    data-i18n="bgImageUrl">URL изображения</option>
+            <option value="imageUpload" data-i18n="bgImageUpload">Загрузить своё изображение</option>
+            <option value="bing"        data-i18n="bgBing">Bing: изображение дня</option>
+          </select>
+        </label>
+
+        <div class="bg-only bg-color">
+          <label class="full">
+            <span class="row"><span data-i18n="labelBgColor">Цвет фона</span></span>
+            <input type="color" name="backgroundColor" />
+          </label>
+        </div>
+
+        <div class="bg-only bg-gradient">
+          <label class="full">
+            <span class="row"><span data-i18n="labelBgGradient">Градиент</span></span>
+            <input type="text" name="backgroundGradient"
+                   data-i18n-placeholder="placeholderGradient"
+                   placeholder="linear-gradient(135deg, #0f0f1a 0%, #1a1a3e 100%)" />
+          </label>
+          <div class="preset-row">
+            <button type="button" class="chip" data-bg="gradient" data-val="linear-gradient(135deg, #0f0f1a 0%, #1a1a3e 100%)">night</button>
+            <button type="button" class="chip" data-bg="gradient" data-val="linear-gradient(135deg, #1f1c2c 0%, #928dab 100%)">dusk</button>
+            <button type="button" class="chip" data-bg="gradient" data-val="linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)">ocean</button>
+            <button type="button" class="chip" data-bg="gradient" data-val="linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%)">sunset</button>
+            <button type="button" class="chip" data-bg="gradient" data-val="radial-gradient(circle at 30% 30%, #2b2b5e 0%, #0f0f1a 70%)">nebula</button>
+          </div>
+        </div>
+
+        <div class="bg-only bg-imageUrl">
+          <label class="full">
+            <span class="row"><span data-i18n="labelBgImage">URL изображения</span></span>
+            <input type="url" name="backgroundImage" placeholder="https://example.com/wallpaper.jpg" />
+          </label>
+        </div>
+
+        <div class="bg-only bg-imageUpload">
+          <div class="dropzone" id="dropZone">
+            <input id="uploadInput" type="file" accept="image/*" hidden />
+            <div class="dz-icon">⬆</div>
+            <div class="dz-text" data-i18n="uploadHint">Перетащите файл сюда или нажмите кнопку</div>
+            <button type="button" id="pickUploadBtn" class="btn" data-i18n="uploadImage">Загрузить изображение</button>
+          </div>
+          <div id="uploadPreview" class="upload-preview" hidden>
+            <img id="uploadPreviewImg" alt="" />
+            <div class="upload-info">
+              <span id="uploadInfo" class="hint"></span>
+              <button id="clearUploadBtn" type="button" class="btn small danger" data-i18n="clearImage">Удалить</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-only bg-bing">
+          <label class="full">
+            <span class="row"><span data-i18n="labelBingMkt">Регион Bing</span></span>
+            <select name="bingMkt">
+              <option value="ru-RU">ru-RU (Россия)</option>
+              <option value="en-US">en-US (United States)</option>
+              <option value="en-GB">en-GB (United Kingdom)</option>
+              <option value="de-DE">de-DE (Deutschland)</option>
+              <option value="fr-FR">fr-FR (France)</option>
+              <option value="ja-JP">ja-JP (日本)</option>
+              <option value="zh-CN">zh-CN (中国)</option>
+            </select>
+          </label>
+          <p class="hint" id="bingCopyright"></p>
+        </div>
+
+        <div class="preview-box bg-preview" id="bgPreview"></div>
+      </section>
+
+      <section id="behaviour" class="panel">
+        <h2 data-i18n="sectionBehaviour">Поведение</h2>
+        <div class="checks">
+          <label class="check"><input type="checkbox" name="showFavicon"    /> <span data-i18n="optShowFavicon">Показывать иконки сайтов</span></label>
+          <label class="check"><input type="checkbox" name="openInNewTab"   /> <span data-i18n="optOpenInNewTab">Открывать закладки в новой вкладке</span></label>
+          <label class="check"><input type="checkbox" name="showRowNumbers" /> <span data-i18n="optShowRowNumbers">Показывать номера строк</span></label>
+          <label class="check"><input type="checkbox" name="showColLetters" /> <span data-i18n="optShowColLetters">Показывать буквы колонок</span></label>
+          <label class="check"><input type="checkbox" name="showSheetTabs"  /> <span data-i18n="optShowSheetTabs">Показывать вкладки листов</span></label>
+          <label class="check"><input type="checkbox" name="showQuickGo"    /> <span data-i18n="optShowQuickGo">Показывать поисковую строку</span></label>
+        </div>
+      </section>
+
+      <section id="widgets" class="panel">
+        <h2 data-i18n="sectionWidgets">Виджеты</h2>
+
+        <div class="widget-block" id="widget-clock">
+          <div class="widget-block-head">
+            <span class="widget-block-title" data-i18n="widgetClockTitle">Часы</span>
+            <label class="check widget-toggle">
+              <input type="checkbox" name="showClock" />
+              <span data-i18n="optShowClock">Показывать часы</span>
+            </label>
+          </div>
+
+          <div class="widget-subsection">
+            <span class="widget-subsection-title" data-i18n="widgetSubsectionAppearance">Внешний вид</span>
+            <div class="grid-2">
+              <label>
+                <span class="row">
+                  <span data-i18n="optClockFont">Шрифт часов</span>
+                  <span class="hint" data-i18n="optClockFontHint">Шрифт системный</span>
+                </span>
+                <select name="clockFontKey" id="clockFontKeySelect">
+                  <!-- options injected from CLOCK_FONTS in options.js -->
+                </select>
+              </label>
+              <label class="full" id="clockFontCustomWrap" hidden>
+                <span class="row">
+                  <span data-i18n="optClockFont">Шрифт часов</span>
+                  <span class="hint" data-i18n="hintClockFont">CSS-шрифт</span>
+                </span>
+                <input type="text" name="clockFont" placeholder="system-ui, sans-serif" />
+              </label>
+              <label>
+                <span class="row">
+                  <span data-i18n="optClockSize">Размер часов</span>
+                  <span class="hint" data-i18n="unitPx">пикс.</span>
+                  <output data-out="clockSize"></output>
+                </span>
+                <input type="range" name="clockSize" min="16" max="40" step="1" />
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="widget-block" id="widget-weather">
+          <div class="widget-block-head">
+            <span class="widget-block-title" data-i18n="widgetWeatherTitle">Погода</span>
+            <label class="check widget-toggle">
+              <input type="checkbox" name="showWeather" />
+              <span data-i18n="optShowWeather">Показывать погоду</span>
+            </label>
+          </div>
+
+          <div class="widget-subsection">
+            <span class="widget-subsection-title" data-i18n="widgetSubsectionLocation">Локация</span>
+            <div class="grid-2">
+              <label>
+                <span class="row"><span data-i18n="optWeatherLat">Широта</span></span>
+                <input type="number" step="0.0001" name="weatherLat" placeholder="55.7558" />
+              </label>
+              <label>
+                <span class="row"><span data-i18n="optWeatherLon">Долгота</span></span>
+                <input type="number" step="0.0001" name="weatherLon" placeholder="37.6173" />
+              </label>
+              <label class="full" style="margin-top:4px;">
+                <button type="button" id="weatherGeoBtn" class="btn">
+                  <span class="btn-icon" aria-hidden="true">🔍</span>
+                  <span data-i18n="optWeatherCityAuto">Получить координаты по городу</span>
+                </button>
+              </label>
+            </div>
+          </div>
+
+          <div class="widget-subsection">
+            <span class="widget-subsection-title" data-i18n="widgetSubsectionAppearance">Внешний вид</span>
+            <div class="grid-2">
+              <label>
+                <span class="row">
+                  <span data-i18n="optWeatherSize">Размер виджета погоды</span>
+                  <span class="hint" data-i18n="unitPx">пикс.</span>
+                  <output data-out="weatherSize"></output>
+                </span>
+                <input type="range" name="weatherSize" min="11" max="22" step="1" />
+              </label>
+              <label>
+                <span class="row">
+                  <span data-i18n="optWeatherRefreshMin">Интервал обновления погоды</span>
+                  <span class="hint" data-i18n="unitMin">мин.</span>
+                  <output data-out="weatherRefreshMin"></output>
+                </span>
+                <input type="range" name="weatherRefreshMin" min="5" max="180" step="5" />
+              </label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="language" class="panel">
+        <h2 data-i18n="optLanguage">Язык интерфейса</h2>
+        <div class="lang-grid">
+          <label class="lang-card">
+            <input type="radio" name="language" value="ru" />
+            <div class="lang-card-inner">
+              <div class="lang-flag">🇷🇺</div>
+              <div class="lang-name">Русский</div>
+            </div>
+          </label>
+          <label class="lang-card">
+            <input type="radio" name="language" value="en" />
+            <div class="lang-card-inner">
+              <div class="lang-flag">🇬🇧</div>
+              <div class="lang-name">English</div>
+            </div>
+          </label>
+        </div>
+      </section>
+
+      <section id="data" class="panel">
+        <h2 data-i18n="sectionData">Данные</h2>
+        <p class="hint" data-i18n="dataHint">Все данные хранятся локально. Экспортируйте, чтобы сделать резервную копию.</p>
+        <div class="row data-actions">
+          <button id="exportBtn" class="btn" data-i18n="export">Экспорт</button>
+          <button id="importBtn" class="btn" data-i18n="import">Импорт</button>
+          <button id="resetBtn"  class="btn danger" data-i18n="reset">Сбросить настройки</button>
+          <input id="importFile" type="file" accept="application/json" hidden />
+        </div>
+      </section>
+
+      <section id="about" class="panel">
+        <h2 data-i18n="sectionAbout">О расширении</h2>
+        <p class="hint" data-i18n="aboutText">Tabula — настраиваемая новая вкладка в стиле электронной таблицы. Хранит данные локально.</p>
+
+        <div class="about-grid">
+          <div class="about-row">
+            <span class="about-label" data-i18n="aboutAuthor">Автор</span>
+            <span class="about-value" data-i18n="aboutAuthorName">withersky</span>
+          </div>
+          <div class="about-row">
+            <span class="about-label" data-i18n="aboutVersion">Версия</span>
+            <span class="about-value" id="aboutVersion">—</span>
+          </div>
+          <div class="about-row about-repo">
+            <span class="about-label" data-i18n="aboutRepository">Репозиторий</span>
+            <a class="about-link" id="aboutRepoLink"
+               href="https://github.com/withersky/tabula-plugin"
+               target="_blank" rel="noopener noreferrer"
+               data-i18n-title="aboutRepositoryHint">
+              <span class="about-link-icon" aria-hidden="true">
+                <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true">
+                  <path d="M8 0C3.58 0 0 3.58 0 8a8 8 0 0 0 5.47 7.59c.4.07.55-.17.55-.38v-1.34c-2.22.48-2.69-1.07-2.69-1.07-.36-.92-.89-1.16-.89-1.16-.73-.5.05-.49.05-.49.81.06 1.23.83 1.23.83.72 1.23 1.88.87 2.34.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.35-1.01.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.43 1.11.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.74.54 1.5v2.22c0 .21.15.46.55.38A8 8 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
+                </svg>
+              </span>
+              <span class="about-link-text">github.com/withersky/tabula-plugin</span>
+              <span class="about-link-arrow" aria-hidden="true">↗</span>
+            </a>
+          </div>
+        </div>
+
+        <p class="hint about-thanks" data-i18n="aboutThanks">Спасибо, что пользуетесь Tabula ❤</p>
+      </section>
+    </main>
+  </div>
+
+  <div id="status" class="status" hidden></div>
+
+  <!-- Geocoder modal -->
+  <div id="geoModal" class="modal" hidden>
+    <div class="modal-card geo-modal-card">
+      <h2 data-i18n="geoModalTitle">Получить координаты по городу</h2>
+      <p class="hint" data-i18n="geoModalHint">Введите название города — выберите подходящий вариант из списка.</p>
+      <form id="geoForm">
+        <label class="full">
+          <span class="row"><span data-i18n="optWeatherCity">Город</span></span>
+          <input type="text" id="geoCityInput" name="geoCity" autocomplete="off"
+                 data-i18n-placeholder="hintWeatherCity"
+                 placeholder="например, Москва, Berlin, Tokyo" />
+        </label>
+        <div class="geo-modal-actions">
+          <button type="button" id="geoCancelBtn" class="btn" data-i18n="cancel">Отмена</button>
+          <button type="submit" id="geoSearchBtn" class="btn primary" data-i18n="geoSearch">Найти</button>
+        </div>
+      </form>
+      <div id="geoStatus" class="geo-status hint" hidden></div>
+      <ul id="geoResults" class="geo-results" hidden></ul>
+    </div>
+  </div>
+
+  <script src="lib/browser.js"></script>
+  <script src="lib/storage.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>
