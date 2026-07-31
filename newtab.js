@@ -963,9 +963,17 @@
 
     addSheetBtn.addEventListener("click", addSheetPrompt);
 
-    // Скролл-стрелки скрыты — вкладки теперь переносятся на новую строку.
-    if (sheetScrollLeft) sheetScrollLeft.style.display = "none";
-    if (sheetScrollRight) sheetScrollRight.style.display = "none";
+    if (sheetScrollLeft) {
+      sheetScrollLeft.addEventListener("click", () => {
+        if (sheetTabsEl) sheetTabsEl.scrollBy({ left: -240, behavior: "smooth" });
+      });
+    }
+    if (sheetScrollRight) {
+      sheetScrollRight.addEventListener("click", () => {
+        if (sheetTabsEl) sheetTabsEl.scrollBy({ left:  240, behavior: "smooth" });
+      });
+    }
+
     if (sheetTabsEl) {
       sheetTabsEl.addEventListener("scroll", updateSheetScrollArrows, { passive: true });
       window.addEventListener("resize", () => {

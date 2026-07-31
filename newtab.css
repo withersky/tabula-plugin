@@ -360,18 +360,19 @@ body.no-quick-go.no-clock.no-weather.no-sheet-bar .grid-wrap { top: 0; bottom: 0
 .sheet-bar {
   position: fixed;
   left: 0; right: 0; bottom: 0;
+  height: 40px;
   min-height: 40px;
-  height: auto;
+  max-height: 40px;
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   background: var(--bar-bg);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border-top: 1px solid var(--grid-line-strong);
   padding: 4px 8px;
   gap: 4px;
-  overflow: visible;
+  overflow: hidden;
   animation: barIn 240ms ease-out;
 }
 @keyframes barIn {
@@ -404,17 +405,20 @@ body.no-sheet-bar .sheet-bar { display: none; }
 .sheet-scroll.right { margin-left: 2px; }
 
 .sheet-tabs {
-  flex: 1 1 auto;
+  flex: 1 1 0;
+  min-width: 0;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 2px;
   align-items: center;
   min-height: 32px;
-  min-width: 0;
-  overflow: visible;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
 }
-/* sheet-tabs no longer scroll */
+.sheet-tabs::-webkit-scrollbar { display: none; }
 .sheet-tab {
+  flex: 0 0 auto;
   display: inline-flex; align-items: center; gap: 6px;
   height: 28px;
   padding: 0 12px;
@@ -430,7 +434,6 @@ body.no-sheet-bar .sheet-bar { display: none; }
   min-width: 0;
   position: relative;
   top: 1px;
-  flex: 0 1 auto;
   animation: tabIn 200ms ease-out;
 }
 @keyframes tabIn {
