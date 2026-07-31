@@ -1,0 +1,15 @@
+# Build artefacts produced by build.sh
+dist/
+tabula-chrome-*.zip
+tabula-firefox-*.zip
+release_notes.md
+
+# OS / IDE junk
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Local overrides
+*.local
+.env
