@@ -995,6 +995,7 @@
 
     // Click on a cell: open bookmark if filled, do nothing if empty (use context menu)
     gridEl.addEventListener("click", onCellClick);
+    gridEl.addEventListener("auxclick", onCellAuxClick);
     gridEl.addEventListener("contextmenu", onCellContextMenu);
     gridEl.addEventListener("dragstart", onCellDragStart);
     gridEl.addEventListener("dragover",  onCellDragOver);
@@ -1071,6 +1072,21 @@
     const target = normalizeUrl(bm.url);
     if (state.settings.openInNewTab) window.open(target, "_blank", "noopener");
     else window.location.href = target;
+  }
+
+  function onCellAuxClick(e) {
+    // СКМ по заполненной ячейке: открыть в новой вкладке всегда (независимо от openInNewTab).
+    if (e.button !== 1) return;
+    const cell = e.target.closest(".cell");
+    if (!cell) return;
+    e.preventDefault();
+    e.stopPropagation();
+    // Подавляем последующий обычный click, чтобы не открыть ссылку повторно.
+    suppressClick = true;
+    const bm = cell.classList.contains("filled") ? currentBookmarkAt(cell.dataset.key) : null;
+    if (!bm) return;
+    const target = normalizeUrl(bm.url);
+    window.open(target, "_blank", "noopener");
   }
 
   function currentBookmarkAt(key) {
