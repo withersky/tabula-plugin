@@ -19,6 +19,7 @@
              data-i18n-placeholder="search"
              placeholder="Поиск или введите URL"
              spellcheck="false" />
+      <div id="quickSuggest" class="quick-suggest" hidden></div>
     </form>
     <div id="weatherWidget" class="weather-widget" role="link" tabindex="0" aria-label="Weather" data-i18n-title="weatherOpenExternal" title="Открыть подробный прогноз">
       <span id="weatherIcon" class="weather-icon">⏳</span>
@@ -30,10 +31,9 @@
         <div id="weatherCity" class="weather-city">—</div>
       </div>
     </div>
+    <button id="optsBtn" class="icon-btn opts-fab" data-i18n-title="settings" title="Настройки">⚙</button>
   </header>
 
-
-  <button id="optsBtn" class="icon-btn opts-fab" data-i18n-title="settings" title="Настройки">⚙</button>
 
   <main id="gridWrap" class="grid-wrap">
     <div id="grid" class="grid"></div>

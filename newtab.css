@@ -42,21 +42,22 @@ html, body {
   width: 100%;
   font-family: var(--font-family);
   color: var(--text-color);
-  background: transparent;
+  background: #000;
   overflow: hidden;
 }
 
 #bg {
   position: fixed; inset: 0; z-index: 0;
+  background: #000;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
 }
 
-.topbar,
 .grid-wrap,
 .sheet-bar,
 .opts-fab { z-index: 5; }
+.topbar { z-index: 40; }
 .modal    { z-index: 100; }
 .ctx-menu { z-index: 200; }
 .toast    { z-index: 300; }
@@ -64,7 +65,7 @@ html, body {
 /* ---------- topbar ---------- */
 .topbar {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto 1fr auto auto;
   align-items: center;
   column-gap: 12px;
   padding: 12px 16px;
@@ -157,7 +158,7 @@ body.no-clock.no-quick-go.no-weather .topbar { display: none; }
 .weather-city { opacity: 0.6; font-size: calc(var(--weather-size, 13px) * 0.85); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 body.no-quick-go .quick-go { display: none; }
 
-.quick-go { grid-column: 2; justify-self: stretch; min-width: 0; max-width: 720px; width: 100%; margin: 0 auto; }
+.quick-go { position: relative; grid-column: 2; justify-self: stretch; min-width: 0; max-width: 720px; width: 100%; margin: 0 auto; }
 .quick-go input {
   width: 100%;
   padding: 9px 14px;
@@ -172,6 +173,61 @@ body.no-quick-go .quick-go { display: none; }
 }
 .quick-go input::placeholder { color: rgba(255,255,255,0.45); }
 .quick-go input:focus { background: rgba(0, 0, 0, 0.45); border-color: rgba(255,255,255,0.3); }
+
+.quick-suggest {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0; right: 0;
+  z-index: 60;
+  padding: 4px;
+  background: rgba(22, 24, 32, var(--suggest-bg-opacity, 0.94));
+  backdrop-filter: blur(calc(var(--suggest-bg-opacity, 0.94) * 14px));
+  -webkit-backdrop-filter: blur(calc(var(--suggest-bg-opacity, 0.94) * 14px));
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.45);
+  max-height: 300px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.28) transparent;
+  animation: fadeIn 240ms ease;
+}
+.quick-suggest.closing {
+  animation: suggestOut 150ms ease forwards;
+}
+.quick-suggest::-webkit-scrollbar { width: 8px; }
+.quick-suggest::-webkit-scrollbar-track { background: transparent; }
+.quick-suggest::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.22);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.quick-suggest::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.34);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+@keyframes suggestOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+.quick-suggest-item {
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--text-color);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background 100ms ease;
+}
+.quick-suggest-item:hover,
+.quick-suggest-item.active {
+  background: rgba(120,140,255,0.2);
+}
+.quick-suggest-item.active { color: #fff; }
 
 .topbar-actions { display: flex; gap: 6px; }
 .icon-btn {
@@ -190,9 +246,8 @@ body.no-quick-go .quick-go { display: none; }
 .icon-btn.small { width: 26px; height: 26px; font-size: 13px; border-radius: 8px; }
 
 .opts-fab {
-  position: fixed;
-  top: 14px;
-  right: 16px;
+  grid-column: 4;
+  justify-self: end;
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -344,6 +399,11 @@ body.no-quick-go.no-clock.no-weather.no-sheet-bar .grid-wrap { top: 0; bottom: 0
   background: var(--cell-hover-bg) !important;
   box-shadow: inset 0 0 0 1px rgba(120,140,255,0.55);
 }
+/* Активная (якорная) ячейка диапазона — как в Excel: рамка жирнее. */
+.cell.selected.active {
+  background: var(--cell-selected-bg) !important;
+  box-shadow: inset 0 0 0 2px rgba(120,140,255,0.9), inset 0 0 0 1px rgba(120,140,255,0.35);
+}
 .cell.dragging { opacity: 0.35; }
 .cell.drop-target {
   outline: 2px solid rgba(120,140,255,0.95);
@@ -407,6 +467,7 @@ body.no-sheet-bar .sheet-bar { display: none; }
 .sheet-tabs {
   flex: 1 1 0;
   min-width: 0;
+  position: relative;
   display: flex;
   flex-wrap: nowrap;
   gap: 2px;
@@ -457,6 +518,18 @@ body.no-sheet-bar .sheet-bar { display: none; }
 }
 .sheet-tab.sheet-drop-target {
   box-shadow: inset 0 0 0 2px rgba(120,140,255,0.9);
+}
+.sheet-tab.sheet-dragging { opacity: 0.4; }
+.sheet-drop-line {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  border-radius: 2px;
+  background: rgba(120,140,255,0.95);
+  box-shadow: 0 0 6px rgba(120,140,255,0.6);
+  pointer-events: none;
+  z-index: 3;
 }
 
 .sheet-tab input.sheet-name-input {

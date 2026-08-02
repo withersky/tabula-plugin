@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const RANGE_KEYS = ["defaultColumns", "cellHeight", "fontSize", "clockSize", "weatherSize", "weatherRefreshMin"];
+  const RANGE_KEYS = ["defaultColumns", "cellHeight", "fontSize", "clockSize", "weatherSize", "weatherRefreshMin", "quickGoSuggestOpacity"];
   const TEXT_KEYS = ["fontFamily",
                      "backgroundColor", "backgroundGradient", "backgroundImage"];
   const NUMBER_KEYS = ["weatherLat", "weatherLon"];
@@ -148,6 +148,7 @@
     }
     refreshRangeOutputs();
     syncWidgetCollapsed();
+    updateSuggestOpacityVisibility();
   }
 
   // ---------- widget collapsed state ----------
@@ -155,6 +156,7 @@
   function syncWidgetCollapsed() {
     const map = [
       ["showClock",   "#widget-clock"],
+      ["showQuickGo", "#widget-search"],
       ["showWeather", "#widget-weather"]
     ];
     for (const [key, sel] of map) {
@@ -164,6 +166,14 @@
       const on = !!(input && input.checked);
       block.classList.toggle("is-collapsed", !on);
     }
+  }
+
+  // Показывать ползунок прозрачности подложки подсказок только при включённых подсказках.
+  function updateSuggestOpacityVisibility() {
+    const wrap = $("#quickGoSuggestOpacityWrap");
+    if (!wrap) return;
+    const cb = $('input[name="quickGoSuggest"]');
+    wrap.hidden = !(cb && cb.checked);
   }
 
   function collectSettings() {
@@ -479,11 +489,14 @@
     });
 
     // Мгновенно сворачивать/разворачивать блок виджета по клику на тоггл
-    ["showClock", "showWeather"].forEach(k => {
+    ["showClock", "showQuickGo", "showWeather"].forEach(k => {
       const el = document.querySelector('input[name="' + k + '"]');
       if (!el) return;
       el.addEventListener("change", syncWidgetCollapsed);
     });
+
+    const suggestOpacityCb = document.querySelector('input[name="quickGoSuggest"]');
+    if (suggestOpacityCb) suggestOpacityCb.addEventListener("change", updateSuggestOpacityVisibility);
 
     if (weatherGeoBtn) {
       weatherGeoBtn.addEventListener("click", () => openGeoModal());

@@ -189,7 +189,6 @@
           <label class="check"><input type="checkbox" name="showRowNumbers" /> <span data-i18n="optShowRowNumbers">Показывать номера строк</span></label>
           <label class="check"><input type="checkbox" name="showColLetters" /> <span data-i18n="optShowColLetters">Показывать буквы колонок</span></label>
           <label class="check"><input type="checkbox" name="showSheetTabs"  /> <span data-i18n="optShowSheetTabs">Показывать вкладки листов</span></label>
-          <label class="check"><input type="checkbox" name="showQuickGo"    /> <span data-i18n="optShowQuickGo">Показывать поисковую строку</span></label>
         </div>
       </section>
 
@@ -231,6 +230,56 @@
                   <output data-out="clockSize"></output>
                 </span>
                 <input type="range" name="clockSize" min="16" max="40" step="1" />
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="widget-block" id="widget-search">
+          <div class="widget-block-head">
+            <span class="widget-block-title" data-i18n="widgetSearchTitle">Поиск</span>
+            <label class="check widget-toggle">
+              <input type="checkbox" name="showQuickGo" />
+              <span data-i18n="optShowQuickGo">Показывать поисковую строку</span>
+            </label>
+          </div>
+
+          <div class="widget-subsection">
+            <span class="widget-subsection-title" data-i18n="optSearchEngine">Поисковая машина</span>
+            <div class="lang-grid se-grid">
+              <label class="lang-card">
+                <input type="radio" name="searchEngine" value="google" />
+                <div class="lang-card-inner">
+                  <div class="se-logo" aria-hidden="true"><img src="icons/se-google.svg" alt="" /></div>
+                  <div class="lang-name" data-i18n="searchEngineGoogle">Google</div>
+                </div>
+              </label>
+              <label class="lang-card">
+                <input type="radio" name="searchEngine" value="yandex" />
+                <div class="lang-card-inner">
+                  <div class="se-logo" aria-hidden="true"><img src="icons/se-yandex.svg" alt="" /></div>
+                  <div class="lang-name" data-i18n="searchEngineYandex">Yandex</div>
+                </div>
+              </label>
+              <label class="lang-card">
+                <input type="radio" name="searchEngine" value="bing" />
+                <div class="lang-card-inner">
+                  <div class="se-logo" aria-hidden="true"><img src="icons/se-bing.svg" alt="" /></div>
+                  <div class="lang-name" data-i18n="searchEngineBing">Bing</div>
+                </div>
+              </label>
+            </div>
+            <label class="check">
+              <input type="checkbox" name="quickGoSuggest" />
+              <span data-i18n="optQuickGoSuggest">Подсказки поиска</span>
+            </label>
+            <div class="grid-2">
+              <label id="quickGoSuggestOpacityWrap" class="full" hidden>
+                <span class="row">
+                  <span data-i18n="optQuickGoSuggestOpacity">Прозрачность подложки</span>
+                  <output data-out="quickGoSuggestOpacity"></output>
+                </span>
+                <input type="range" name="quickGoSuggestOpacity" min="0" max="100" step="5" />
               </label>
             </div>
           </div>

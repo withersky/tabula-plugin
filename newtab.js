@@ -17,6 +17,7 @@
   const toastEl    = document.getElementById("toast");
   const quickGo    = document.getElementById("quickGo");
   const quickInput = document.getElementById("quickGoInput");
+  const quickSuggestEl = document.getElementById("quickSuggest");
   const clockWidget   = document.getElementById("clockWidget");
   const clockTimeEl   = document.getElementById("clockTime");
   const clockDateEl   = document.getElementById("clockDate");
@@ -33,17 +34,27 @@
   let ctxCellKey = null;
   let ctxBookmarkId = null;
   let sheetCtxTargetId = null;
-  let dragBookmarkId = null;
-  let dragFromKey = null;
   let sheetDragId = null;
+  let sheetDragPtr = null;       // активная pointer-сессия на вкладке листа
+  let suppressSheetClick = false; // подавление click после перетаскивания вкладки
+  let sheetDropLine = null;      // индикатор позиции вставки в лист-баре
   let selectedCellKey = null;
   let suppressClick = false;
+  let selAnchorKey = null;   // якорная ячейка текущего выделения
+  let selRange = [];         // ключи ячеек в выделении (в т.ч. диапазон)
+  let pointerState = null;   // активная pointer-сессия на сетке
+  let moveDrag = null;       // данные переноса выделенного блока
   let clockTimer = null;
   let weatherTimer = null;
   let _weatherGeoInFlight = false;
   let _weatherHasError = false;
   let _weatherInFlight = false;
   let _weatherGen = 0;
+  let _suggestTimer = null;
+  let _suggestGen = 0;
+  let _suggestItems = [];
+  let _suggestIndex = -1;
+  let _suggestHideTimer = null;
 
   function tx(key) { return t(key, lang); }
 
@@ -487,6 +498,9 @@
     root.setProperty("--clock-font",  resolveClockFont(s));
     root.setProperty("--clock-size",  (s.clockSize || 28) + "px");
     root.setProperty("--weather-size", (s.weatherSize || 13) + "px");
+    const op = Number(s.quickGoSuggestOpacity);
+    const opA = (isFinite(op) ? Math.max(0, Math.min(100, op)) : 90) / 100;
+    root.setProperty("--suggest-bg-opacity", String(opA));
     applyBackground();
     requestAnimationFrame(applyTopbarHeight);
   }
@@ -591,6 +605,10 @@
 
   function renderGrid() {
     selectedCellKey = null;
+    selAnchorKey = null;
+    selRange = [];
+    pointerState = null;
+    moveDrag = null;
     gridEl.innerHTML = "";
     const sh = activeSheet();
     if (!sh) return;
@@ -652,7 +670,6 @@
     cell.dataset.key = key;
     if (bm) {
       cell.dataset.id = bm.id;
-      cell.draggable = true;
       cell.title = bm.title + "\n" + bm.url;
       const fav = document.createElement("span");
       fav.className = "favicon";
@@ -687,16 +704,20 @@
       el.style.opacity = "";
       el.classList.remove("sheet-drop-target");
     });
+    hideSheetDropLine();
   }
 
   const _justAddedIds = new Set();
   function renderSheetBar() {
     sheetTabsEl.innerHTML = "";
+    sheetDropLine = document.createElement("div");
+    sheetDropLine.className = "sheet-drop-line";
+    sheetDropLine.hidden = true;
+    sheetTabsEl.appendChild(sheetDropLine);
     for (const sh of state.sheets) {
       const tab = document.createElement("div");
       tab.className = "sheet-tab" + (sh.id === state.activeSheetId ? " active" : "");
       tab.dataset.id = sh.id;
-      tab.draggable = true;
       if (_justAddedIds.has(sh.id)) {
         tab.classList.add("newly-added");
         tab.addEventListener("animationend", () => tab.classList.remove("newly-added"), { once: true });
@@ -717,6 +738,7 @@
 
       tab.addEventListener("click", (e) => {
         if (tab.querySelector("input.sheet-name-input")) return;
+        if (suppressSheetClick) { suppressSheetClick = false; return; }
         if (sh.id !== state.activeSheetId) switchSheet(sh.id);
       });
       tab.addEventListener("dblclick", (e) => {
@@ -730,55 +752,6 @@
         refreshSheetCtx();
         positionMenu(sheetCtx, e.clientX, e.clientY);
         sheetCtx.hidden = false;
-      });
-
-      // Sheet drag-and-drop reorder
-      tab.addEventListener("dragstart", (e) => {
-        if (tab.querySelector("input.sheet-name-input")) { e.preventDefault(); return; }
-        e.stopPropagation();
-        sheetDragId = sh.id;
-        try {
-          e.dataTransfer.effectAllowed = "move";
-          e.dataTransfer.setData("text/sheet", sh.id);
-          e.dataTransfer.setData("text/plain",  sh.id);
-        } catch (_) {}
-        tab.style.opacity = "0.4";
-      });
-      tab.addEventListener("dragover", (e) => {
-        if (sheetDragId && sheetDragId !== sh.id) {
-          e.preventDefault();
-          try { e.dataTransfer.dropEffect = "move"; } catch (_) {}
-          tab.classList.add("sheet-drop-target");
-        }
-      });
-      tab.addEventListener("dragleave", () => {
-        tab.classList.remove("sheet-drop-target");
-      });
-      tab.addEventListener("drop", async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        tab.classList.remove("sheet-drop-target");
-        tab.style.opacity = "";
-        const fromId = sheetDragId || e.dataTransfer.getData("text/sheet") || e.dataTransfer.getData("text/plain");
-        sheetDragId = null;
-        clearSheetDragStyles();
-        if (!fromId || fromId === sh.id) return;
-        await Storage.update((d) => {
-          const fromIdx = d.sheets.findIndex(s => s.id === fromId);
-          const toIdx   = d.sheets.findIndex(s => s.id === sh.id);
-          if (fromIdx < 0 || toIdx < 0) return;
-          const moved = d.sheets.splice(fromIdx, 1)[0];
-          const insertAt = (fromIdx < toIdx) ? (toIdx - 1) : toIdx;
-          d.sheets.splice(insertAt, 0, moved);
-        });
-        state = await Storage.get();
-        renderSheetBar();
-        renderGrid();
-        updateSheetScrollArrows();
-      });
-      tab.addEventListener("dragend", () => {
-        sheetDragId = null;
-        clearSheetDragStyles();
       });
 
       sheetTabsEl.appendChild(tab);
@@ -796,6 +769,113 @@
     const max = sheetTabsEl.scrollWidth - sheetTabsEl.clientWidth;
     sheetScrollLeft.disabled  = sheetTabsEl.scrollLeft <= 1;
     sheetScrollRight.disabled = sheetTabsEl.scrollLeft >= max - 1;
+  }
+
+  // ---------- перетаскивание вкладок листов (pointer-события) ----------
+  function onSheetBarPointerDown(e) {
+    if (e.button !== 0) return;
+    const tab = e.target.closest && e.target.closest(".sheet-tab");
+    if (!tab) return;
+    if (tab.querySelector("input.sheet-name-input") || tab.querySelector("input.sheet-icon-input")) return;
+    sheetDragId = null;
+    sheetDragPtr = {
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      tab,
+      moved: false,
+      targetId: null,
+      before: true
+    };
+  }
+
+  function onSheetBarPointerMove(e) {
+    const d = sheetDragPtr;
+    if (!d || e.pointerId !== d.pointerId) return;
+    if (!d.moved) {
+      if (Math.hypot(e.clientX - d.startX, e.clientY - d.startY) < 5) return;
+      d.moved = true;
+      sheetDragId = d.tab.dataset.id;
+      d.tab.classList.add("sheet-dragging");
+      d.tab.style.opacity = "0.4";
+    }
+    // Ищем вкладку, к которой ближе всего указатель (по середине).
+    const tabs = [...sheetTabsEl.querySelectorAll(".sheet-tab")].filter(t => t !== d.tab);
+    let targetId = null;
+    let before = true;
+    for (const t of tabs) {
+      const r = t.getBoundingClientRect();
+      if (e.clientX < r.left + r.width / 2) { targetId = t.dataset.id; before = true; break; }
+      targetId = t.dataset.id;
+      before = false;
+    }
+    d.targetId = targetId;
+    d.before = before;
+    // Позиция линии-индикатора в координатах контента (с учётом scrollLeft).
+    const rect = sheetTabsEl.getBoundingClientRect();
+    let left;
+    if (targetId == null) {
+      left = sheetTabsEl.scrollWidth;
+    } else {
+      const target = sheetTabsEl.querySelector('.sheet-tab[data-id="' + cssAttr(targetId) + '"]');
+      const tr = target.getBoundingClientRect();
+      left = before ? tr.left - rect.left : tr.right - rect.left;
+    }
+    left += sheetTabsEl.scrollLeft;
+    sheetDropLine.style.left = left + "px";
+    sheetDropLine.hidden = false;
+  }
+
+  function onSheetBarPointerUp(e) {
+    const d = sheetDragPtr;
+    if (!d || e.pointerId !== d.pointerId) return;
+    sheetDragPtr = null;
+    hideSheetDropLine();
+    d.tab.classList.remove("sheet-dragging");
+    d.tab.style.opacity = "";
+    if (!d.moved) return;
+    const fromId = d.tab.dataset.id;
+    sheetDragId = null;
+    if (!d.targetId || d.targetId === fromId) return;
+    suppressSheetClick = true;
+    setTimeout(() => { suppressSheetClick = false; }, 50);
+    persistSheetOrder(fromId, d.targetId, d.before);
+  }
+
+  function onSheetBarPointerCancel() {
+    const d = sheetDragPtr;
+    if (!d) return;
+    sheetDragPtr = null;
+    sheetDragId = null;
+    hideSheetDropLine();
+    d.tab.classList.remove("sheet-dragging");
+    d.tab.style.opacity = "";
+  }
+
+  function hideSheetDropLine() {
+    if (sheetDropLine) sheetDropLine.hidden = true;
+  }
+
+  // Перемещает лист на новую позицию и сохраняет порядок.
+  async function persistSheetOrder(fromId, targetId, before) {
+    await Storage.update((d) => {
+      const fromIdx = d.sheets.findIndex(s => s.id === fromId);
+      if (fromIdx < 0) return;
+      const [moved] = d.sheets.splice(fromIdx, 1);
+      let toIdx;
+      if (targetId == null) {
+        toIdx = d.sheets.length;
+      } else {
+        const ti = d.sheets.findIndex(s => s.id === targetId);
+        if (ti < 0) { d.sheets.splice(fromIdx, 0, moved); return; }
+        toIdx = before ? ti : ti + 1;
+      }
+      d.sheets.splice(toIdx, 0, moved);
+    });
+    state = await Storage.get();
+    renderSheetBar();
+    renderGrid();
+    updateSheetScrollArrows();
   }
 
   async function switchSheet(id) {
@@ -940,6 +1020,25 @@
     document.getElementById("cancelBtn").addEventListener("click", closeModal);
     tabForm.addEventListener("submit", onSubmitBookmark);
     quickGo.addEventListener("submit", onQuickGo);
+    quickInput.addEventListener("input", () => {
+      clearTimeout(_suggestTimer);
+      _suggestTimer = setTimeout(fetchSuggest, 180);
+    });
+    quickInput.addEventListener("focus", () => {
+      clearTimeout(_suggestTimer);
+      _suggestTimer = setTimeout(fetchSuggest, 180);
+    });
+    quickInput.addEventListener("blur", () => {
+      clearTimeout(_suggestTimer);
+      setTimeout(() => {
+        if (document.activeElement !== quickInput) hideSuggest();
+      }, 120);
+    });
+    document.addEventListener("mousedown", (e) => {
+      if (quickSuggestEl && !quickSuggestEl.hidden && !quickSuggestEl.contains(e.target)) {
+        hideSuggest();
+      }
+    });
 
     if (weatherWidget) {
       weatherWidget.addEventListener("click", (e) => {
@@ -993,15 +1092,23 @@
       }, { passive: false });
     }
 
-    // Click on a cell: open bookmark if filled, do nothing if empty (use context menu)
+    // Перетаскивание вкладок листов (как у ячеек — pointer-события).
+    if (sheetTabsEl) {
+      sheetTabsEl.addEventListener("pointerdown", onSheetBarPointerDown);
+      document.addEventListener("pointermove", onSheetBarPointerMove);
+      document.addEventListener("pointerup", onSheetBarPointerUp);
+      document.addEventListener("pointercancel", onSheetBarPointerCancel);
+    }
+
+    // Клик по ячейке: открытие закладки обрабатывается в onGridPointerUp.
     gridEl.addEventListener("click", onCellClick);
     gridEl.addEventListener("auxclick", onCellAuxClick);
     gridEl.addEventListener("contextmenu", onCellContextMenu);
-    gridEl.addEventListener("dragstart", onCellDragStart);
-    gridEl.addEventListener("dragover",  onCellDragOver);
-    gridEl.addEventListener("dragleave", onCellDragLeave);
-    gridEl.addEventListener("drop",      onCellDrop);
-    gridEl.addEventListener("dragend",   onCellDragEnd);
+    // Excel-подобное выделение диапазона и перенос выделенного блока.
+    gridEl.addEventListener("pointerdown", onGridPointerDown);
+    document.addEventListener("pointermove", onGridPointerMove);
+    document.addEventListener("pointerup", onGridPointerUp);
+    document.addEventListener("pointercancel", onCellPointerCancel);
 
     ctxMenu.addEventListener("click", onCtxAction);
     ctxEmpty.addEventListener("click", onCtxEmptyAction);
@@ -1026,15 +1133,36 @@
 
     document.addEventListener("keydown", (e) => {
       if (!modalEl.hidden) { if (e.key === "Escape") closeModal(); return; }
+
+      const suggestOpen = quickSuggestEl && !quickSuggestEl.hidden;
+
       if (e.key === "Escape") {
         hideCtx(); hideCtxEmpty(); hideSheetCtx();
-        if (document.activeElement === quickInput) quickInput.blur();
+        if (suggestOpen) {
+          hideSuggest();
+        } else if (document.activeElement === quickInput) {
+          quickInput.blur();
+        }
         return;
       }
+
       if (document.activeElement === quickInput) {
-        if (e.key === "Escape") quickInput.blur();
+        if (suggestOpen && _suggestItems.length && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+          e.preventDefault();
+          _suggestIndex = (e.key === "ArrowDown")
+            ? (_suggestIndex + 1) % _suggestItems.length
+            : (_suggestIndex - 1 + _suggestItems.length) % _suggestItems.length;
+          markSuggestActive();
+          return;
+        }
+        if (suggestOpen && _suggestItems.length && e.key === "Enter" && _suggestIndex >= 0) {
+          e.preventDefault();
+          onQuickGo(null, _suggestItems[_suggestIndex]);
+          return;
+        }
         return;
       }
+
       if (e.key === "/" && document.activeElement.tagName !== "INPUT") {
         e.preventDefault(); quickInput.focus(); quickInput.select();
       }
@@ -1047,31 +1175,62 @@
     });
   }
 
-  function selectCell(key) {
-    selectedCellKey = key;
-    gridEl.querySelectorAll(".cell.selected").forEach(el => el.classList.remove("selected"));
-    if (key) {
-      const el = gridEl.querySelector('.cell[data-key="' + cssAttr(key) + '"]');
-      if (el) el.classList.add("selected");
-    }
+  function cssAttr(v) { return String(v).replace(/"/g, '\\"'); }
+
+  function clearCellSelection() {
+    gridEl.querySelectorAll(".cell.selected").forEach(el => el.classList.remove("selected", "active"));
   }
 
-  function cssAttr(v) { return String(v).replace(/"/g, '\\"'); }
+  function cellElByKey(key) {
+    return gridEl.querySelector('.cell[data-key="' + cssAttr(key) + '"]');
+  }
+
+  function keyParts(key) {
+    const p = String(key).split(",");
+    return [parseInt(p[0], 10) || 0, parseInt(p[1], 10) || 0];
+  }
+
+  function rangeKeys(a, b) {
+    const [r0, c0] = keyParts(a);
+    const [r1, c1] = keyParts(b);
+    const rmin = Math.min(r0, r1), rmax = Math.max(r0, r1);
+    const cmin = Math.min(c0, c1), cmax = Math.max(c0, c1);
+    const keys = [];
+    for (let r = rmin; r <= rmax; r++) {
+      for (let c = cmin; c <= cmax; c++) keys.push(r + "," + c);
+    }
+    return keys;
+  }
+
+  function applySelection(anchorKey, keys) {
+    selAnchorKey = anchorKey;
+    selRange = keys;
+    clearCellSelection();
+    keys.forEach(k => {
+      const el = cellElByKey(k);
+      if (el) el.classList.add("selected");
+    });
+    const a = cellElByKey(anchorKey);
+    if (a) a.classList.add("active");
+  }
+
+  function selectCell(key) {
+    selectedCellKey = key;
+    if (key) applySelection(key, [key]);
+    else { selAnchorKey = null; selRange = []; clearCellSelection(); }
+  }
+
+  function selectRange(anchorKey, focusKey) {
+    selectedCellKey = anchorKey;
+    applySelection(anchorKey, rangeKeys(anchorKey, focusKey));
+  }
 
   function onCellClick(e) {
     if (suppressClick) { suppressClick = false; return; }
-    const cell = e.target.closest(".cell");
-    if (!cell) return;
+    // Открытие закладки обрабатывается в onGridPointerUp (клик без перетаскивания).
+    // Здесь только гасим случайные клики, оставшиеся после pointer-сессии.
     e.preventDefault();
     e.stopPropagation();
-    const key = cell.dataset.key;
-    if (!key) return;
-    selectCell(key);
-    const bm = cell.classList.contains("filled") ? currentBookmarkAt(key) : null;
-    if (!bm) return; // empty cells: only via context menu
-    const target = normalizeUrl(bm.url);
-    if (state.settings.openInNewTab) window.open(target, "_blank", "noopener");
-    else window.location.href = target;
   }
 
   function onCellAuxClick(e) {
@@ -1082,7 +1241,9 @@
     e.preventDefault();
     e.stopPropagation();
     // Подавляем последующий обычный click, чтобы не открыть ссылку повторно.
+    // (СКМ не порождает click, поэтому гасим флаг отложенно.)
     suppressClick = true;
+    setTimeout(() => { suppressClick = false; }, 50);
     const bm = cell.classList.contains("filled") ? currentBookmarkAt(cell.dataset.key) : null;
     if (!bm) return;
     const target = normalizeUrl(bm.url);
@@ -1235,90 +1396,168 @@
     openAddModal(key);
   }
 
-  function resolveDrag(e) {
-    if (dragBookmarkId && dragFromKey) return { id: dragBookmarkId, from: dragFromKey };
-    try {
-      const raw = e.dataTransfer && e.dataTransfer.getData("text/plain");
-      if (!raw) return null;
-      const sh = activeSheet();
-      if (!sh) return null;
-      let from = null;
-      for (const k of Object.keys(sh.cells || {})) {
-        if (sh.cells[k] && sh.cells[k].id === raw) { from = k; break; }
-      }
-      if (!from) return null;
-      dragBookmarkId = raw;
-      dragFromKey = from;
-      return { id: raw, from };
-    } catch (_) { return null; }
-  }
-
-  function onCellDragStart(e) {
-    const cell = e.target.closest(".cell");
-    if (!cell || !cell.classList.contains("filled")) return;
-    const key = cell.dataset.key;
+  // ---------- Excel-подобное выделение и перенос блока ----------
+  function selectionFilledCells() {
     const sh = activeSheet();
-    if (!sh || !sh.cells[key]) return;
-    dragBookmarkId = sh.cells[key].id;
-    dragFromKey = key;
-    cell.classList.add("dragging");
-    try {
-      e.dataTransfer.effectAllowed = "move";
-      e.dataTransfer.setData("text/plain", String(dragBookmarkId));
-    } catch (_) {}
+    const out = [];
+    if (!sh || !sh.cells) return out;
+    selRange.forEach(k => { if (sh.cells[k]) out.push({ from: k, bm: sh.cells[k] }); });
+    return out;
   }
-  function onCellDragOver(e) {
-    const cell = e.target.closest(".cell");
-    if (!cell) return;
-    const drag = resolveDrag(e);
-    if (!drag) return;
-    e.preventDefault();
-    try { e.dataTransfer.dropEffect = "move"; } catch (_) {}
-    gridEl.querySelectorAll(".cell.drop-target, .cell.drop-swap").forEach(el => {
-      el.classList.remove("drop-target", "drop-swap");
-    });
-    if (cell.dataset.key === drag.from) return;
-    if (cell.classList.contains("filled")) cell.classList.add("drop-swap");
-    else cell.classList.add("drop-target");
-  }
-  function onCellDragLeave(e) {
-    const cell = e.target.closest(".cell");
-    if (cell) cell.classList.remove("drop-target", "drop-swap");
-  }
-  async function onCellDrop(e) {
-    const cell = e.target.closest(".cell");
-    if (!cell) return;
-    e.preventDefault();
-    const drag = resolveDrag(e);
-    if (!drag) return;
-    const targetKey = cell.dataset.key;
-    if (!targetKey || targetKey === drag.from) return;
 
-    const willSwap = !!currentBookmarkAt(targetKey);
+  function cellAtPoint(x, y) {
+    const el = document.elementFromPoint(x, y);
+    return el ? el.closest(".cell") : null;
+  }
+
+  function clearMoveTargets() {
+    gridEl.querySelectorAll(".cell.drop-target").forEach(el => el.classList.remove("drop-target"));
+  }
+
+  function clearDraggingCells() {
+    gridEl.querySelectorAll(".cell.dragging").forEach(el => el.classList.remove("dragging"));
+  }
+
+  function onGridPointerDown(e) {
+    if (e.button !== 0) return; // только ЛКМ
+    const cell = e.target.closest(".cell");
+    if (!cell) return;
+    const key = cell.dataset.key;
+    if (!key) return;
+    const inSelection = selRange.indexOf(key) !== -1;
+    const hasContent = selectionFilledCells().length > 0;
+    // Как в Excel: перетаскивание изнутри выделения двигает блок, извне — выделяет диапазон.
+    const mode = (inSelection && hasContent) ? "move" : "select";
+    pointerState = {
+      mode,
+      anchorKey: key,
+      startX: e.clientX,
+      startY: e.clientY,
+      lastKey: key,
+      moved: false
+    };
+    if (mode === "select") selectCell(key);
+  }
+
+  function onGridPointerMove(e) {
+    if (!pointerState) return;
+    const dx = e.clientX - pointerState.startX;
+    const dy = e.clientY - pointerState.startY;
+    if (!pointerState.moved && (Math.abs(dx) > 4 || Math.abs(dy) > 4)) {
+      pointerState.moved = true;
+      if (pointerState.mode === "move") {
+        moveDrag = { cells: selectionFilledCells(), anchorKey: pointerState.anchorKey };
+        gridEl.querySelectorAll(".cell.selected").forEach(el => el.classList.add("dragging"));
+      }
+    }
+    if (!pointerState.moved) return;
+    e.preventDefault(); // запрещаем выделение текста/нативный drag во время перетаскивания
+    const cell = cellAtPoint(e.clientX, e.clientY);
+    const key = cell ? cell.dataset.key : null;
+    if (!key || key === pointerState.lastKey) return;
+    pointerState.lastKey = key;
+    if (pointerState.mode === "select") {
+      selectRange(pointerState.anchorKey, key);
+    } else {
+      clearMoveTargets();
+      if (key !== pointerState.anchorKey) {
+        const t = cellElByKey(key);
+        if (t) t.classList.add("drop-target");
+      }
+    }
+  }
+
+  async function onGridPointerUp(e) {
+    if (!pointerState || e.button !== 0) return;
+    const st = pointerState;
+    pointerState = null;
+    const cell = cellAtPoint(e.clientX, e.clientY);
+    const targetKey = cell ? cell.dataset.key : st.lastKey;
+
+    if (st.mode === "move" && st.moved && moveDrag) {
+      const md = moveDrag;
+      moveDrag = null;
+      clearMoveTargets();
+      clearDraggingCells();
+      if (targetKey && targetKey !== md.anchorKey) {
+        await moveSelectionBlock(md, targetKey);
+      } else {
+        renderGrid();
+      }
+      suppressClick = true;
+      setTimeout(() => { suppressClick = false; }, 50);
+      return;
+    }
+
+    // Обычный клик без перетаскивания: выделить и открыть закладку, если есть.
+    clearMoveTargets();
+    clearDraggingCells();
+    if (!st.moved) {
+      suppressClick = true;
+      setTimeout(() => { suppressClick = false; }, 50);
+      if (st.mode === "select") {
+        selectCell(st.anchorKey);
+        openBookmarkAt(st.anchorKey);
+      } else if (st.mode === "move") {
+        openBookmarkAt(st.anchorKey);
+      }
+    }
+  }
+
+  function onCellPointerCancel() {
+    pointerState = null;
+    moveDrag = null;
+    clearMoveTargets();
+    clearDraggingCells();
+    suppressClick = true;
+    setTimeout(() => { suppressClick = false; }, 50);
+  }
+
+  function openBookmarkAt(key) {
+    const bm = currentBookmarkAt(key);
+    if (!bm) return;
+    const target = normalizeUrl(bm.url);
+    if (state.settings.openInNewTab) window.open(target, "_blank", "noopener");
+    else window.location.href = target;
+  }
+
+  // Переносит выделенный блок так, чтобы захваченная ячейка оказалась под курсором.
+  async function moveSelectionBlock(md, targetKey) {
+    const sh = activeSheet();
+    if (!sh || md.cells.length === 0) return;
+    const [ar, ac] = keyParts(md.anchorKey);
+    const [tr, tc] = keyParts(targetKey);
+    const dr = tr - ar;
+    const dc = tc - ac;
+    if (dr === 0 && dc === 0) { renderGrid(); return; }
+
+    const sourceKeys = new Set(md.cells.map(c => c.from));
+    let blocked = false;
     await Storage.update((d) => {
       const cur = d.sheets.find(s => s.id === d.activeSheetId);
       if (!cur) return;
-      const moving = cur.cells[drag.from];
-      if (!moving) return;
-      if (cur.cells[targetKey]) {
-        const tmp = cur.cells[targetKey];
-        cur.cells[drag.from] = tmp;
-        cur.cells[targetKey] = moving;
-      } else {
-        delete cur.cells[drag.from];
-        cur.cells[targetKey] = moving;
+      // Проверяем целевые ячейки: нельзя класть на чужие занятые (вне блока).
+      for (const c of md.cells) {
+        const [r, col] = keyParts(c.from);
+        const nk = (r + dr) + "," + (col + dc);
+        if (sourceKeys.has(nk)) continue; // внутри блока — переедет вместе с блоком
+        if (cur.cells[nk]) { blocked = true; return; }
+      }
+      if (blocked) return;
+      for (const c of md.cells) delete cur.cells[c.from];
+      for (const c of md.cells) {
+        const [r, col] = keyParts(c.from);
+        cur.cells[(r + dr) + "," + (col + dc)] = c.bm;
       }
     });
-    state = await Storage.get(); renderGrid();
-    toast(willSwap ? tx("swapped") : tx("moved"));
-  }
-  function onCellDragEnd(e) {
-    dragBookmarkId = null;
-    dragFromKey = null;
-    gridEl.querySelectorAll(".cell.dragging, .cell.drop-target, .cell.drop-swap")
-          .forEach(el => el.classList.remove("dragging", "drop-target", "drop-swap"));
-    suppressClick = true;
-    setTimeout(() => { suppressClick = false; }, 50);
+
+    if (blocked) {
+      toast(tx("cellOccupied"), true);
+      return;
+    }
+    state = await Storage.get();
+    renderGrid();
+    toast(tx("moved"));
   }
 
   function openAddModal(key) {
@@ -1387,15 +1626,99 @@
     toast(editingBookmark ? tx("saved") : tx("added"));
   }
 
-  function onQuickGo(e) {
-    e.preventDefault();
+  function hideSuggest() {
+    _suggestGen++;
+    _suggestIndex = -1;
+    _suggestItems = [];
+    if (!quickSuggestEl || quickSuggestEl.hidden) return;
+    quickSuggestEl.classList.add("closing");
+    clearTimeout(_suggestHideTimer);
+    _suggestHideTimer = setTimeout(() => {
+      quickSuggestEl.classList.remove("closing");
+      quickSuggestEl.hidden = true;
+    }, 150);
+  }
+
+  function markSuggestActive() {
+    if (!quickSuggestEl) return;
+    const nodes = quickSuggestEl.children;
+    for (let i = 0; i < nodes.length; i++) {
+      nodes[i].classList.toggle("active", i === _suggestIndex);
+    }
+    const active = nodes[_suggestIndex];
+    if (active && active.scrollIntoView) active.scrollIntoView({ block: "nearest" });
+  }
+
+  function renderSuggest(items) {
+    if (!quickSuggestEl) return;
+    _suggestItems = (items || []).slice(0, 10);
+    _suggestIndex = -1;
+    if (!_suggestItems.length) {
+      quickSuggestEl.hidden = true;
+      return;
+    }
+    quickSuggestEl.textContent = "";
+    _suggestItems.forEach((item) => {
+      const div = document.createElement("div");
+      div.className = "quick-suggest-item";
+      div.textContent = item;
+      div.addEventListener("mousedown", (e) => {
+        e.preventDefault(); // сохранить фокус на инпуте
+        onQuickGo(null, item);
+      });
+      quickSuggestEl.appendChild(div);
+    });
+    clearTimeout(_suggestHideTimer);
+    quickSuggestEl.classList.remove("closing");
+    quickSuggestEl.hidden = false;
+  }
+
+  async function fetchSuggest() {
+    const s = state && state.settings;
+    if (!s || s.quickGoSuggest === false || !ext.runtime.sendMessage) {
+      hideSuggest();
+      return;
+    }
     const v = quickInput.value.trim();
+    if (v.length < 2) {
+      hideSuggest();
+      return;
+    }
+    const myGen = ++_suggestGen;
+    try {
+      const resp = await withTimeout(
+        ext.runtime.sendMessage({ type: "suggest", engine: s.searchEngine || "google", q: v }),
+        5000
+      );
+      if (myGen !== _suggestGen) return;
+      if (!resp || resp.error || !resp.ok) {
+        hideSuggest();
+        return;
+      }
+      if (quickInput.value.trim() !== v) return; // ввод изменился — результат устарел
+      renderSuggest(resp.items || []);
+    } catch (_) {
+      if (myGen === _suggestGen) hideSuggest();
+    }
+  }
+
+  function onQuickGo(e, forcedValue) {
+    if (e) e.preventDefault();
+    hideSuggest();
+    const v = (forcedValue != null ? String(forcedValue) : quickInput.value).trim();
     if (!v) return;
     let target;
     if (/^https?:\/\//i.test(v) || (/\.[a-z]{2,}/i.test(v) && !v.includes(" "))) {
       target = normalizeUrl(v);
     } else {
-      target = "https://www.google.com/search?q=" + encodeURIComponent(v);
+      const engine = state.settings.searchEngine || "google";
+      if (engine === "yandex") {
+        target = "https://yandex.ru/search/?text=" + encodeURIComponent(v);
+      } else if (engine === "bing") {
+        target = "https://www.bing.com/search?q=" + encodeURIComponent(v);
+      } else {
+        target = "https://www.google.com/search?q=" + encodeURIComponent(v);
+      }
     }
     window.location.href = target;
   }

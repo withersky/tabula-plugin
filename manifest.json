@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Tabula",
-  "version": "1.7.0",
+  "version": "2.0.0",
   "description": "Customizable spreadsheet-style speed-dial new tab page with sheets, themes, and a Bing daily image option.",
   "minimum_chrome_version": "108",
   "chrome_url_overrides": {
@@ -14,7 +14,10 @@
     "https://www.bing.com/*",
     "https://www.google.com/*",
     "https://api.met.no/*",
-    "https://geocoding-api.open-meteo.com/*"
+    "https://geocoding-api.open-meteo.com/*",
+    "https://suggestqueries.google.com/*",
+    "https://suggest.yandex.ru/*",
+    "https://api.bing.com/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -25,7 +28,7 @@
     "128": "icons/icon128.png"
   },
   "action": {
-    "default_title": "Tabula — open options",
+    "default_title": "Tabula — new tab",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",

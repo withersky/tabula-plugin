@@ -112,6 +112,28 @@ async function geocodeCity(name, lang) {
   }));
 }
 
+const SUGGEST_ENDPOINTS = {
+  google: "https://suggestqueries.google.com/complete/search?client=firefox&q=",
+  yandex: "https://suggest.yandex.ru/suggest-ff.cgi?part=",
+  bing: "https://api.bing.com/osjson.aspx?query="
+};
+
+async function fetchSuggestions(engine, q) {
+  const base = SUGGEST_ENDPOINTS[engine] || SUGGEST_ENDPOINTS.google;
+  const resp = await fetch(base + encodeURIComponent(q), {
+    headers: { "Accept": "application/json" }
+  });
+  if (!resp.ok) throw new Error("suggest http " + resp.status);
+  const j = await resp.json();
+  if (Array.isArray(j) && j.length >= 2 && Array.isArray(j[1])) {
+    return j[1].map(x => (typeof x === "string" ? x : String(x))).filter(Boolean);
+  }
+  if (j && typeof j === "object" && Array.isArray(j.s)) {
+    return j.s.map(x => (typeof x === "string" ? x : String(x))).filter(Boolean);
+  }
+  return [];
+}
+
 ext.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg && msg.type === "bingDaily") {
     const mkt = (msg.mkt || "ru-RU").replace(/[^a-zA-Z0-9_-]/g, "");
@@ -130,6 +152,16 @@ ext.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         }
         sendResponse({ url: fullUrl, copyright: img.copyright || "" });
       })
+      .catch(err => sendResponse({ error: String(err && err.message || err) }));
+    return true;
+  }
+
+  if (msg && msg.type === "suggest") {
+    const engine = String(msg.engine || "google").replace(/[^a-z]/gi, "");
+    const q = String(msg.q || "").trim();
+    if (!q) { sendResponse({ ok: true, items: [] }); return true; }
+    fetchSuggestions(engine, q)
+      .then(items => sendResponse({ ok: true, items: items }))
       .catch(err => sendResponse({ error: String(err && err.message || err) }));
     return true;
   }
@@ -158,3 +190,14 @@ ext.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
   return false;
 });
+
+// Clicking the extension icon (toolbar / extensions menu) opens a new Tabula tab.
+if (ext.action && ext.action.onClicked && ext.action.onClicked.addListener) {
+  ext.action.onClicked.addListener(() => {
+    try {
+      const url = ext._raw.runtime.getURL("newtab.html");
+      const p = ext._raw.tabs.create({ url: url });
+      if (p && typeof p.catch === "function") p.catch(() => {});
+    } catch (_) { /* ignore */ }
+  });
+}
