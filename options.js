@@ -862,7 +862,10 @@
   }
 
   init().catch(err => {
-    document.body.innerHTML = "<pre style='padding:20px;color:#f88'>" +
-      "Options failed to initialize.\n\n" + (err && err.message || err) + "</pre>";
+    const pre = document.createElement("pre");
+    pre.style.cssText = "padding:20px;color:#f88";
+    pre.textContent = "Options failed to initialize.\n\n" + (err && err.message || err);
+    document.body.textContent = "";
+    document.body.appendChild(pre);
   });
 })();

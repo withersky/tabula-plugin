@@ -1975,7 +1975,10 @@ div.append(iconEl, textEl);
 
   init().catch(err => {
     console.error("Tabula init failed:", err);
-    document.body.innerHTML = "<pre style='padding:20px;color:#f88'>" +
-      "Tabula failed to initialize.\n\n" + (err && err.message || err) + "</pre>";
+    const pre = document.createElement("pre");
+    pre.style.cssText = "padding:20px;color:#f88";
+    pre.textContent = "Tabula failed to initialize.\n\n" + (err && err.message || err);
+    document.body.textContent = "";
+    document.body.appendChild(pre);
   });
 })();
