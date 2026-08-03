@@ -147,8 +147,40 @@ Chrome и Firefox используют одну и ту же кодовую ба
 
 3. `git push origin main`. Через ~30 секунд в разделе **Releases** появятся
    `v1.2.3` и два zip-архива (их можно скачать с сайта-визитки). Workflow также
-   обновит [`site/latest.json`](site/latest.json:1) и задеплоит сайт, чтобы
-   кнопки скачивания указывали на новый релиз.
+   обновит [`site/latest.json`](site/latest.json:1) и [`site/updates.json`](site/updates.json:1)
+   и задеплоит сайт, чтобы кнопки скачивания указывали на новый релиз.
+
+**Автообновление Firefox (update_url):**
+
+Firefox-манифест [`manifest.firefox.json`](manifest.firefox.json:1) содержит
+`browser_specific_settings.gecko.update_url`, указывающий на
+[`site/updates.json`](site/updates.json:1) (GitHub Pages). Это update-манифест,
+по которому Firefox находит новые версии для пользователей, установивших
+дополнение из релиза:
+
+```json
+{
+  "addons": {
+    "tabula@withersky.local": {
+      "updates": [
+        { "version": "1.2.3", "update_link": "https://github.com/withersky/tabula-plugin/releases/download/v1.2.3/tabula-firefox-v1.2.3.xpi" }
+      ]
+    }
+  }
+}
+```
+
+Важное ограничение: Firefox по `update_link` устанавливает **только подписанный**
+Mozilla `.xpi` (неподписанный `-unsign` файл он отклонит). Поэтому после того,
+как заявка пройдёт ревью в [Центре разработчиков](https://addons.mozilla.org/developers/):
+
+1. Скачайте подписанный `.xpi` из Центра разработчиков.
+2. Переименуйте его в `tabula-firefox-v1.2.3.xpi` (без суффикса `-unsign`).
+3. Загрузите в **тот же релиз** `v1.2.3` на GitHub (через интерфейс
+   **Releases → Attach a file** или командой `gh release upload`).
+4. Workflow добавит `update_hash` (sha256) в `updates.json` при следующем запуске
+   (или перезапустите вручную уже прошедший release workflow). Пока подписанный
+   файл не загружен, `update_hash` опущен — Firefox проверит подпись по https.
 
 ## Сайт-визитка и GitHub Pages
 
@@ -167,6 +199,12 @@ Chrome и Firefox используют одну и ту же кодовую ба
 точности фоново уточняет данные через GitHub API. Снимок обновляет release workflow
 при каждом релизе, поэтому кнопки всегда ведут на актуальные
 `tabula-chrome-vX.Y.Z-unsign.zip` и `tabula-firefox-vX.Y.Z-unsign.xpi`.
+
+В той же папке лежит [`site/updates.json`](site/updates.json:1) — Firefox
+update-манифест для `update_url` из [`manifest.firefox.json`](manifest.firefox.json:1).
+Workflow генерирует его при каждом релизе (и добавляет `update_hash`, если в релиз
+уже загружен подписанный `.xpi`), поэтому файл всегда актуален и доступен по
+`https://withersky.github.io/tabula-plugin/updates.json`.
 
 Деплой — воркфлоу [`.github/workflows/site.yml`](.github/workflows/site.yml:1).
 Он срабатывает, когда **первая строка** commit message начинается с `site:`
@@ -241,4 +279,5 @@ Chrome и Firefox используют одну и ту же кодовую ба
 - **Свои изображения** хранятся как data URL в `chrome.storage.local` (лимит ~2 МБ).
 - **Bing daily** подгружается через service worker (нужны `host_permissions`), кешируется на день.
 - **Синхронизация между устройствами** не предусмотрена — используйте экспорт/импорт JSON.
+- **Автообновление Firefox** работает только через `update_url` на подписанный `.xpi` (см. раздел «Релизы»); неподписанные сборки пользователям не обновляются автоматически.
 - Требования: Manifest V3, Chrome 108+; Firefox 109+ (MV3 service worker — только с 121, поэтому в Firefox-сборке используется `background.scripts`).

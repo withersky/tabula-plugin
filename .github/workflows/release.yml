@@ -172,16 +172,20 @@ jobs:
             tabula-chrome-v${{ steps.meta.outputs.version }}-unsign.zip
             tabula-firefox-v${{ steps.meta.outputs.version }}-unsign.xpi
 
-      # Обновляем статический снимок релиза на сайте, чтобы кнопки скачивания
-      # работали даже при недоступности api.github.com. Коммит с префиксом
-      # "site:" деплоит сайт через site.yml, а release.yml его пропускает.
-      - name: Sync site/latest.json
+      # Обновляем статические снимки релиза на сайте, чтобы кнопки скачивания
+      # работали даже при недоступности api.github.com, а Firefox находил
+      # обновления по update_url из manifest.firefox.json (updates.json).
+      # Коммит с префиксом "site:" деплоит сайт через site.yml, а release.yml
+      # его пропускает.
+      - name: Sync site files (latest.json + updates.json)
         if: steps.meta.outputs.skip != 'true'
         shell: bash
         run: |
           set -euo pipefail
           VERSION="${{ steps.meta.outputs.version }}"
           TAG="v${VERSION}"
+          ADDON_ID="tabula@withersky.local"
+          SIGNED_XPI="tabula-firefox-v${VERSION}.xpi"
 
           cat > site/latest.json <<EOF
           {
@@ -191,13 +195,50 @@ jobs:
           }
           EOF
 
+          # Firefox update-манифест. update_link обязан вести на ПОДПИСАННЫЙ
+          # xpi (неподписанный Firefox отклонит). Подписанный файл Mozilla
+          # отдаёт в Центре разработчиков после ревью; его нужно загрузить
+          # в этот релиз под именем tabula-firefox-vX.Y.Z.xpi (без -unsign).
+          # Пока файла нет, update_hash опущен — Firefox проверит подпись
+          # по https при скачивании.
+          UPDATE_HASH=""
+          if gh release download "$TAG" --pattern "${SIGNED_XPI}" --clobber 2>/dev/null; then
+            UPDATE_HASH="$(sha256sum "${SIGNED_XPI}" | cut -d' ' -f1)"
+            echo "Signed xpi found: ${SIGNED_XPI} (sha256:${UPDATE_HASH})"
+          else
+            echo "Signed xpi not found yet — upload ${SIGNED_XPI} to release ${TAG} later."
+          fi
+
+          if [[ -n "${UPDATE_HASH}" ]]; then
+            HASH_LINE=",\"update_hash\": \"sha256:${UPDATE_HASH}\""
+          else
+            HASH_LINE=""
+          fi
+          cat > site/updates.json <<EOF
+          {
+            "addons": {
+              "${ADDON_ID}": {
+                "updates": [
+                  {
+                    "version": "${VERSION}",
+                    "update_link": "https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/${SIGNED_XPI}"${HASH_LINE}
+                  }
+                ]
+              }
+            }
+          }
+          EOF
+
+          echo "--- site/updates.json ---"
+          cat site/updates.json
+
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add site/latest.json
+          git add site/latest.json site/updates.json
           if git diff --cached --quiet; then
-            echo "latest.json unchanged — nothing to commit."
+            echo "Site files unchanged — nothing to commit."
           else
             git commit -m "site: sync release ${TAG}"
             git push origin "HEAD:${GITHUB_REF_NAME}"
-            echo "Pushed site/latest.json (${TAG})."
+            echo "Pushed site/latest.json and site/updates.json (${TAG})."
           fi
