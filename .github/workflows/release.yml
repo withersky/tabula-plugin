@@ -4,7 +4,7 @@ name: release
 # commit message начинается с `vX.Y.Z` (например `v1.2.1 - описание`),
 # workflow собирает Chrome- и Firefox-варианты, вешает тег
 # `vX.Y.Z` на текущий коммит и публикует GitHub Release с прикреплёнными
-# zip-архивами и телом сообщения в качестве release notes.
+# архивами (.zip для Chrome, .xpi для Firefox) и телом сообщения в качестве release notes.
 #
 # Требования:
 #   - В manifest.json и manifest.firefox.json поле `version` должно
@@ -100,7 +100,7 @@ jobs:
           echo "--- dist/firefox ---"
           ls -la dist/firefox
 
-      - name: Package zip archives
+      - name: Package archives
         if: steps.meta.outputs.skip != 'true'
         shell: bash
         run: |
@@ -110,14 +110,15 @@ jobs:
           # В Firefox-сборке Firefox-манифест лежит как manifest.json,
           # а manifest.firefox.json туда не попадает (build.sh его выкидывает).
           # Поэтому просто архивируем всё содержимое папок.
+          # Firefox-сборка упаковывается в .xpi (неподписанную) — суффикс -unsign.
 
-          (cd dist/chrome   && zip -r "../../tabula-chrome-v${VERSION}.zip"   .)
-          (cd dist/firefox  && zip -r "../../tabula-firefox-v${VERSION}.zip"  .)
+          (cd dist/chrome   && zip -r "../../tabula-chrome-v${VERSION}-unsign.zip"   .)
+          (cd dist/firefox  && zip -r "../../tabula-firefox-v${VERSION}-unsign.xpi"  .)
 
-          ls -la tabula-*.zip
-          unzip -l "tabula-chrome-v${VERSION}.zip"  | tail -n +4 | head -n -2 || true
+          ls -la tabula-*.zip tabula-*.xpi
+          unzip -l "tabula-chrome-v${VERSION}-unsign.zip"  | tail -n +4 | head -n -2 || true
           echo "---"
-          unzip -l "tabula-firefox-v${VERSION}.zip" | tail -n +4 | head -n -2 || true
+          unzip -l "tabula-firefox-v${VERSION}-unsign.xpi" | tail -n +4 | head -n -2 || true
 
       - name: Create git tag
         if: steps.meta.outputs.skip != 'true'
@@ -151,5 +152,5 @@ jobs:
           generate_release_notes: false
           fail_on_unmatched_files: true
           files: |
-            tabula-chrome-v${{ steps.meta.outputs.version }}.zip
-            tabula-firefox-v${{ steps.meta.outputs.version }}.zip
+            tabula-chrome-v${{ steps.meta.outputs.version }}-unsign.zip
+            tabula-firefox-v${{ steps.meta.outputs.version }}-unsign.xpi

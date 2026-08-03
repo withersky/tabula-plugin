@@ -43,14 +43,31 @@ var REPO = "withersky/tabula-plugin";
     return; // страница частично не разметлена — не мешаем
   }
 
-  function findAsset(assets, pattern) {
-    for (var i = 0; i < assets.length; i++) {
-      if (pattern.test(assets[i].name)) {
-        return assets[i];
-      }
-    }
-    return null;
-  }
+function findAsset(assets, pattern) {
+for (var i = 0; i < assets.length; i++) {
+if (pattern.test(assets[i].name)) {
+return assets[i];
+}
+}
+return null;
+}
+
+// Приоритет: сначала подписанные архивы (-sign), затем неподписанные (-unsign).
+function findDownloadAsset(assets, browser) {
+var signed = findAsset(assets, browser === "firefox"
+? /^tabula-firefox-v.+-sign\.xpi$/i
+: /^tabula-chrome-v.+-sign\.zip$/i);
+if (signed) {
+return { asset: signed, signed: true };
+}
+var unsigned = findAsset(assets, browser === "firefox"
+? /^tabula-firefox-v.+-unsign\.xpi$/i
+: /^tabula-chrome-v.+-unsign\.zip$/i);
+if (unsigned) {
+return { asset: unsigned, signed: false };
+}
+return null;
+}
 
   fetch(API_URL, {
     headers: { Accept: "application/vnd.github+json" }
@@ -63,28 +80,34 @@ var REPO = "withersky/tabula-plugin";
     })
     .then(function (release) {
       var assets = release.assets || [];
-      var chrome = findAsset(assets, /^tabula-chrome-v.+\.zip$/i);
-      var firefox = findAsset(assets, /^tabula-firefox-v.+\.zip$/i);
+var chromeDL = findDownloadAsset(assets, "chrome");
+var firefoxDL = findDownloadAsset(assets, "firefox");
 
-      if (chrome) {
-        chromeBtn.href = chrome.browser_download_url;
-      }
-      if (firefox) {
-        firefoxBtn.href = firefox.browser_download_url;
-      }
+if (chromeDL) {
+chromeBtn.href = chromeDL.asset.browser_download_url;
+}
+if (firefoxDL) {
+firefoxBtn.href = firefoxDL.asset.browser_download_url;
+}
 
-      if (release.tag_name) {
-        versionNote.textContent =
-          "Актуальная версия: " + release.tag_name + " · " +
-          (chrome || firefox ? "архивы готовы к скачиванию" : "смотрите раздел Releases");
-      } else {
-        versionNote.textContent = "";
-      }
+var signNotes = [];
+if (chromeDL && chromeDL.signed) signNotes.push("Chrome: подписан");
+if (chromeDL &&!chromeDL.signed) signNotes.push("Chrome: неподписан");
+if (firefoxDL && firefoxDL.signed) signNotes.push("Firefox: подписан");
+if (firefoxDL &&!firefoxDL.signed) signNotes.push("Firefox: неподписан");
 
-      if (!chrome && !firefox) {
-        versionNote.textContent =
-          "В последнем релизе нет архивов — откройте раздел Releases.";
-      }
+if (release.tag_name) {
+versionNote.textContent =
+"Актуальная версия: " + release.tag_name + " · " +
+(signNotes.length? signNotes.join(", "): "смотрите раздел Releases");
+} else {
+versionNote.textContent = "";
+}
+
+if (!chromeDL &&!firefoxDL) {
+versionNote.textContent =
+"В последнем релизе нет архивов — откройте раздел Releases.";
+}
     })
     .catch(function () {
       // Оставляем кнопки по умолчанию (ссылка на latest release) и поясняем.
