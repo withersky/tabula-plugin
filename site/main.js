@@ -3,9 +3,35 @@
    their default link to the "latest release" page. */
 
 (function () {
-  "use strict";
+"use strict";
 
-  var REPO = "withersky/tabula-plugin";
+/* Живые часы в мокапе: время и дата обновляются каждую секунду. */
+function pad2(n) {
+return n < 10 ? "0" + n : String(n);
+}
+
+function updateMockClock() {
+var timeEl = document.querySelector(".mock-time");
+var dateEl = document.querySelector(".mock-date");
+if (!timeEl && !dateEl) return;
+
+var now = new Date();
+if (timeEl) {
+timeEl.textContent = pad2(now.getHours()) + ":" + pad2(now.getMinutes());
+}
+if (dateEl) {
+var days = ["воскресенье", "понедельник", "вторник", "среда", "четверг", "пятница", "суббота"];
+var months = ["января", "февраля", "марта", "апреля", "мая", "июня",
+"июля", "августа", "сентября", "октября", "ноября", "декабря"];
+dateEl.textContent = now.getDate() + " " + months[now.getMonth()] +
+", " + days[now.getDay()];
+}
+}
+
+updateMockClock();
+setInterval(updateMockClock, 1000);
+
+var REPO = "withersky/tabula-plugin";
   var API_URL = "https://api.github.com/repos/" + REPO + "/releases/latest";
   var RELEASES_URL = "https://github.com/" + REPO + "/releases";
 
