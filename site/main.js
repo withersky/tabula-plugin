@@ -291,6 +291,7 @@ function applyLang() {
 var REPO = "withersky/tabula-plugin";
 var API_URL = "https://api.github.com/repos/" + REPO + "/releases/latest";
 var RELEASES_URL = "https://github.com/" + REPO + "/releases";
+var LATEST_FILE = "latest.json"; // статический снимок последнего релиза (обновляется release workflow)
 
 var chromeBtn = document.querySelector('[data-browser="chrome"]');
 var firefoxBtn = document.querySelector('[data-browser="firefox"]');
@@ -338,43 +339,86 @@ function findDownloadAsset(assets, browser) {
   if (unsigned) {
     return { asset: unsigned, signed: false };
   }
+  // Запасной вариант: любой .xpi для Firefox и любой .zip для Chrome.
+  var any = findAsset(assets, browser === "firefox" ? /\.xpi$/i : /\.zip$/i);
+  if (any) {
+    return { asset: any, signed: null };
+  }
   return null;
 }
 
-fetch(API_URL, {
-  headers: { Accept: "application/vnd.github+json" }
-})
+function applyLinks(tag, chromeName, firefoxName, signed) {
+  if (chromeName) {
+    chromeBtn.href = "https://github.com/" + REPO + "/releases/download/" +
+      tag + "/" + chromeName;
+  }
+  if (firefoxName) {
+    firefoxBtn.href = "https://github.com/" + REPO + "/releases/download/" +
+      tag + "/" + firefoxName;
+  }
+  loaded = true;
+  versionState = {
+    tag: tag || null,
+    chromeSigned: chromeName ? signed : null,
+    firefoxSigned: firefoxName ? signed : null,
+    noArchives: !chromeName && !firefoxName
+  };
+  renderVersionNote();
+}
+
+function finishWithError() {
+  // Оставляем кнопки по умолчанию (ссылка на latest release) и поясняем.
+  loaded = true;
+  versionState = { error: true };
+  renderVersionNote();
+}
+
+function loadFromApi() {
+  return fetch(API_URL, {
+    headers: { Accept: "application/vnd.github+json" }
+  })
+    .then(function (res) {
+      if (!res.ok) {
+        throw new Error("GitHub API status: " + res.status);
+      }
+      return res.json();
+    })
+    .then(function (release) {
+      var assets = release.assets || [];
+      var chromeDL = findDownloadAsset(assets, "chrome");
+      var firefoxDL = findDownloadAsset(assets, "firefox");
+
+      if (chromeDL) chromeBtn.href = chromeDL.asset.browser_download_url;
+      if (firefoxDL) firefoxBtn.href = firefoxDL.asset.browser_download_url;
+
+      loaded = true;
+      versionState = {
+        tag: release.tag_name || null,
+        chromeSigned: chromeDL ? !!chromeDL.signed : null,
+        firefoxSigned: firefoxDL ? !!firefoxDL.signed : null,
+        noArchives: !chromeDL && !firefoxDL
+      };
+      renderVersionNote();
+    });
+}
+
+// Статический снимок релиза лежит на том же origin (GitHub Pages) и работает
+// даже если api.github.com недоступен/заблокирован. Если снимка нет —
+// пробуем GitHub API, а при неудаче оставляем ссылку на страницу релизов.
+fetch(LATEST_FILE)
   .then(function (res) {
-    if (!res.ok) {
-      throw new Error("GitHub API status: " + res.status);
-    }
+    if (!res.ok) throw new Error("latest.json status: " + res.status);
     return res.json();
   })
-  .then(function (release) {
-    var assets = release.assets || [];
-    var chromeDL = findDownloadAsset(assets, "chrome");
-    var firefoxDL = findDownloadAsset(assets, "firefox");
-
-    if (chromeDL) {
-      chromeBtn.href = chromeDL.asset.browser_download_url;
+  .then(function (snap) {
+    if (!snap || !snap.tag || !(snap.chrome || snap.firefox)) {
+      throw new Error("latest.json is empty");
     }
-    if (firefoxDL) {
-      firefoxBtn.href = firefoxDL.asset.browser_download_url;
-    }
-
-    loaded = true;
-    versionState = {
-      tag: release.tag_name || null,
-      chromeSigned: chromeDL ? !!chromeDL.signed : null,
-      firefoxSigned: firefoxDL ? !!firefoxDL.signed : null,
-      noArchives: !chromeDL && !firefoxDL
-    };
-    renderVersionNote();
+    applyLinks(snap.tag, snap.chrome || "", snap.firefox || "", false);
+    // Фоном уточняем через API (на случай ручного релиза мимо workflow).
+    loadFromApi().catch(function () { /* снимок уже применили */ });
   })
   .catch(function () {
-    // Оставляем кнопки по умолчанию (ссылка на latest release) и поясняем.
-    loaded = true;
-    versionState = { error: true };
-    renderVersionNote();
+    loadFromApi().catch(finishWithError);
   });
 })();
