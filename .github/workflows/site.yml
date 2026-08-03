@@ -1,0 +1,97 @@
+name: site
+
+# Деплой сайта-визитки (папка `site/`) на GitHub Pages.
+#
+# Триггерится на каждый push в основные ветки. Если ПЕРВАЯ строка commit message
+# начинается с `site:` (например `site: обновил кнопки скачивания`), workflow
+# собирает папку `site/` в артефакт и публикует её на GitHub Pages.
+# Обычные коммиты (без префикса `site:`) тихо пропускаются.
+#
+# Требования к репозиторию:
+#   - В Settings → Pages → Build and deployment источник должен быть
+#     «GitHub Actions» (а не ветка), иначе деплой не сработает.
+#   - Права Pages и id-token выдаются через `permissions` ниже, отдельные
+#     секреты не нужны.
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Check commit message
+    runs-on: ubuntu-latest
+    outputs:
+      skip: ${{ steps.meta.outputs.skip }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Parse first line of commit message
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Ручной запуск (Run workflow) всегда деплоит сайт.
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Manual run — deploying the site."
+            exit 0
+          fi
+
+          COMMIT_MSG="$(git log -1 --pretty=%B)"
+          FIRST_LINE="$(printf '%s\n' "$COMMIT_MSG" | awk 'NF{print; exit}')"
+          echo "First line: $FIRST_LINE"
+
+          if [[ ! "$FIRST_LINE" =~ ^site: ]]; then
+            echo "::notice::First line does not start with 'site:' — skipping site deploy."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          echo "::notice::Deploying the site."
+
+  build:
+    name: Build site artifact
+    needs: check
+    if: needs.check.outputs.skip != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
