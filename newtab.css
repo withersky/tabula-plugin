@@ -1,3 +1,22 @@
+/*
+ * Tabula — spreadsheet-style new tab page browser extension.
+ *
+ * Copyright (C) 2026 withersky
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 :root {
   --columns: 8;
   --cell-height: 60px;       /* computed by JS: base * (cellHeight_setting / 100) */
@@ -156,12 +175,144 @@ body.no-clock.no-quick-go.no-weather .topbar { display: none; }
 .weather-temp { font-weight: 600; font-variant-numeric: tabular-nums; flex: 0 0 auto; }
 .weather-desc { opacity: 0.78; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .weather-city { opacity: 0.6; font-size: calc(var(--weather-size, 13px) * 0.85); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.weather-widget {
+  position: relative;
+}
+.weather-popup {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 60;
+  width: var(--weather-popup-width, 340px);
+  max-height: 70vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.28) transparent;
+  padding: 8px 10px 10px;
+  background: rgba(22, 24, 32, var(--weather-popup-bg-opacity, 0.94));
+  backdrop-filter: blur(calc(var(--weather-popup-bg-opacity, 0.94) * 14px));
+  -webkit-backdrop-filter: blur(calc(var(--weather-popup-bg-opacity, 0.94) * 14px));
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.45);
+  animation: fadeIn 160ms ease;
+  font-size: 13px;
+  line-height: 1.3;
+  user-select: none;
+  cursor: default;
+}
+.weather-popup.closing {
+  animation: suggestOut 150ms ease forwards;
+}
+.weather-popup::-webkit-scrollbar { width: 8px; }
+.weather-popup::-webkit-scrollbar-track { background: transparent; }
+.weather-popup::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.28); border-radius: 4px; }
+.weather-popup-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 2px 2px 6px;
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+  margin-bottom: 6px;
+}
+.weather-popup-title {
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap;
+}
+.weather-popup-city {
+  opacity: 0.6;
+  font-size: 12px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.weather-popup-days {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.weather-popup-day {
+  display: grid;
+  grid-template-columns: 64px 26px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 4px;
+  border-radius: 8px;
+  transition: background 120ms ease;
+}
+.weather-popup-day:hover { background: rgba(255,255,255,0.06); }
+.weather-popup-day-label {
+  font-weight: 500;
+  white-space: nowrap;
+}
+.weather-popup-day-label.today { color: rgba(140, 160, 255, 0.95); }
+.weather-popup-day-icon {
+  font-size: 18px;
+  line-height: 1;
+  text-align: center;
+}
+.weather-popup-day-desc {
+  opacity: 0.7;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.weather-popup-day-range {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.weather-popup-day-range .min { opacity: 0.55; font-weight: 400; }
+.weather-popup-open {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.16);
+  background: rgba(255,255,255,0.06);
+  color: var(--text-color);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+.weather-popup-open:hover { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.28); }
+.weather-popup-empty {
+  text-align: center;
+  opacity: 0.6;
+  padding: 14px 0;
+  font-size: 12px;
+}
 body.no-quick-go .quick-go { display: none; }
 
 .quick-go { position: relative; grid-column: 2; justify-self: stretch; min-width: 0; max-width: 720px; width: 100%; margin: 0 auto; }
+.quick-go-icon {
+  position: absolute;
+  top: 50%;
+  left: 14px;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  opacity: 0.7;
+  z-index: 1;
+}
+.quick-go-icon img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+.quick-go-icon:empty { display: none; }
 .quick-go input {
   width: 100%;
-  padding: 9px 14px;
+  padding: 9px 14px 9px 38px;
   border-radius: 999px;
   border: 1px solid var(--input-border);
   background: var(--topbar-bg);
@@ -213,15 +364,35 @@ body.no-quick-go .quick-go { display: none; }
   to { opacity: 0; }
 }
 .quick-suggest-item {
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-size: 14px;
-  color: var(--text-color);
-  cursor: pointer;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  transition: background 100ms ease;
+display: flex;
+align-items: center;
+gap: 8px;
+padding: 8px 12px;
+border-radius: 8px;
+font-size: 14px;
+color: var(--text-color);
+cursor: pointer;
+white-space: nowrap;
+overflow: hidden;
+text-overflow: ellipsis;
+transition: background 100ms ease;
+}
+.quick-suggest-item .suggest-icon {
+flex: 0 0 auto;
+width: 16px;
+height: 16px;
+display: grid;
+place-items: center;
+opacity: 0.55;
+font-size: 14px;
+line-height: 1;
+}
+.quick-suggest-item .suggest-text {
+flex: 1 1 auto;
+min-width: 0;
+overflow: hidden;
+text-overflow: ellipsis;
+white-space: nowrap;
 }
 .quick-suggest-item:hover,
 .quick-suggest-item.active {
@@ -271,6 +442,8 @@ body.no-quick-go .quick-go { display: none; }
   left: 0; right: 0;
   top: var(--topbar-height, 84px); bottom: var(--sheet-bar-height, 40px);
   overflow: hidden;
+  /* Подложка грида; прозрачность задаётся настройкой (0 = прозрачно по умолчанию). */
+  background: rgba(26, 26, 42, var(--grid-bg-opacity, 0));
 }
 body.no-quick-go.no-clock.no-weather .grid-wrap  { top: 0; }
 body.no-sheet-bar .grid-wrap { bottom: 0; }
@@ -637,6 +810,26 @@ body.no-sheet-bar .sheet-bar { display: none; }
 .btn:hover { background: rgba(255,255,255,0.06); }
 .btn.primary { background: rgba(120,140,255,0.95); color: #0f0f1a; border-color: transparent; }
 .btn.primary:hover { background: rgba(120,140,255,1); }
+.btn.danger { background: rgba(255,90,90,0.85); color: #fff; border-color: transparent; }
+.btn.danger:hover { background: rgba(255,110,110,1); }
+
+/* ---------- confirm modal ---------- */
+.confirm-modal-card { width: min(380px, 92vw); }
+.confirm-modal-card h2 { margin: 0 0 6px; }
+.confirm-text {
+  margin: 0 0 4px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-color);
+  opacity: 0.9;
+  word-break: break-word;
+}
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
 
 .ctx-menu {
   position: fixed;

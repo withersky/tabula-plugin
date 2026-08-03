@@ -1,3 +1,22 @@
+<!--
+ Tabula — spreadsheet-style new tab page browser extension.
+
+ Copyright (C) 2026 withersky
+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+-->
+
 <!doctype html>
 <html lang="ru">
 <head>
@@ -14,23 +33,32 @@
       <div id="clockTime" class="clock-time">--:--</div>
       <div id="clockDate" class="clock-date">—</div>
     </div>
-    <form id="quickGo" class="quick-go" autocomplete="off">
-      <input id="quickGoInput" type="text"
-             data-i18n-placeholder="search"
-             placeholder="Поиск или введите URL"
-             spellcheck="false" />
+<form id="quickGo" class="quick-go" autocomplete="off">
+<span id="quickGoIcon" class="quick-go-icon" aria-hidden="true"></span>
+<input id="quickGoInput" type="text"
+data-i18n-placeholder="search"
+placeholder="Поиск или введите URL"
+spellcheck="false" />
       <div id="quickSuggest" class="quick-suggest" hidden></div>
     </form>
-    <div id="weatherWidget" class="weather-widget" role="link" tabindex="0" aria-label="Weather" data-i18n-title="weatherOpenExternal" title="Открыть подробный прогноз">
-      <span id="weatherIcon" class="weather-icon">⏳</span>
-      <div class="weather-text">
-        <div class="weather-line weather-line-main">
-          <span id="weatherTemp" class="weather-temp">—</span>
-          <span id="weatherDesc" class="weather-desc">—</span>
-        </div>
-        <div id="weatherCity" class="weather-city">—</div>
-      </div>
-    </div>
+<div id="weatherWidget" class="weather-widget" tabindex="0" aria-label="Weather" role="button" data-i18n-title="weatherForecastTitle" title="Прогноз погоды">
+<span id="weatherIcon" class="weather-icon">⏳</span>
+<div class="weather-text">
+<div class="weather-line weather-line-main">
+<span id="weatherTemp" class="weather-temp">—</span>
+<span id="weatherDesc" class="weather-desc">—</span>
+</div>
+<div id="weatherCity" class="weather-city">—</div>
+</div>
+<div id="weatherPopup" class="weather-popup" hidden>
+<div class="weather-popup-head">
+<span class="weather-popup-title" data-i18n="weatherForecastTitle">Прогноз погоды</span>
+<span id="weatherPopupCity" class="weather-popup-city"></span>
+</div>
+<div id="weatherPopupDays" class="weather-popup-days"></div>
+<button type="button" id="weatherPopupOpenBtn" class="weather-popup-open" data-i18n="weatherOpenForecast">Открыть прогноз</button>
+</div>
+</div>
     <button id="optsBtn" class="icon-btn opts-fab" data-i18n-title="settings" title="Настройки">⚙</button>
   </header>
 
@@ -46,22 +74,49 @@
     <button id="addSheetBtn" class="sheet-add" data-i18n-title="addSheet" title="Добавить лист">＋</button>
   </nav>
 
-  <!-- Edit bookmark modal -->
-  <div id="modal" class="modal" hidden>
-    <div class="modal-card">
-      <h2 id="modalTitle" data-i18n="modalAdd">Добавить закладку</h2>
-      <form id="tabForm">
-        <label><span data-i18n="fieldTitle">Название</span><input name="title" type="text" required maxlength="80"
-               data-i18n-placeholder="placeholderTitle" placeholder="Название" /></label>
-        <label><span data-i18n="fieldUrl">URL</span><input name="url" type="text" required
-               data-i18n-placeholder="placeholderUrl" placeholder="https://example.com" /></label>
-        <div class="modal-actions">
-          <button type="button" id="cancelBtn" class="btn" data-i18n="cancel">Отмена</button>
-          <button type="submit" class="btn primary" data-i18n="save">Сохранить</button>
-        </div>
-      </form>
-    </div>
-  </div>
+<!-- Edit bookmark modal -->
+<div id="modal" class="modal" hidden>
+<div class="modal-card">
+<h2 id="modalTitle" data-i18n="modalAdd">Добавить закладку</h2>
+<form id="tabForm">
+<label><span data-i18n="fieldTitle">Название</span><input name="title" type="text" required maxlength="80"
+data-i18n-placeholder="placeholderTitle" placeholder="Название" /></label>
+<label><span data-i18n="fieldUrl">URL</span><input name="url" type="text" required
+data-i18n-placeholder="placeholderUrl" placeholder="https://example.com" /></label>
+<div class="modal-actions">
+<button type="button" id="cancelBtn" class="btn" data-i18n="cancel">Отмена</button>
+<button type="submit" class="btn primary" data-i18n="save">Сохранить</button>
+</div>
+</form>
+</div>
+</div>
+
+<!-- Add sheet modal -->
+<div id="sheetModal" class="modal" hidden>
+<div class="modal-card">
+<h2 id="sheetModalTitle" data-i18n="addSheet">Добавить лист</h2>
+<form id="sheetForm">
+<label><span data-i18n="sheetName">Название листа</span><input name="name" type="text" required maxlength="40"
+data-i18n-placeholder="promptSheetName" placeholder="Название листа" /></label>
+<div class="modal-actions">
+<button type="button" id="sheetCancelBtn" class="btn" data-i18n="cancel">Отмена</button>
+<button type="submit" class="btn primary" data-i18n="addSheet">Добавить лист</button>
+</div>
+</form>
+</div>
+</div>
+
+<!-- Confirm modal -->
+<div id="confirmModal" class="modal" hidden>
+<div class="modal-card confirm-modal-card">
+<h2 data-i18n="confirmTitle">Подтверждение</h2>
+<p id="confirmText" class="confirm-text"></p>
+<div class="confirm-actions">
+<button type="button" id="confirmCancelBtn" class="btn" data-i18n="cancel">Отмена</button>
+<button type="button" id="confirmOkBtn" class="btn danger" data-i18n="confirmOk">Подтвердить</button>
+</div>
+</div>
+</div>
 
   <!-- Filled cell context menu -->
   <ul id="ctxMenu" class="ctx-menu" hidden>

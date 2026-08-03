@@ -1,7 +1,26 @@
+/*
+ * Tabula — spreadsheet-style new tab page browser extension.
+ *
+ * Copyright (C) 2026 withersky
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 (() => {
   "use strict";
 
-  const RANGE_KEYS = ["defaultColumns", "cellHeight", "fontSize", "clockSize", "weatherSize", "weatherRefreshMin", "quickGoSuggestOpacity"];
+  const RANGE_KEYS = ["defaultColumns", "cellHeight", "gridOpacity", "fontSize", "clockSize", "weatherSize", "weatherRefreshMin", "quickGoSuggestOpacity", "weatherForecastDays", "weatherPopupOpacity", "weatherPopupWidth"];
   const TEXT_KEYS = ["fontFamily",
                      "backgroundColor", "backgroundGradient", "backgroundImage"];
   const NUMBER_KEYS = ["weatherLat", "weatherLon"];
@@ -25,6 +44,10 @@
   const geoStatus      = $("#geoStatus");
   const geoResults     = $("#geoResults");
   const geoSearchBtn   = $("#geoSearchBtn");
+  const confirmModal     = $("#confirmModal");
+  const confirmText      = $("#confirmText");
+  const confirmOkBtn     = $("#confirmOkBtn");
+  const confirmCancelBtn = $("#confirmCancelBtn");
   let   _geoInFlight = false;
   let   _geoLastQuery = "";
   const statusEl    = $("#status");
@@ -321,7 +344,7 @@
   }
 
   async function onReset() {
-    if (!confirm(tx("confirmReset"))) return;
+    if (!(await confirmDialog(tx("confirmReset")))) return;
     state = await Storage.reset();
     lang = state.settings.language || "ru";
     applyI18nStatic();
@@ -432,7 +455,7 @@
         if (!parsed || !Array.isArray(parsed.sheets) || !parsed.settings) {
           throw new Error(tx("invalidImport"));
         }
-        if (!confirm(tx("confirmImport"))) return;
+        if (!(await confirmDialog(tx("confirmImport")))) return;
         await Storage.set(parsed);
         state = await Storage.get();
         lang = state.settings.language || "ru";
@@ -529,6 +552,48 @@
         updateFontSelectCustomVisibility(clockFontSelect, clockFontCustomWrap);
       });
     }
+  }
+
+  // ---------- confirm modal ----------
+  function confirmDialog(message) {
+    return new Promise((resolve) => {
+      if (!confirmModal || !confirmText || !confirmOkBtn || !confirmCancelBtn) { resolve(true); return; }
+      confirmText.textContent = message;
+      confirmModal.hidden = false;
+
+      let settled = false;
+      const finish = (val) => {
+        if (settled) return;
+        settled = true;
+        confirmModal.hidden = true;
+        cleanup();
+        resolve(val);
+      };
+      const onOk = () => finish(true);
+      const onCancel = () => finish(false);
+      const onKey = (e) => {
+        if (e.key !== "Escape") return;
+        e.preventDefault();
+        onCancel();
+      };
+      const onOverlay = (e) => {
+        if (e.target === confirmModal) onCancel();
+      };
+      function cleanup() {
+        confirmOkBtn.removeEventListener("click", onOk);
+        confirmCancelBtn.removeEventListener("click", onCancel);
+        document.removeEventListener("keydown", onKey);
+        confirmModal.removeEventListener("mousedown", onOverlay);
+      }
+      confirmOkBtn.addEventListener("click", onOk);
+      confirmCancelBtn.addEventListener("click", onCancel);
+      document.addEventListener("keydown", onKey);
+      confirmModal.addEventListener("mousedown", onOverlay);
+      // Фокус на безопасную кнопку (Отмена), чтобы Enter не сработал случайно.
+      setTimeout(() => {
+        try { confirmCancelBtn.focus({ preventScroll: true }); } catch (_) {}
+      }, 0);
+    });
   }
 
   // ---------- geo modal ----------

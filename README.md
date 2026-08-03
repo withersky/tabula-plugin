@@ -179,7 +179,7 @@ GitHub API и подставляет прямые ссылки на zip-архи
 
 ## Модель данных
 
-Данные лежат в `chrome.storage.local` под ключом `gridtabs_data`, текущий формат — **v3**:
+Данные лежат в `chrome.storage.local` под ключом `tabula_data`, текущий формат — **v3**:
 
 ```jsonc
 {

@@ -1,3 +1,22 @@
+/*
+ * Tabula — spreadsheet-style new tab page browser extension.
+ *
+ * Copyright (C) 2026 withersky
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 :root {
   --bg: #1a1a24;
   --bg-elev: #23232e;
@@ -57,12 +76,10 @@ button { font: inherit; }
 }
 .brand { display: flex; align-items: center; gap: 10px; }
 .brand-mark {
-  width: 28px; height: 28px;
-  border-radius: 8px;
-  background: var(--primary);
-  color: var(--primary-fg);
-  display: grid; place-items: center;
-  font-weight: 700;
+width: 28px; height: 28px;
+border-radius: 8px;
+object-fit: contain;
+display: block;
 }
 .topbar h1 {
   margin: 0;
@@ -488,7 +505,7 @@ select { cursor: pointer; }
   width: 42px;
   height: 42px;
   border-radius: 10px;
-  background: #fff;
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -761,3 +778,21 @@ select { cursor: pointer; }
 
 /* ---------- weather coords button ---------- */
 .btn-icon { margin-right: 6px; }
+
+/* ---------- confirm modal ---------- */
+.confirm-modal-card {
+  max-width: 400px;
+}
+.confirm-text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text);
+  word-break: break-word;
+}
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}

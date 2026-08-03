@@ -1,3 +1,22 @@
+<!--
+ Tabula — spreadsheet-style new tab page browser extension.
+
+ Copyright (C) 2026 withersky
+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+-->
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -18,11 +37,17 @@
       <img class="brand-icon" src="icons/icon128.png" alt="Tabula" width="28" height="28">
       <span class="brand-name">Tabula</span>
     </a>
-    <nav class="nav" aria-label="Основное меню">
-      <a href="#features">Возможности</a>
-      <a href="#install">Установка</a>
-      <a href="https://github.com/withersky/tabula-plugin" target="_blank" rel="noopener">GitHub</a>
-    </nav>
+    <div class="topbar-right">
+      <nav class="nav" aria-label="Основное меню" data-i18n-aria="navLabel">
+        <a href="#features" data-i18n="navFeatures">Возможности</a>
+        <a href="#install" data-i18n="navInstall">Установка</a>
+        <a href="https://github.com/withersky/tabula-plugin" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+      <div class="lang-switch" role="group" aria-label="Language">
+        <button type="button" class="lang-btn" data-lang="ru" aria-pressed="true">RU</button>
+        <button type="button" class="lang-btn" data-lang="en" aria-pressed="false">EN</button>
+      </div>
+    </div>
   </header>
 
   <main id="top">
@@ -30,8 +55,8 @@
     <section class="hero">
       <div class="container hero-inner">
         <div class="hero-text">
-          <h1>Новая вкладка —<br>как электронная таблица</h1>
-          <p class="subtitle">
+          <h1 data-i18n-html="heroTitle">Новая вкладка —<br>как электронная таблица</h1>
+          <p class="subtitle" data-i18n="heroSubtitle">
             Раскладывайте закладки по ячейкам сетки, как в Excel: листы, темы,
             фон, часы и погода. Всё хранится локально, без телеметрии и подписок.
           </p>
@@ -57,9 +82,9 @@
             </a>
           </div>
 
-          <p class="version-note" id="version-note">Ищем последний релиз…</p>
+          <p class="version-note" id="version-note" data-i18n="versionLoading">Ищем последний релиз…</p>
           <a class="link-releases" href="https://github.com/withersky/tabula-plugin/releases"
-             target="_blank" rel="noopener">Все релизы на GitHub →</a>
+             target="_blank" rel="noopener" data-i18n="releasesLink">Все релизы на GitHub →</a>
         </div>
 
         <!-- Мокап интерфейса расширения (не интерактивен) -->
@@ -69,12 +94,12 @@
               <div class="mock-time">22:14</div>
               <div class="mock-date">3 августа, воскресенье</div>
             </div>
-            <div class="mock-search">🔍&nbsp; Поиск или введите URL</div>
+            <div class="mock-search" data-i18n-html="mockSearch">🔍&nbsp; Поиск или введите URL</div>
             <div class="mock-weather">
               <span class="mock-wx-icon">⛅</span>
               <div class="mock-wx-text">
-                <div class="mock-wx-line"><b>21°</b>&nbsp; Облачно</div>
-                <div class="mock-wx-city">Нижний Новгород</div>
+                <div class="mock-wx-line" data-i18n-html="mockWeather"><b>21°</b>&nbsp; Облачно</div>
+                <div class="mock-wx-city" data-i18n="mockCity">Нижний Новгород</div>
               </div>
             </div>
             <div class="mock-gear">⚙</div>
@@ -91,17 +116,17 @@
               <span class="mock-num">1</span>
               <div class="mock-cell filled"><span class="mock-fav">G</span><span class="mock-title">Google</span></div>
               <div class="mock-cell filled"><span class="mock-fav">Y</span><span class="mock-title">YouTube</span></div>
-              <div class="mock-cell filled"><span class="mock-fav">В</span><span class="mock-title">ВКонтакте</span></div>
-              <div class="mock-cell filled selected"><span class="mock-fav">Я</span><span class="mock-title">Яндекс</span></div>
+              <div class="mock-cell filled" data-mock-cell="vk"><span class="mock-fav">В</span><span class="mock-title">ВКонтакте</span></div>
+              <div class="mock-cell filled selected" data-mock-cell="yandex"><span class="mock-fav">Я</span><span class="mock-title">Яндекс</span></div>
               <div class="mock-cell filled"><span class="mock-fav">G</span><span class="mock-title">GitHub</span></div>
               <div class="mock-cell filled"><span class="mock-fav">M</span><span class="mock-title">Mail</span></div>
             </div>
             <div class="mock-row">
               <span class="mock-num">2</span>
               <div class="mock-cell"></div>
-              <div class="mock-cell filled"><span class="mock-fav">Н</span><span class="mock-title">Новости</span></div>
+              <div class="mock-cell filled" data-mock-cell="news"><span class="mock-fav">Н</span><span class="mock-title">Новости</span></div>
               <div class="mock-cell"></div>
-              <div class="mock-cell filled"><span class="mock-fav">М</span><span class="mock-title">Музыка</span></div>
+              <div class="mock-cell filled" data-mock-cell="music"><span class="mock-fav">М</span><span class="mock-title">Музыка</span></div>
               <div class="mock-cell"></div>
               <div class="mock-cell"></div>
             </div>
@@ -109,9 +134,9 @@
               <span class="mock-num">3</span>
               <div class="mock-cell"></div>
               <div class="mock-cell"></div>
-              <div class="mock-cell filled"><span class="mock-fav">К</span><span class="mock-title">Кинопоиск</span></div>
+              <div class="mock-cell filled" data-mock-cell="kinopoisk"><span class="mock-fav">К</span><span class="mock-title">Кинопоиск</span></div>
               <div class="mock-cell"></div>
-              <div class="mock-cell filled"><span class="mock-fav">Т</span><span class="mock-title">Твиттер</span></div>
+              <div class="mock-cell filled" data-mock-cell="twitter"><span class="mock-fav">Т</span><span class="mock-title">Твиттер</span></div>
               <div class="mock-cell"></div>
             </div>
             <div class="mock-row">
@@ -126,10 +151,10 @@
           </div>
 
           <div class="mock-sheetbar">
-            <span class="mock-tab active">📋 Главная</span>
-            <span class="mock-tab">💼 Работа</span>
-            <span class="mock-tab">🎮 Игры</span>
-            <span class="mock-tab">🎵 Музыка</span>
+            <span class="mock-tab active" data-i18n-html="mockTabHome">📋 Главная</span>
+            <span class="mock-tab" data-i18n-html="mockTabWork">💼 Работа</span>
+            <span class="mock-tab" data-i18n-html="mockTabGames">🎮 Игры</span>
+            <span class="mock-tab" data-i18n-html="mockTabMusic">🎵 Музыка</span>
             <span class="mock-add">＋</span>
           </div>
         </div>
@@ -139,37 +164,37 @@
     <!-- Features -->
     <section class="features" id="features">
       <div class="container">
-        <h2>Возможности</h2>
+        <h2 data-i18n="featuresTitle">Возможности</h2>
         <div class="grid">
           <article class="card">
             <span class="card-icon">🗂️</span>
-            <h3>Листы как в Excel</h3>
-            <p>Несколько листов-вкладок с emoji-иконками, перетаскиванием для смены порядка и своим числом колонок (3–12).</p>
+            <h3 data-i18n="f1Title">Листы как в Excel</h3>
+            <p data-i18n="f1Text">Несколько листов-вкладок с emoji-иконками, перетаскиванием для смены порядка и своим числом колонок (3–12).</p>
           </article>
           <article class="card">
             <span class="card-icon">🧩</span>
-            <h3>Сетка ячеек</h3>
-            <p>Каждая ячейка — одна закладка. Перетаскивайте их, меняйте местами, открывайте в новой вкладке и редактируйте правым кликом.</p>
+            <h3 data-i18n="f2Title">Сетка ячеек</h3>
+            <p data-i18n="f2Text">Каждая ячейка — одна закладка. Перетаскивайте их, меняйте местами, открывайте в новой вкладке и редактируйте правым кликом.</p>
           </article>
           <article class="card">
             <span class="card-icon">🎨</span>
-            <h3>Темы и фон</h3>
-            <p>Тёмная и светлая тема, цвет, CSS-градиент, своя картинка или Bing-обои дня — всё настраивается в один клик.</p>
+            <h3 data-i18n="f3Title">Оформление</h3>
+            <p data-i18n="f3Text">Цветовая палитра, шрифты, CSS-градиент, своя картинка или Bing-обои дня — всё настраивается в один клик.</p>
           </article>
           <article class="card">
             <span class="card-icon">🌤️</span>
-            <h3>Часы и погода</h3>
-            <p>Крупные часы и виджет погоды (данные — открытый сервис met.no). Настраиваются шрифт, размер и период обновления.</p>
+            <h3 data-i18n="f4Title">Часы и погода</h3>
+            <p data-i18n="f4Text">Крупные часы и виджет погоды (данные — открытый сервис met.no). Настраиваются шрифт, размер и период обновления.</p>
           </article>
           <article class="card">
             <span class="card-icon">🔍</span>
-            <h3>Быстрый поиск</h3>
-            <p>Строка быстрого перехода с подсказками и выбором поисковой системы: Google, Яндекс или Bing.</p>
+            <h3 data-i18n="f5Title">Быстрый поиск</h3>
+            <p data-i18n="f5Text">Строка быстрого перехода с подсказками и выбором поисковой системы: Google, Яндекс или Bing.</p>
           </article>
           <article class="card">
             <span class="card-icon">🔒</span>
-            <h3>Приватность</h3>
-            <p>Никакой телеметрии и облаков: все данные живут локально в вашем браузере и никуда не отправляются.</p>
+            <h3 data-i18n="f6Title">Приватность</h3>
+            <p data-i18n="f6Text">Никакой телеметрии и облаков: все данные живут локально в вашем браузере и никуда не отправляются.</p>
           </article>
         </div>
       </div>
@@ -178,28 +203,28 @@
     <!-- Install -->
     <section class="install" id="install">
       <div class="container">
-        <h2>Установка</h2>
+        <h2 data-i18n="installTitle">Установка</h2>
         <div class="install-cols">
           <div class="card install-card">
             <h3>Chrome / Edge / Brave / Opera</h3>
             <ol>
-              <li>Скачайте архив <b>Chrome</b> с кнопки выше.</li>
-              <li>Распакуйте его в любую папку.</li>
-              <li>Откройте <code>chrome://extensions</code> и включите «Режим разработчика».</li>
-              <li>Нажмите «Загрузить распакованное расширение» и выберите папку.</li>
+              <li data-i18n-html="installChromeGet">Скачайте архив <b>Chrome</b> с кнопки выше.</li>
+              <li data-i18n="installUnpack">Распакуйте его в любую папку.</li>
+              <li data-i18n-html="installChromeExt">Откройте <code>chrome://extensions</code> и включите «Режим разработчика».</li>
+              <li data-i18n="installChromeLoad">Нажмите «Загрузить распакованное расширение» и выберите папку.</li>
             </ol>
           </div>
           <div class="card install-card">
             <h3>Firefox 109+</h3>
             <ol>
-              <li>Скачайте архив <b>Firefox</b> с кнопки выше.</li>
-              <li>Распакуйте его в любую папку.</li>
+              <li data-i18n-html="installFirefoxGet">Скачайте архив <b>Firefox</b> с кнопки выше.</li>
+              <li data-i18n="installUnpack">Распакуйте его в любую папку.</li>
               <li>Откройте <code>about:debugging#/runtime/this-firefox</code>.</li>
-              <li>Нажмите «Загрузить временное дополнение…» и выберите файл <code>manifest.json</code> из папки.</li>
+              <li data-i18n-html="installFirefoxLoad">Нажмите «Загрузить временное дополнение…» и выберите файл <code>manifest.json</code> из папки.</li>
             </ol>
           </div>
         </div>
-        <p class="hint">
+        <p class="hint" data-i18n="installHint">
           Если другое расширение уже переопределяет новую вкладку, отключите его —
           браузер использует только одно такое расширение одновременно.
         </p>
@@ -209,8 +234,8 @@
 
   <footer class="footer">
     <div class="container footer-inner">
-      <span>Tabula · автор <a href="https://github.com/withersky" target="_blank" rel="noopener">withersky</a></span>
-      <a href="https://github.com/withersky/tabula-plugin" target="_blank" rel="noopener">Исходный код на GitHub</a>
+      <span>Tabula · <span data-i18n="footerBy">автор</span> <a href="https://github.com/withersky" target="_blank" rel="noopener">withersky</a></span>
+      <a href="https://github.com/withersky/tabula-plugin" target="_blank" rel="noopener" data-i18n="footerSource">Исходный код на GitHub</a>
     </div>
   </footer>
 

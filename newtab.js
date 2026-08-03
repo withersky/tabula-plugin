@@ -1,3 +1,22 @@
+/*
+ * Tabula — spreadsheet-style new tab page browser extension.
+ *
+ * Copyright (C) 2026 withersky
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 (() => {
   "use strict";
 
@@ -11,6 +30,12 @@
   const modalEl    = document.getElementById("modal");
   const modalTitle = document.getElementById("modalTitle");
   const tabForm    = document.getElementById("tabForm");
+  const sheetModal = document.getElementById("sheetModal");
+  const sheetForm  = document.getElementById("sheetForm");
+  const confirmModal    = document.getElementById("confirmModal");
+  const confirmText     = document.getElementById("confirmText");
+  const confirmOkBtn    = document.getElementById("confirmOkBtn");
+  const confirmCancelBtn= document.getElementById("confirmCancelBtn");
   const ctxMenu    = document.getElementById("ctxMenu");
   const ctxEmpty   = document.getElementById("ctxMenuEmpty");
   const sheetCtx   = document.getElementById("sheetCtx");
@@ -211,6 +236,21 @@
     if (weatherCityEl) weatherCityEl.textContent = city;
   }
 
+  function renderQuickGoIcon() {
+    const el = document.getElementById("quickGoIcon");
+    if (!el) return;
+    const se = state && state.settings && state.settings.searchEngine;
+    const maps = { google: "icons/se-google.svg", yandex: "icons/se-yandex.svg", bing: "icons/se-bing.svg" };
+    const src = maps[se] || maps.google;
+    if (el.dataset.src === src) return;
+    el.dataset.src = src;
+    el.innerHTML = "";
+    const img = document.createElement("img");
+    img.src = src;
+    img.alt = "";
+    el.appendChild(img);
+  }
+
   function renderWeather() {
     if (!weatherWidget) return;
     const s = state && state.settings;
@@ -224,7 +264,7 @@
       _weatherHasError = false;
       weatherIconEl.textContent = weatherIconFor(cache.code);
       const temp = (cache.tempC != null) ? (Math.round(cache.tempC) + "°") : "—";
-      const desc = cache.desc || "";
+      const desc = describeSymbol(cache.symbol) || cache.desc || "";
       const city = cache.city
         ? (cache.city + (cache.country ? ", " + cache.country : ""))
         : (s.weatherCity || "");
@@ -374,15 +414,104 @@
     return "https://yandex.ru/pogoda";
   }
 
-  function openWeatherAggregator(e) {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    const s = state && state.settings;
-    const url = aggregatorUrl(s && s.weatherLat, s && s.weatherLon, (s && s.weatherCity) || "");
-    window.open(url, "_blank", "noopener,noreferrer");
-  }
+function openWeatherAggregator() {
+const s = state && state.settings;
+const url = aggregatorUrl(s && s.weatherLat, s && s.weatherLon, (s && s.weatherCity) || "");
+window.open(url, "_blank", "noopener,noreferrer");
+}
+
+// ---------- weather forecast popup (like quick-go suggestions) ----------
+const weatherPopupEl = document.getElementById("weatherPopup");
+const weatherPopupDaysEl = document.getElementById("weatherPopupDays");
+const weatherPopupCityEl = document.getElementById("weatherPopupCity");
+const weatherPopupOpenBtn = document.getElementById("weatherPopupOpenBtn");
+let _weatherPopupTimer = null;
+let _weatherPopupClosing = false;
+
+function closeWeatherPopup() {
+if (!weatherPopupEl || weatherPopupEl.hidden) return;
+_weatherPopupClosing = true;
+weatherPopupEl.classList.add("closing");
+clearTimeout(_weatherPopupTimer);
+_weatherPopupTimer = setTimeout(() => {
+weatherPopupEl.classList.remove("closing");
+_weatherPopupClosing = false;
+weatherPopupEl.hidden = true;
+}, 150);
+}
+
+function toggleWeatherPopup() {
+if (!weatherPopupEl) return;
+if (!weatherPopupEl.hidden) {
+closeWeatherPopup();
+return;
+}
+renderWeatherPopup();
+clearTimeout(_weatherPopupTimer);
+weatherPopupEl.classList.remove("closing");
+_weatherPopupClosing = false;
+weatherPopupEl.hidden = false;
+}
+
+ function dayLabel(date, idx, isToday) {
+ if (isToday) return tx("weatherToday");
+ const d = date || new Date();
+ const opts = { weekday: "short" };
+ const locale = (lang === "en") ? "en-GB" : "ru-RU";
+ try {
+ return d.toLocaleDateString(locale, opts).replace(/\.$/, "");
+ } catch (_) {
+ return d.toLocaleDateString("ru-RU", opts).replace(/\.$/, "");
+ }
+ }
+
+function renderWeatherPopup() {
+if (!weatherPopupEl || !weatherPopupDaysEl) return;
+const s = state && state.settings;
+const cache = state && state.weatherCache;
+const list = (cache && Array.isArray(cache.forecast)) ? cache.forecast : [];
+const maxDays = Math.max(1, Math.min(14, Number((s && s.weatherForecastDays) || 5)));
+if (weatherPopupCityEl) {
+weatherPopupCityEl.textContent = (cache && cache.city) ||
+((s && s.weatherCity) || "");
+}
+weatherPopupDaysEl.textContent = "";
+if (!list.length) {
+const empty = document.createElement("div");
+empty.className = "weather-popup-empty";
+empty.textContent = tx("weatherNoData");
+weatherPopupDaysEl.appendChild(empty);
+return;
+}
+const now = new Date();
+const today = now.toDateString();
+list.slice(0, maxDays).forEach((day, idx) => {
+const row = document.createElement("div");
+row.className = "weather-popup-day";
+const date = day.date ? new Date(day.date + "T12:00:00") : new Date(now.getTime() + idx * 86400000);
+const isToday = idx === 0 || date.toDateString() === today;
+const label = document.createElement("span");
+label.className = "weather-popup-day-label" + (isToday ? " today" : "");
+label.textContent = dayLabel(date, idx, isToday);
+const icon = document.createElement("span");
+icon.className = "weather-popup-day-icon";
+icon.textContent = weatherIconFor(day.code);
+const descEl = document.createElement("span");
+descEl.className = "weather-popup-day-desc";
+descEl.textContent = describeSymbol(day.desc) || describeSymbol(day.symbol) || day.desc || "";
+const range = document.createElement("span");
+range.className = "weather-popup-day-range";
+const max = (day.maxC != null) ? Math.round(day.maxC) + "°" : "—";
+const min = (day.minC != null) ? Math.round(day.minC) + "°" : "—";
+range.textContent = max + " / ";
+const minSpan = document.createElement("span");
+minSpan.className = "min";
+minSpan.textContent = min;
+range.appendChild(minSpan);
+for (const el of [label, icon, descEl, range]) row.appendChild(el);
+weatherPopupDaysEl.appendChild(row);
+});
+}
 
   function normalizeUrl(u) {
     if (!u) return "#";
@@ -497,11 +626,22 @@
     root.setProperty("--text-color",  s.textColor);
     root.setProperty("--clock-font",  resolveClockFont(s));
     root.setProperty("--clock-size",  (s.clockSize || 28) + "px");
-    root.setProperty("--weather-size", (s.weatherSize || 13) + "px");
-    const op = Number(s.quickGoSuggestOpacity);
-    const opA = (isFinite(op) ? Math.max(0, Math.min(100, op)) : 90) / 100;
-    root.setProperty("--suggest-bg-opacity", String(opA));
-    applyBackground();
+ root.setProperty("--weather-size", (s.weatherSize || 13) + "px");
+ const op = Number(s.quickGoSuggestOpacity);
+ const opA = (isFinite(op)? Math.max(0, Math.min(100, op)): 90) / 100;
+ root.setProperty("--suggest-bg-opacity", String(opA));
+ const wop = Number(s.weatherPopupOpacity);
+ const wopA = (isFinite(wop)? Math.max(0, Math.min(100, wop)): 94) / 100;
+ root.setProperty("--weather-popup-bg-opacity", String(wopA));
+ const ww = Number(s.weatherPopupWidth);
+ const wwA = (isFinite(ww)? Math.max(280, Math.min(480, ww)): 340);
+root.setProperty("--weather-popup-width", wwA + "px");
+ // Прозрачность подложки грида: 0 = полностью прозрачно (по умолчанию), 100 = непрозрачная панель.
+ const gop = Number(s.gridOpacity);
+ const gopA = (isFinite(gop)? Math.max(0, Math.min(100, gop)): 0) / 100;
+ root.setProperty("--grid-bg-opacity", String(gopA));
+   applyBackground();
+    renderQuickGoIcon();
     requestAnimationFrame(applyTopbarHeight);
   }
 
@@ -891,14 +1031,35 @@
   }
 
   async function addSheetPrompt() {
-    const name = prompt(tx("promptSheetName"), tx("newSheetDefault"));
-    if (name == null) return;
-    const trimmed = String(name).trim();
-    if (!trimmed) return;
-    if (state.sheets.some(s => s.name === trimmed)) { toast(tx("sheetExists"), true); return; }
+    if (!sheetModal || !sheetForm) return;
+    sheetForm.reset();
+    sheetForm.elements.name.value = tx("newSheetDefault");
+    sheetModal.hidden = false;
+    // restart modal animation
+    const card = sheetModal.querySelector(".modal-card");
+    if (card) { card.style.animation = "none"; void card.offsetWidth; card.style.animation = ""; }
+    // Defer focus to next tick so the modal can paint first.
+    setTimeout(() => {
+      try { sheetForm.elements.name.focus({ preventScroll: true }); } catch (_) {}
+      try { sheetForm.elements.name.select(); } catch (_) {}
+    }, 0);
+  }
+
+  function closeSheetModal() {
+    if (sheetModal) sheetModal.hidden = true;
+  }
+
+  async function onSubmitSheet(e) {
+    e.preventDefault();
+    if (!sheetForm) return;
+    const nameEl = sheetForm.elements.name;
+    if (!nameEl) return;
+    const name = (nameEl.value || "").trim();
+    if (!name) return;
+    if (state.sheets.some(s => s.name === name)) { toast(tx("sheetExists"), true); return; }
     const icon = randomSheetIcon();
     const cols = clampCols(state.settings.defaultColumns || 8);
-    const newSheet = { id: cryptoId(), name: trimmed, icon: icon, columns: cols, cells: {} };
+    const newSheet = { id: cryptoId(), name: name, icon: icon, columns: cols, cells: {} };
     await Storage.update((d) => {
       d.sheets.push(newSheet);
       d.activeSheetId = newSheet.id;
@@ -909,13 +1070,59 @@
     setTimeout(() => _justAddedIds.delete(newSheet.id), 800);
     renderSheetBar(); renderGrid();
     if (sheetTabsEl) sheetTabsEl.scrollLeft = sheetTabsEl.scrollWidth;
+    closeSheetModal();
     toast(tx("sheetAdded"));
+  }
+
+  // ---------- confirm modal ----------
+  function confirmDialog(message) {
+    return new Promise((resolve) => {
+      if (!confirmModal || !confirmText || !confirmOkBtn || !confirmCancelBtn) { resolve(true); return; }
+      confirmText.textContent = message;
+      confirmModal.hidden = false;
+      // restart modal animation
+      const card = confirmModal.querySelector(".modal-card");
+      if (card) { card.style.animation = "none"; void card.offsetWidth; card.style.animation = ""; }
+
+      let settled = false;
+      const finish = (val) => {
+        if (settled) return;
+        settled = true;
+        confirmModal.hidden = true;
+        cleanup();
+        resolve(val);
+      };
+      const onOk = () => finish(true);
+      const onCancel = () => finish(false);
+      const onKey = (e) => {
+        if (e.key !== "Escape") return;
+        e.preventDefault();
+        onCancel();
+      };
+      const onOverlay = (e) => {
+        if (e.target === confirmModal) onCancel();
+      };
+      function cleanup() {
+        confirmOkBtn.removeEventListener("click", onOk);
+        confirmCancelBtn.removeEventListener("click", onCancel);
+        document.removeEventListener("keydown", onKey);
+        confirmModal.removeEventListener("mousedown", onOverlay);
+      }
+      confirmOkBtn.addEventListener("click", onOk);
+      confirmCancelBtn.addEventListener("click", onCancel);
+      document.addEventListener("keydown", onKey);
+      confirmModal.addEventListener("mousedown", onOverlay);
+      // Фокус на безопасную кнопку (Отмена), чтобы Enter не сработал случайно.
+      setTimeout(() => {
+        try { confirmCancelBtn.focus({ preventScroll: true }); } catch (_) {}
+      }, 0);
+    });
   }
 
   async function deleteSheet(sh) {
     if (state.sheets.length <= 1) { toast(tx("needOneSheet"), true); return; }
     const count = Object.keys(sh.cells || {}).length;
-    if (count > 0 && !confirm(tx("confirmDeleteSheet")(count))) return;
+    if (count > 0 && !(await confirmDialog(tx("confirmDeleteSheet")(count)))) return;
     await Storage.update((d) => {
       d.sheets = d.sheets.filter(s => s.id !== sh.id);
       if (d.activeSheetId === sh.id) d.activeSheetId = d.sheets[0].id;
@@ -1040,20 +1247,33 @@
       }
     });
 
-    if (weatherWidget) {
-      weatherWidget.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        openWeatherAggregator(e);
-      });
-      weatherWidget.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          e.stopPropagation();
-          openWeatherAggregator(e);
-        }
-      });
-    }
+if (weatherWidget) {
+weatherWidget.addEventListener("click", (e) => {
+e.preventDefault();
+e.stopPropagation();
+toggleWeatherPopup();
+});
+weatherWidget.addEventListener("keydown", (e) => {
+if (e.key === "Enter" || e.key === " ") {
+e.preventDefault();
+e.stopPropagation();
+toggleWeatherPopup();
+}
+});
+}
+if (weatherPopupOpenBtn) {
+weatherPopupOpenBtn.addEventListener("click", (e) => {
+e.preventDefault();
+e.stopPropagation();
+closeWeatherPopup();
+openWeatherAggregator();
+});
+}
+document.addEventListener("mousedown", (e) => {
+if (weatherPopupEl && !weatherPopupEl.hidden && !weatherWidget.contains(e.target) && !weatherPopupOpenBtn.contains(e.target)) {
+closeWeatherPopup();
+}
+});
 
     // Close modal on click outside the card
     modalEl.addEventListener("mousedown", (e) => {
@@ -1061,6 +1281,15 @@
     });
 
     addSheetBtn.addEventListener("click", addSheetPrompt);
+    if (sheetForm) sheetForm.addEventListener("submit", onSubmitSheet);
+    const sheetCancelBtn = document.getElementById("sheetCancelBtn");
+    if (sheetCancelBtn) sheetCancelBtn.addEventListener("click", closeSheetModal);
+    // Close sheet modal on click outside the card
+    if (sheetModal) {
+      sheetModal.addEventListener("mousedown", (e) => {
+        if (e.target === sheetModal) closeSheetModal();
+      });
+    }
 
     if (sheetScrollLeft) {
       sheetScrollLeft.addEventListener("click", () => {
@@ -1119,7 +1348,7 @@
     });
 
     document.addEventListener("mousedown", (e) => {
-      if (!modalEl.hidden) return; // don't interfere with the open modal
+      if (!modalEl.hidden || (sheetModal && !sheetModal.hidden) || (confirmModal && !confirmModal.hidden)) return; // don't interfere with open modals
       if (!ctxMenu.hidden && !ctxMenu.contains(e.target)) hideCtx();
       if (!ctxEmpty.hidden && !ctxEmpty.contains(e.target)) hideCtxEmpty();
       if (!sheetCtx.hidden && !sheetCtx.contains(e.target)) hideSheetCtx();
@@ -1133,6 +1362,8 @@
 
     document.addEventListener("keydown", (e) => {
       if (!modalEl.hidden) { if (e.key === "Escape") closeModal(); return; }
+      if (sheetModal && !sheetModal.hidden) { if (e.key === "Escape") closeSheetModal(); return; }
+      if (confirmModal && !confirmModal.hidden) return; // закрывается внутри confirmDialog
 
       const suggestOpen = quickSuggestEl && !quickSuggestEl.hidden;
 
@@ -1661,7 +1892,13 @@
     _suggestItems.forEach((item) => {
       const div = document.createElement("div");
       div.className = "quick-suggest-item";
-      div.textContent = item;
+      const iconEl = document.createElement("span");
+iconEl.className = "suggest-icon";
+iconEl.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
+const textEl = document.createElement("span");
+textEl.className = "suggest-text";
+textEl.textContent = item;
+div.append(iconEl, textEl);
       div.addEventListener("mousedown", (e) => {
         e.preventDefault(); // сохранить фокус на инпуте
         onQuickGo(null, item);
