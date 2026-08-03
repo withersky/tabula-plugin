@@ -1,13 +1,19 @@
 {
   "manifest_version": 3,
   "name": "Tabula",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "description": "Customizable spreadsheet-style speed-dial new tab page with sheets, themes, and a Bing daily image option.",
 "browser_specific_settings": {
 "gecko": {
 "id": "tabula@withersky.local",
-"strict_min_version": "109.0",
-"update_url": "https://withersky.github.io/tabula-plugin/updates.json"
+"strict_min_version": "140.0",
+"update_url": "https://withersky.github.io/tabula-plugin/updates.json",
+"data_collection_permissions": {
+"required": ["none"]
+}
+},
+"gecko_android": {
+"strict_min_version": "142.0"
 }
 },
   "chrome_url_overrides": {

@@ -6,7 +6,7 @@
 **Tabula** — расширение для браузера, которое превращает новую вкладку в **электронную таблицу**.
 Закладки раскладываются по ячейкам сетки, как в Excel: со своими листами, темами, фоном, часами и погодой.
 
-- Работает в **Chromium-браузерах** (Chrome, Edge, Brave, Opera, Vivaldi…) и **Firefox 109+**.
+- Работает в **Chromium-браузерах** (Chrome, Edge, Brave, Opera, Vivaldi…) и **Firefox 140+**.
 - Интерфейс — на русском, в настройках переключается на английский.
 - **Без подписок, без телеметрии** — все данные хранятся локально в вашем браузере.
 - Автор: [withersky](https://github.com/withersky).
@@ -23,7 +23,7 @@
 4. Нажмите **«Загрузить распакованное расширение»** и выберите распакованную папку.
 5. Откройте новую вкладку — появится таблица. Настройки — иконка ⚙ в правом верхнем углу.
 
-### Firefox 109+
+### Firefox 140+
 
 1. Скачайте архив **Firefox** со [страницы релизов](https://github.com/withersky/tabula-plugin/releases/latest).
 2. Распакуйте его в любую папку.
@@ -84,7 +84,7 @@
 ```
 tabula-plugin/
 ├── manifest.json           MV3 (Chrome): service_worker, newtab override
-├── manifest.firefox.json   MV3 (Firefox 109+): background.scripts, gecko.id
+├── manifest.firefox.json   MV3 (Firefox 140+): background.scripts, gecko.id
 ├── background.js           service worker / event page: проксирует Bing и met.no
 ├── lib/
 │   ├── browser.js          кросс-браузерная обёртка ext.* (chrome.* / browser.*)
@@ -280,4 +280,4 @@ Workflow генерирует его при каждом релизе (и доб
 - **Bing daily** подгружается через service worker (нужны `host_permissions`), кешируется на день.
 - **Синхронизация между устройствами** не предусмотрена — используйте экспорт/импорт JSON.
 - **Автообновление Firefox** работает только через `update_url` на подписанный `.xpi` (см. раздел «Релизы»); неподписанные сборки пользователям не обновляются автоматически.
-- Требования: Manifest V3, Chrome 108+; Firefox 109+ (MV3 service worker — только с 121, поэтому в Firefox-сборке используется `background.scripts`).
+- Требования: Manifest V3, Chrome 108+; Firefox 140+ (в Firefox-сборке используется `background.scripts`).

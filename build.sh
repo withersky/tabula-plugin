@@ -26,7 +26,7 @@
 # The script copies the shared source tree and selects the right manifest
 # for each target. The Firefox build uses manifest.firefox.json (which
 # declares background.scripts instead of service_worker for compatibility
-# with Firefox 109+).
+# with Firefox 140+).
 
 set -euo pipefail
 
