@@ -561,7 +561,7 @@ weatherPopupDaysEl.appendChild(row);
     startClock();
     startWeather();
 
-    // Динамический отступ грида от топбара (часы могут менять высоту).
+    // Динамический отступ ячеек от топбара (часы могут менять высоту).
     const tb = document.querySelector(".topbar");
     if (tb && typeof ResizeObserver !== "undefined") {
       const ro = new ResizeObserver(() => applyTopbarHeight());
@@ -636,7 +636,7 @@ weatherPopupDaysEl.appendChild(row);
  const ww = Number(s.weatherPopupWidth);
  const wwA = (isFinite(ww)? Math.max(280, Math.min(480, ww)): 340);
 root.setProperty("--weather-popup-width", wwA + "px");
- // Прозрачность подложки грида: 0 = полностью прозрачно (по умолчанию), 100 = непрозрачная панель.
+ // Прозрачность подложки ячеек: 0 = полностью прозрачно (по умолчанию), 100 = непрозрачная панель.
  const gop = Number(s.gridOpacity);
  const gopA = (isFinite(gop)? Math.max(0, Math.min(100, gop)): 0) / 100;
  root.setProperty("--grid-bg-opacity", String(gopA));

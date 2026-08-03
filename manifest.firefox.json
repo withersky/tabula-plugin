@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Tabula",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Customizable spreadsheet-style speed-dial new tab page with sheets, themes, and a Bing daily image option.",
 "browser_specific_settings": {
 "gecko": {
@@ -16,7 +16,8 @@
     "newtab": "newtab.html"
   },
   "permissions": [
-    "storage"
+    "storage",
+    "bookmarks"
   ],
   "host_permissions": [
     "https://www.bing.com/*",

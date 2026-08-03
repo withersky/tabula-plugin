@@ -442,8 +442,7 @@ white-space: nowrap;
   left: 0; right: 0;
   top: var(--topbar-height, 84px); bottom: var(--sheet-bar-height, 40px);
   overflow: hidden;
-  /* Подложка грида; прозрачность задаётся настройкой (0 = прозрачно по умолчанию). */
-  background: rgba(26, 26, 42, var(--grid-bg-opacity, 0));
+  /* Подложка грида всегда прозрачна; настройка прозрачности влияет только на ячейки (.cell.filled). */
 }
 body.no-quick-go.no-clock.no-weather .grid-wrap  { top: 0; }
 body.no-sheet-bar .grid-wrap { bottom: 0; }
@@ -532,7 +531,11 @@ body.no-quick-go.no-clock.no-weather.no-sheet-bar .grid-wrap { top: 0; bottom: 0
 .cell.empty:hover,
 .cell.filled:hover { background: var(--cell-hover-bg); }
 
-.cell.filled { flex-direction: row; justify-content: flex-start; cursor: grab; }
+.cell.filled {
+  flex-direction: row; justify-content: flex-start; cursor: grab;
+  /* Фон заполненной ячейки; прозрачность задаётся настройкой (0 = прозрачно по умолчанию). */
+  background: rgba(26, 26, 42, var(--grid-bg-opacity, 0));
+}
 .cell.filled .favicon {
   width: 20px; height: 20px;
   flex: 0 0 20px;

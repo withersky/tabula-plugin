@@ -146,7 +146,9 @@ Chrome и Firefox используют одну и ту же кодовую ба
    ```
 
 3. `git push origin main`. Через ~30 секунд в разделе **Releases** появятся
-   `v1.2.3` и два zip-архива (их можно скачать с сайта-визитки).
+   `v1.2.3` и два zip-архива (их можно скачать с сайта-визитки). Workflow также
+   обновит [`site/latest.json`](site/latest.json:1) и задеплоит сайт, чтобы
+   кнопки скачивания указывали на новый релиз.
 
 ## Сайт-визитка и GitHub Pages
 
@@ -159,8 +161,12 @@ Chrome и Firefox используют одну и ту же кодовую ба
 рядом). Если вы поменяете `icons/icon*.png` или `icons/*.svg` в корне — обновите
 и копии в `site/icons/`.
 
-Скрипт [`site/main.js`](site/main.js:1) сам запрашивает последний релиз через
-GitHub API и подставляет прямые ссылки на zip-архивы (Chrome/Firefox).
+Скрипт [`site/main.js`](site/main.js:1) подставляет кнопкам прямые ссылки на
+файлы релиза. Сначала он читает статический снимок [`site/latest.json`](site/latest.json:1)
+(тот же origin — работает даже при недоступности `api.github.com`), затем для
+точности фоново уточняет данные через GitHub API. Снимок обновляет release workflow
+при каждом релизе, поэтому кнопки всегда ведут на актуальные
+`tabula-chrome-vX.Y.Z-unsign.zip` и `tabula-firefox-vX.Y.Z-unsign.xpi`.
 
 Деплой — воркфлоу [`.github/workflows/site.yml`](.github/workflows/site.yml:1).
 Он срабатывает, когда **первая строка** commit message начинается с `site:`

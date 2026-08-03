@@ -78,7 +78,7 @@
         <div class="grid-2" style="margin-top:12px">
           <label>
             <span class="row">
-              <span data-i18n="labelGridOpacity">Прозрачность грида</span>
+              <span data-i18n="labelGridOpacity">Прозрачность ячеек</span>
               <output data-out="gridOpacity"></output>
             </span>
             <input type="range" name="gridOpacity" min="0" max="100" step="5" />
@@ -415,6 +415,7 @@
         <div class="row data-actions">
           <button id="exportBtn" class="btn" data-i18n="export">Экспорт</button>
           <button id="importBtn" class="btn" data-i18n="import">Импорт</button>
+          <button id="importBookmarksBtn" class="btn" data-i18n="importBookmarks">Из папки закладок</button>
           <button id="resetBtn"  class="btn danger" data-i18n="reset">Сбросить настройки</button>
           <input id="importFile" type="file" accept="application/json" hidden />
         </div>
@@ -474,6 +475,23 @@
   </div>
 
   <div id="status" class="status" hidden></div>
+
+  <!-- Bookmarks import modal -->
+  <div id="bookmarksModal" class="modal" hidden>
+    <div class="modal-card bookmarks-modal-card">
+      <h2 data-i18n="bookmarksModalTitle">Импорт из закладок</h2>
+      <p class="hint" data-i18n="bookmarksModalHint">Выберите папку закладок браузера — её содержимое добавится на новый лист.</p>
+      <label class="full">
+        <span class="row"><span data-i18n="bookmarksFolderLabel">Папка</span></span>
+        <select id="bookmarksFolderSelect"></select>
+      </label>
+      <p id="bookmarksFolderInfo" class="bookmarks-info" hidden></p>
+      <div class="bookmarks-modal-actions">
+        <button type="button" id="bookmarksCancelBtn" class="btn" data-i18n="cancel">Отмена</button>
+        <button type="button" id="bookmarksImportBtn" class="btn primary" data-i18n="bookmarksImportBtn">Импортировать</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Geocoder modal -->
   <div id="geoModal" class="modal" hidden>

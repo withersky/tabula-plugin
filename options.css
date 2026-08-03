@@ -719,6 +719,22 @@ select { cursor: pointer; }
   gap: 8px;
   margin-top: 4px;
 }
+.bookmarks-modal-card select {
+  width: 100%;
+}
+.bookmarks-info {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+}
+.bookmarks-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
 .geo-status {
   padding: 8px 10px;
   border-radius: 8px;
