@@ -66,10 +66,10 @@
           </label>
           <label>
             <span class="row">
-              <span data-i18n="labelCellHeight">Размер ячеек</span>
-              <output data-out="cellHeight"></output>
+              <span data-i18n="labelGridRows">Строк по умолчанию</span>
+              <output data-out="gridRows"></output>
             </span>
-            <input type="range" name="cellHeight" min="20" max="200" step="5" />
+            <input type="range" name="gridRows" min="2" max="30" step="1" />
           </label>
         </div>
         <div class="checks" style="margin-top:12px">
@@ -82,6 +82,13 @@
               <output data-out="gridOpacity"></output>
             </span>
             <input type="range" name="gridOpacity" min="0" max="100" step="5" />
+          </label>
+          <label>
+            <span class="row">
+              <span data-i18n="labelCellSelectedColor">Цвет выделения</span>
+              <output data-out="cellSelectedColor"></output>
+            </span>
+            <input type="color" name="cellSelectedColor" />
           </label>
         </div>
       </section>
@@ -383,6 +390,19 @@
 <output data-out="weatherRefreshMin"></output>
 </span>
 <input type="range" name="weatherRefreshMin" min="5" max="180" step="5" />
+</label>
+<label>
+<span class="row">
+<span data-i18n="optWeatherDateFmt">Формат даты в прогнозе</span>
+</span>
+<select name="weatherDateFmt">
+<option value="dd.mm" data-i18n="weatherDateFmtDdMm">дд.мм (15.08)</option>
+<option value="dd.mm.yy" data-i18n="weatherDateFmtDdMmYy">дд.мм.гг (15.08.26)</option>
+<option value="dd.mm.yyyy" data-i18n="weatherDateFmtDdMmYyyy">дд.мм.гггг (15.08.2026)</option>
+<option value="dd.mon" data-i18n="weatherDateFmtDdMon">дд месяц кр. (15 авг)</option>
+<option value="dd.month" data-i18n="weatherDateFmtDdMonth">дд месяц полн. (15 августа)</option>
+<option value="off" data-i18n="weatherDateFmtOff">Не показывать</option>
+</select>
 </label>
             </div>
           </div>

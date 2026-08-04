@@ -456,6 +456,8 @@ weatherPopupEl.hidden = false;
  function dayLabel(date, idx, isToday) {
  if (isToday) return tx("weatherToday");
  const d = date || new Date();
+ const tomorrow = new Date(Date.now() + 86400000);
+ if (d.toDateString() === tomorrow.toDateString()) return tx("weatherTomorrow");
  const opts = { weekday: "short" };
  const locale = (lang === "en") ? "en-GB" : "ru-RU";
  try {
@@ -463,6 +465,27 @@ weatherPopupEl.hidden = false;
  } catch (_) {
  return d.toLocaleDateString("ru-RU", opts).replace(/\.$/, "");
  }
+ }
+ 
+ function formatDateFmt(d, fmt) {
+ if (!d || !fmt || fmt === "off") return "";
+ const dd = String(d.getDate()).padStart(2, "0");
+ const mm = String(d.getMonth() + 1).padStart(2, "0");
+ if (fmt === "dd.mm.yyyy") return dd + "." + mm + "." + d.getFullYear();
+ if (fmt === "dd.mm.yy") return dd + "." + mm + "." + String(d.getFullYear()).slice(-2);
+ if (fmt === "dd.mon" || fmt === "dd.month") {
+ const locale = (lang === "en") ? "en-GB" : "ru-RU";
+ try {
+ const s = d.toLocaleDateString(locale, {
+ day: "2-digit",
+ month: (fmt === "dd.mon") ? "short" : "long"
+ });
+ return s.replace(/\./g, "");
+ } catch (_) {
+ return dd + "." + mm;
+ }
+ }
+ return dd + "." + mm;
  }
 
 function renderWeatherPopup() {
@@ -493,6 +516,13 @@ const isToday = idx === 0 || date.toDateString() === today;
 const label = document.createElement("span");
 label.className = "weather-popup-day-label" + (isToday ? " today" : "");
 label.textContent = dayLabel(date, idx, isToday);
+const fmt = (s && s.weatherDateFmt) || "dd.mm";
+if (fmt && fmt !== "off") {
+const dateEl = document.createElement("span");
+dateEl.className = "weather-popup-day-date";
+dateEl.textContent = formatDateFmt(date, fmt);
+label.appendChild(dateEl);
+}
 const icon = document.createElement("span");
 icon.className = "weather-popup-day-icon";
 icon.textContent = weatherIconFor(day.code);
@@ -574,8 +604,7 @@ weatherPopupDaysEl.appendChild(row);
       const ro2 = new ResizeObserver(() => applySheetBarHeight());
       ro2.observe(sb);
     }
-    requestAnimationFrame(() => { applyTopbarHeight(); applySheetBarHeight(); applyCellScale(); });
-    window.addEventListener("resize", applyCellScale);
+    requestAnimationFrame(() => { applyTopbarHeight(); applySheetBarHeight(); });
 
     Storage.onChanged((next) => {
       if (!next) return;
@@ -619,9 +648,6 @@ weatherPopupDaysEl.appendChild(row);
     const root = document.documentElement.style;
     root.setProperty("--columns",     String(s.defaultColumns));
     root.setProperty("--font-family", resolveFont(s.fontFamilyKey, s.fontFamily));
-    // --cell-height (px) рассчитывается в applyCellScale() на основе cellHeight (%)
-    // и реального размера окна — чтобы ячейки были пропорциональны окну.
-    applyCellScale();
     root.setProperty("--font-size",   s.fontSize + "px");
     root.setProperty("--text-color",  s.textColor);
     root.setProperty("--clock-font",  resolveClockFont(s));
@@ -640,6 +666,8 @@ root.setProperty("--weather-popup-width", wwA + "px");
  const gop = Number(s.gridOpacity);
  const gopA = (isFinite(gop)? Math.max(0, Math.min(100, gop)): 0) / 100;
  root.setProperty("--grid-bg-opacity", String(gopA));
+ // Цвет выделения ячейки (используется в .cell.selected / .cell.drop-target).
+ root.setProperty("--cell-selected-color", s.cellSelectedColor || "#788cff");
    applyBackground();
     renderQuickGoIcon();
     requestAnimationFrame(applyTopbarHeight);
@@ -668,22 +696,6 @@ root.setProperty("--weather-popup-width", wwA + "px");
     const hidden = s && (s.showClock === false && s.showWeather === false && s.showQuickGo === false);
     const h = hidden ? 0 : tb.getBoundingClientRect().height;
     document.documentElement.style.setProperty("--topbar-height", Math.ceil(h) + "px");
-  }
-
-  // Пересчитывает --cell-height (px) как
-  //   baseHeight = window.innerHeight / 8  (clamp 40..120)
-  //   cellHeight = baseHeight * (cellHeight_setting / 100)
-  // Запускается при ресайзе окна и при изменении cellHeight в настройках.
-  function applyCellScale() {
-    const s = state && state.settings;
-    if (!s) return;
-    const scale = (Number(s.cellHeight) || 100) / 100;
-    // Базовая высота пропорциональна размеру окна: на ~600px окне ~75px.
-    const base = Math.max(40, Math.min(120, window.innerHeight / 8));
-    let px = Math.round(base * scale);
-    // Защита: не меньше 28, иначе ячейки схлопнутся.
-    if (px < 28) px = 28;
-    document.documentElement.style.setProperty("--cell-height", px + "px");
   }
 
   // Обновляет --sheet-bar-height по реальной высоте sheet-bar.
@@ -796,12 +808,24 @@ root.setProperty("--weather-popup-width", wwA + "px");
     }
   }
 
+  function clampGridRows() {
+    // Минимальное число строк грида — настраивается в options.
+    const v = Number(state.settings.gridRows);
+    return isFinite(v) ? Math.max(2, Math.min(30, Math.round(v))) : 6;
+  }
+
   function computeFillRows(sheet) {
     // Грид растягивается на всю доступную высоту (flex: 1 1 0 у каждой строки),
-    // поэтому нам нужно лишь столько строк, сколько нужно для контента
-    // + минимальный запас, чтобы сетка не схлопывалась на маленьком окне.
-    const contentRows = computeRowsForSheet(sheet, 0);
-    return Math.max(contentRows, 6);
+    // поэтому показываем ровно столько строк, сколько нужно контенту
+    // (минимум — настройка "Строк по умолчанию", чтобы сетка не схлопывалась).
+    // Без резерва +4 снизу — он заставлял грид «прыгать», когда закладку
+    // добавляли в последнюю видимую строку.
+    let maxRow = -1;
+    for (const k of Object.keys(sheet.cells || {})) {
+      const r = parseInt(k.split(",")[0], 10);
+      if (!isNaN(r) && r > maxRow) maxRow = r;
+    }
+    return Math.max(maxRow + 1, clampGridRows());
   }
 
   function createCellEl(key, bm) {
@@ -1623,7 +1647,7 @@ closeWeatherPopup();
   async function onAddBookmarkTop() {
     const sh = activeSheet();
     if (!sh) return;
-    const key = findFirstEmptyCell(sh, 12, clampCols(state.settings.defaultColumns)) || "0,0";
+    const key = findFirstEmptyCell(sh, computeFillRows(sh), clampCols(state.settings.defaultColumns)) || "0,0";
     openAddModal(key);
   }
 
@@ -1655,10 +1679,15 @@ closeWeatherPopup();
     if (!cell) return;
     const key = cell.dataset.key;
     if (!key) return;
+    const sh = activeSheet();
+    const hasBookmark = !!(sh && sh.cells && sh.cells[key]);
     const inSelection = selRange.indexOf(key) !== -1;
-    const hasContent = selectionFilledCells().length > 0;
-    // Как в Excel: перетаскивание изнутри выделения двигает блок, извне — выделяет диапазон.
-    const mode = (inSelection && hasContent) ? "move" : "select";
+    // Как везде: захват заполненной ячейки — перемещение (одной или блока),
+    // захват пустой ячейки — выделение диапазона.
+    const mode = hasBookmark ? "move" : "select";
+    // Новый захват вне текущего выделения сужает выбор до этой ячейки,
+    // иначе при переносе уедет старый блок, а не захваченная ячейка.
+    if (mode === "select" || (mode === "move" && !inSelection)) selectCell(key);
     pointerState = {
       mode,
       anchorKey: key,
@@ -1667,7 +1696,6 @@ closeWeatherPopup();
       lastKey: key,
       moved: false
     };
-    if (mode === "select") selectCell(key);
   }
 
   function onGridPointerMove(e) {
@@ -1847,7 +1875,7 @@ closeWeatherPopup();
           x.url   = url;
         }
       } else {
-        const k = editingTargetKey || findFirstEmptyCell(cur, 12, clampCols(state.settings.defaultColumns)) || "0,0";
+        const k = editingTargetKey || findFirstEmptyCell(cur, computeFillRows(cur), clampCols(state.settings.defaultColumns)) || "0,0";
         cur.cells[k] = { id: cryptoId(), title, url };
       }
     });

@@ -20,7 +20,7 @@
 (() => {
   "use strict";
 
-  const RANGE_KEYS = ["defaultColumns", "cellHeight", "gridOpacity", "fontSize", "clockSize", "weatherSize", "weatherRefreshMin", "quickGoSuggestOpacity", "weatherForecastDays", "weatherPopupOpacity", "weatherPopupWidth"];
+  const RANGE_KEYS = ["defaultColumns", "gridOpacity", "fontSize", "clockSize", "weatherSize", "weatherRefreshMin", "quickGoSuggestOpacity", "weatherForecastDays", "weatherPopupOpacity", "weatherPopupWidth", "cellSelectedColor", "gridRows"];
   const TEXT_KEYS = ["fontFamily",
                      "backgroundColor", "backgroundGradient", "backgroundImage"];
   const NUMBER_KEYS = ["weatherLat", "weatherLon"];
