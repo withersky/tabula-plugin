@@ -123,7 +123,7 @@ body.no-clock.no-quick-go.no-weather .topbar { display: none; }
 }
 .clock-widget:hover { background: rgba(0,0,0,0.42); border-color: var(--input-border); }
 .clock-time {
-  font-family: var(--clock-font, var(--font-family));
+  font-family: var(--font-family);
   font-size: clamp(16px, var(--clock-size, 28px), 36px);
   line-height: 1.05;
   font-weight: 600;
@@ -131,7 +131,7 @@ body.no-clock.no-quick-go.no-weather .topbar { display: none; }
   font-variant-numeric: tabular-nums;
 }
 .clock-date {
-  font-family: var(--clock-font, var(--font-family));
+  font-family: var(--font-family);
   font-size: clamp(10px, calc(var(--clock-size, 28px) * 0.32), 13px);
   line-height: 1;
   opacity: 0.65;

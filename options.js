@@ -73,8 +73,6 @@
   const fontPreview   = $("#fontPreview");
   const fontFamilySelect = $("#fontFamilyKeySelect");
   const fontFamilyCustomWrap = $("#fontFamilyCustomWrap");
-  const clockFontSelect = $("#clockFontKeySelect");
-  const clockFontCustomWrap = $("#clockFontCustomWrap");
   const aboutVersionEl  = $("#aboutVersion");
   const aboutRepoLink   = $("#aboutRepoLink");
 
@@ -94,9 +92,7 @@
     document.documentElement.lang = lang;
     document.title = tx("settingsTitle");
     populateFontSelect(fontFamilySelect);
-    populateFontSelect(clockFontSelect);
     updateFontSelectCustomVisibility(fontFamilySelect, fontFamilyCustomWrap);
-    updateFontSelectCustomVisibility(clockFontSelect, clockFontCustomWrap);
   }
 
   // ---------- font selects ----------
@@ -571,11 +567,6 @@
     if (fontFamilySelect) {
       fontFamilySelect.addEventListener("change", () => {
         updateFontSelectCustomVisibility(fontFamilySelect, fontFamilyCustomWrap);
-      });
-    }
-    if (clockFontSelect) {
-      clockFontSelect.addEventListener("change", () => {
-        updateFontSelectCustomVisibility(clockFontSelect, clockFontCustomWrap);
       });
     }
   }

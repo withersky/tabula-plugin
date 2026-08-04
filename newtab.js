@@ -650,7 +650,6 @@ weatherPopupDaysEl.appendChild(row);
     root.setProperty("--font-family", resolveFont(s.fontFamilyKey, s.fontFamily));
     root.setProperty("--font-size",   s.fontSize + "px");
     root.setProperty("--text-color",  s.textColor);
-    root.setProperty("--clock-font",  resolveClockFont(s));
     root.setProperty("--clock-size",  (s.clockSize || 28) + "px");
  root.setProperty("--weather-size", (s.weatherSize || 13) + "px");
  const op = Number(s.quickGoSuggestOpacity);
