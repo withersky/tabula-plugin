@@ -183,9 +183,13 @@ body.no-clock.no-quick-go.no-weather .topbar { display: none; }
   top: calc(100% + 6px);
   right: 0;
   z-index: 60;
-  width: var(--weather-popup-width, 340px);
+  /* Ширина подстраивается под содержимое. */
+  width: max-content;
+  min-width: 240px;
+  max-width: min(70vw, 440px);
   max-height: 70vh;
   overflow-y: auto;
+  overflow-x: hidden;
   scrollbar-width: thin;
   scrollbar-color: rgba(255,255,255,0.28) transparent;
   padding: 8px 10px 10px;
@@ -299,7 +303,7 @@ body.no-clock.no-quick-go.no-weather .topbar { display: none; }
 }
 body.no-quick-go .quick-go { display: none; }
 
-.quick-go { position: relative; grid-column: 2; justify-self: stretch; min-width: 0; max-width: 720px; width: 100%; margin: 0 auto; }
+.quick-go { position: relative; grid-column: 2; justify-self: stretch; min-width: 0; max-width: 720px; width: 100%; margin: 0 auto; animation: fadeIn 240ms ease; }
 .quick-go-icon {
   position: absolute;
   top: 50%;
@@ -437,7 +441,7 @@ white-space: nowrap;
   font-size: 18px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
   border: 1px solid var(--input-border);
-  animation: fabSpin 600ms ease-out;
+  animation: fadeIn 240ms ease, fabSpin 600ms ease-out;
 }
 @keyframes fabSpin {
   from { transform: rotate(-180deg) scale(0.6); opacity: 0; }

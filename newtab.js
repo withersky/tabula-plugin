@@ -659,9 +659,6 @@ weatherPopupDaysEl.appendChild(row);
  const wop = Number(s.weatherPopupOpacity);
  const wopA = (isFinite(wop)? Math.max(0, Math.min(100, wop)): 94) / 100;
  root.setProperty("--weather-popup-bg-opacity", String(wopA));
- const ww = Number(s.weatherPopupWidth);
- const wwA = (isFinite(ww)? Math.max(280, Math.min(480, ww)): 340);
-root.setProperty("--weather-popup-width", wwA + "px");
  // Прозрачность подложки ячеек: 0 = полностью прозрачно (по умолчанию), 100 = непрозрачная панель.
  const gop = Number(s.gridOpacity);
  const gopA = (isFinite(gop)? Math.max(0, Math.min(100, gop)): 0) / 100;
