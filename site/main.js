@@ -338,29 +338,32 @@ if (!chromeBtn || !firefoxBtn) {
 
 function findAsset(assets, pattern) {
   for (var i = 0; i < assets.length; i++) {
-    if (pattern.test(assets[i].name)) {
+    if (typeof pattern === "function" ? pattern(assets[i].name) : pattern.test(assets[i].name)) {
       return assets[i];
     }
   }
   return null;
 }
 
-// Приоритет: сначала подписанные архивы (), затем неподписанные (-unsign).
+// Приоритет: сначала подписанные архивы (без суффикса -unsign),
+// затем неподписанные (-unsign). Важно: обычный .xpi/.zip паттерн
+// НЕ должен захватывать файлы с суффиксом -unsign.
 function findDownloadAsset(assets, browser) {
-  var signed = findAsset(assets, browser === "firefox"
-    ? /^tabula-firefox-v.+\.xpi$/i
-    : /^tabula-chrome-v.+\.zip$/i);
+  var extRe = browser === "firefox" ? /\.xpi$/i : /\.zip$/i;
+  var isUnsigned = function (name) { return /-unsign\.(xpi|zip)$/i.test(name); };
+
+  var signed = findAsset(assets, function (name) {
+    return extRe.test(name) && !isUnsigned(name);
+  });
   if (signed) {
     return { asset: signed, signed: true };
   }
-  var unsigned = findAsset(assets, browser === "firefox"
-    ? /^tabula-firefox-v.+-unsign\.xpi$/i
-    : /^tabula-chrome-v.+-unsign\.zip$/i);
+  var unsigned = findAsset(assets, isUnsigned);
   if (unsigned) {
     return { asset: unsigned, signed: false };
   }
   // Запасной вариант: любой .xpi для Firefox и любой .zip для Chrome.
-  var any = findAsset(assets, browser === "firefox" ? /\.xpi$/i : /\.zip$/i);
+  var any = findAsset(assets, extRe);
   if (any) {
     return { asset: any, signed: null };
   }

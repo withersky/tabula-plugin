@@ -242,3 +242,27 @@ jobs:
             git push origin "HEAD:${GITHUB_REF_NAME}"
             echo "Pushed site/latest.json and site/updates.json (${TAG})."
           fi
+
+      - name: Post-publish instructions (v${{ steps.meta.outputs.version }})
+        if: steps.meta.outputs.skip != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.meta.outputs.version }}"
+          TAG="v${VERSION}"
+          echo "::notice::Релиз ${TAG} опубликован. Что дальше?"
+          echo ""
+          echo "1. Подписанный XPI для автообновления:"
+          echo "   - Скачайте tabula-firefox-v${VERSION}-unsign.xpi из релиза ${TAG}."
+          echo "   - Загрузите его в Центр разработчиков AMO (режим Self-hosted) и получите ПОДПИСАННЫЙ xpi."
+          echo "   - Переименуйте его в tabula-firefox-v${VERSION}.xpi (без -unsign)."
+          echo ""
+          echo "2. Загрузите подписанный файл в ТОТ ЖЕ релиз ${TAG} на GitHub:"
+          echo "   gh release upload ${TAG} tabula-firefox-v${VERSION}.xpi"
+          echo ""
+          echo "3. Перезапустите этот workflow (Actions → release → Re-run),"
+          echo "   чтобы в site/updates.json добавился update_hash (sha256)."
+          echo ""
+          echo "4. Убедитесь, что commit 'site: sync release ${TAG}' задеплоил сайт"
+          echo "   (GitHub Pages). Кнопка Firefox на сайте должна вести на подписанный"
+          echo "   tabula-firefox-v${VERSION}.xpi."
