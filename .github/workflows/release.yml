@@ -263,6 +263,5 @@ jobs:
           echo "3. Перезапустите этот workflow (Actions → release → Re-run),"
           echo "   чтобы в site/updates.json добавился update_hash (sha256)."
           echo ""
-          echo "4. Убедитесь, что commit 'site: sync release ${TAG}' задеплоил сайт"
-          echo "   (GitHub Pages). Кнопка Firefox на сайте должна вести на подписанный"
-          echo "   tabula-firefox-v${VERSION}.xpi."
+          echo "4. Убедитесь, что сайт показывает 'Firefox: подписан' и кнопка Firefox"
+          echo "   ведёт на подписанный tabula-firefox-v${VERSION}.xpi."

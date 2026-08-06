@@ -349,16 +349,19 @@ function findAsset(assets, pattern) {
 // затем неподписанные (-unsign). Важно: обычный .xpi/.zip паттерн
 // НЕ должен захватывать файлы с суффиксом -unsign.
 function findDownloadAsset(assets, browser) {
-  var extRe = browser === "firefox" ? /\.xpi$/i : /\.zip$/i;
-  var isUnsigned = function (name) { return /-unsign\.(xpi|zip)$/i.test(name); };
+  var isFirefox = browser === "firefox";
+  // Regex обязан учитывать расширение браузера: .xpi для Firefox, .zip для Chrome.
+  // Иначе "-unsign" матчер может найти чужой файл (например chrome .zip для Firefox).
+  var extRe = isFirefox ? /\.xpi$/i : /\.zip$/i;
+  var unsignedRe = isFirefox ? /-unsign\.xpi$/i : /-unsign\.zip$/i;
 
   var signed = findAsset(assets, function (name) {
-    return extRe.test(name) && !isUnsigned(name);
+    return extRe.test(name) && !unsignedRe.test(name);
   });
   if (signed) {
     return { asset: signed, signed: true };
   }
-  var unsigned = findAsset(assets, isUnsigned);
+  var unsigned = findAsset(assets, unsignedRe);
   if (unsigned) {
     return { asset: unsigned, signed: false };
   }
