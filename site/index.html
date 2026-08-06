@@ -214,15 +214,29 @@
               <li data-i18n="installChromeLoad">Нажмите «Загрузить распакованное расширение» и выберите папку.</li>
             </ol>
           </div>
-          <div class="card install-card">
-            <h3>Firefox 140+</h3>
-            <ol>
-              <li data-i18n-html="installFirefoxGet">Скачайте архив <b>Firefox</b> с кнопки выше.</li>
-              <li data-i18n="installUnpack">Распакуйте его в любую папку.</li>
-              <li>Откройте <code>about:debugging#/runtime/this-firefox</code>.</li>
-              <li data-i18n-html="installFirefoxLoad">Нажмите «Загрузить временное дополнение…» и выберите файл <code>manifest.json</code> из папки.</li>
-            </ol>
-          </div>
+<div class="card install-card">
+<h3>Firefox 140+</h3>
+<p class="install-variant-hint" data-i18n="installFfDynamicHint">Инструкция ниже подстраивается под файл, на который ведёт кнопка скачивания.</p>
+<div class="install-variant" data-install-variant="signed">
+<p class="install-variant-title" data-i18n="installFfSignedTitle">Подписанная версия (.xpi)</p>
+<ol>
+<li data-i18n-html="installFfSigned1">Скачайте файл <code>.xpi</code> с кнопки выше.</li>
+<li data-i18n-html="installFfSigned2">Откройте скачанный файл — Firefox предложит добавить дополнение.</li>
+<li data-i18n-html="installFfSigned3">Нажмите «Добавить» и подтвердите установку.</li>
+</ol>
+<p class="install-variant-note" data-i18n="installFfSignedNote">Подписанная версия обновляется автоматически.</p>
+</div>
+<div class="install-variant" data-install-variant="unsigned">
+<p class="install-variant-title" data-i18n="installFfUnsignedTitle">Неподписанная версия (-unsign.xpi)</p>
+<ol>
+<li data-i18n-html="installFfUnsigned1">Скачайте файл <code>.xpi</code> с кнопки выше.</li>
+<li data-i18n-html="installFfUnsigned2">Откройте <code>about:debugging#/runtime/this-firefox</code>.</li>
+<li data-i18n-html="installFfUnsigned3">Нажмите «Загрузить временное дополнение…» и выберите скачанный <code>.xpi</code>.</li>
+<li data-i18n-html="installFfUnsigned4">Дополнение действует только в текущем сеансе — после перезапуска Firefox загрузите его снова.</li>
+</ol>
+<p class="install-variant-note" data-i18n="installFfUnsignedNote">Неподписанная версия не обновляется автоматически.</p>
+</div>
+</div>
         </div>
         <p class="hint" data-i18n="installHint">
           Если другое расширение уже переопределяет новую вкладку, отключите его —

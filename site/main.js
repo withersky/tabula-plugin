@@ -69,8 +69,18 @@ var I18N = {
     installUnpack: "Распакуйте его в любую папку.",
     installChromeExt: "Откройте <code>chrome://extensions</code> и включите «Режим разработчика».",
     installChromeLoad: "Нажмите «Загрузить распакованное расширение» и выберите папку.",
-    installFirefoxGet: "Скачайте архив <b>Firefox</b> с кнопки выше.",
-    installFirefoxLoad: "Нажмите «Загрузить временное дополнение…» и выберите файл <code>manifest.json</code> из папки.",
+    installFfDynamicHint: "Инструкция ниже подстраивается под файл, на который ведёт кнопка скачивания.",
+    installFfSignedTitle: "Подписанная версия (.xpi)",
+    installFfSigned1: "Скачайте файл <code>.xpi</code> с кнопки выше.",
+    installFfSigned2: "Откройте скачанный файл — Firefox предложит добавить дополнение.",
+    installFfSigned3: "Нажмите «Добавить» и подтвердите установку.",
+    installFfSignedNote: "Подписанная версия обновляется автоматически.",
+    installFfUnsignedTitle: "Неподписанная версия (-unsign.xpi)",
+    installFfUnsigned1: "Скачайте файл <code>.xpi</code> с кнопки выше.",
+    installFfUnsigned2: "Откройте <code>about:debugging#/runtime/this-firefox</code>.",
+    installFfUnsigned3: "Нажмите «Загрузить временное дополнение…» и выберите скачанный <code>.xpi</code>.",
+    installFfUnsigned4: "Дополнение действует только в текущем сеансе — после перезапуска Firefox загрузите его снова.",
+    installFfUnsignedNote: "Неподписанная версия не обновляется автоматически.",
     installHint: "Если другое расширение уже переопределяет новую вкладку, отключите его — браузер использует только одно такое расширение одновременно.",
     footerBy: "автор",
     footerSource: "Исходный код на GitHub",
@@ -125,8 +135,18 @@ var I18N = {
     installUnpack: "Unpack it into any folder.",
     installChromeExt: "Open <code>chrome://extensions</code> and enable “Developer mode”.",
     installChromeLoad: "Click “Load unpacked” and select the folder.",
-    installFirefoxGet: "Download the <b>Firefox</b> archive from the button above.",
-    installFirefoxLoad: "Click “Load Temporary Add-on…” and select the <code>manifest.json</code> file from the folder.",
+    installFfDynamicHint: "The instructions below adjust to the file the download button points to.",
+    installFfSignedTitle: "Signed version (.xpi)",
+    installFfSigned1: "Download the <code>.xpi</code> file from the button above.",
+    installFfSigned2: "Open the downloaded file — Firefox will offer to add the extension.",
+    installFfSigned3: "Click “Add” and confirm the installation.",
+    installFfSignedNote: "The signed version updates automatically.",
+    installFfUnsignedTitle: "Unsigned version (-unsign.xpi)",
+    installFfUnsigned1: "Download the <code>.xpi</code> file from the button above.",
+    installFfUnsigned2: "Open <code>about:debugging#/runtime/this-firefox</code>.",
+    installFfUnsigned3: "Click “Load Temporary Add-on…” and select the downloaded <code>.xpi</code>.",
+    installFfUnsigned4: "The extension only works for the current session — reload it after restarting Firefox.",
+    installFfUnsignedNote: "The unsigned version does not update automatically.",
     installHint: "If another extension already overrides the new tab page, disable it — the browser only uses one such extension at a time.",
     footerBy: "by",
     footerSource: "Source code on GitHub",
@@ -347,6 +367,22 @@ function findDownloadAsset(assets, browser) {
   return null;
 }
 
+/* Показываем блок инструкции в зависимости от файла Firefox:
+   *-unsign.xpi -> временная загрузка (unsigned), иначе обычная установка (signed).
+   Пока файл неизвестен, показываем оба варианта. */
+function applyFirefoxVariant(name) {
+  var variants = document.querySelectorAll("[data-install-variant]");
+  if (!variants.length) return;
+  var unsigned = /-unsign\.xpi$/i.test(name);
+  var signed = /\.xpi$/i.test(name) && !unsigned;
+  for (var i = 0; i < variants.length; i++) {
+    var kind = variants[i].getAttribute("data-install-variant");
+    variants[i].style.display = (signed && kind === "signed") ||
+      (unsigned && kind === "unsigned") ||
+      (!signed && !unsigned) ? "" : "none";
+  }
+}
+
 function applyLinks(tag, chromeName, firefoxName, signed) {
   if (chromeName) {
     chromeBtn.href = "https://github.com/" + REPO + "/releases/download/" +
@@ -356,6 +392,7 @@ function applyLinks(tag, chromeName, firefoxName, signed) {
     firefoxBtn.href = "https://github.com/" + REPO + "/releases/download/" +
       tag + "/" + firefoxName;
   }
+  applyFirefoxVariant(firefoxName || "");
   loaded = true;
   versionState = {
     tag: tag || null,
@@ -390,6 +427,7 @@ function loadFromApi() {
 
       if (chromeDL) chromeBtn.href = chromeDL.asset.browser_download_url;
       if (firefoxDL) firefoxBtn.href = firefoxDL.asset.browser_download_url;
+      applyFirefoxVariant(firefoxDL ? firefoxDL.asset.name : "");
 
       loaded = true;
       versionState = {
