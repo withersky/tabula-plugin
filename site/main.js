@@ -325,11 +325,11 @@ function findAsset(assets, pattern) {
   return null;
 }
 
-// Приоритет: сначала подписанные архивы (-sign), затем неподписанные (-unsign).
+// Приоритет: сначала подписанные архивы (), затем неподписанные (-unsign).
 function findDownloadAsset(assets, browser) {
   var signed = findAsset(assets, browser === "firefox"
-    ? /^tabula-firefox-v.+-sign\.xpi$/i
-    : /^tabula-chrome-v.+-sign\.zip$/i);
+    ? /^tabula-firefox-v.+\.xpi$/i
+    : /^tabula-chrome-v.+\.zip$/i);
   if (signed) {
     return { asset: signed, signed: true };
   }
