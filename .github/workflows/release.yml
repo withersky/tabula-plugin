@@ -148,16 +148,37 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Если тег уже есть (например, повторный push), обновляем его на HEAD.
-          if git rev-parse "$TAG" >/dev/null 2>&1; then
-            echo "Tag $TAG already exists — moving to current HEAD."
-            git tag -d "$TAG" >/dev/null 2>&1 || true
-            git push origin ":refs/tags/$TAG" >/dev/null 2>&1 || true
-          fi
-
-          git tag "$TAG" HEAD
-          git push origin "refs/tags/$TAG"
+          # Тег пересоздаётся при каждом запуске (в том числе Re-run).
+          # Force-пуш идемпотентен: если тег уже существует — он просто
+          # обновится на HEAD, без удаления (так нет гонки с релизом).
+          git tag -f "$TAG" HEAD
+          git push --force origin "refs/tags/$TAG"
           echo "Pushed tag $TAG at $(git rev-parse --short HEAD)."
+
+      # При Re-run релиз уже существует, а softprops/action-gh-release по
+      # умолчанию не обновляет существующие релизы — поэтому нужны
+      # allowUpdates: true и предварительная очистка старых -unsign ассетов
+      # (иначе загрузка файла с тем же именем упадёт на "asset already exists").
+      - name: Clean existing unsign assets
+        if: steps.meta.outputs.skip != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.meta.outputs.version }}"
+          TAG="v${VERSION}"
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release view "$TAG" --json assets -q '.assets[].name' | while read -r NAME; do
+              case "$NAME" in
+                *-unsign.zip|*-unsign.xpi)
+                  echo "Deleting existing asset: $NAME"
+                  gh release delete-asset "$TAG" "$NAME" --yes
+                  ;;
+              esac
+            done
+          else
+            echo "Release $TAG does not exist yet — nothing to clean."
+          fi
 
       - name: Publish GitHub Release
         if: steps.meta.outputs.skip != 'true'
@@ -167,6 +188,7 @@ jobs:
           tag_name: v${{ steps.meta.outputs.version }}
           body_path: release_notes.md
           generate_release_notes: false
+          allowUpdates: true
           fail_on_unmatched_files: true
           files: |
             tabula-chrome-v${{ steps.meta.outputs.version }}-unsign.zip
