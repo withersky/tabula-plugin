@@ -20,7 +20,7 @@
 (() => {
   "use strict";
 
-  const RANGE_KEYS = ["defaultColumns", "gridOpacity", "fontSize", "clockSize", "weatherSize", "weatherRefreshMin", "quickGoSuggestOpacity", "weatherForecastDays", "weatherPopupOpacity", "cellSelectedColor", "gridRows"];
+  const RANGE_KEYS = ["defaultColumns", "uiOpacity", "fontSize", "clockSize", "weatherSize", "weatherRefreshMin", "weatherForecastDays", "cellSelectedColor", "gridRows"];
   const TEXT_KEYS = ["fontFamily",
                      "backgroundColor", "backgroundGradient", "backgroundImage"];
   const NUMBER_KEYS = ["weatherLat", "weatherLon"];
@@ -75,11 +75,18 @@
   const fontFamilyCustomWrap = $("#fontFamilyCustomWrap");
   const aboutVersionEl  = $("#aboutVersion");
   const aboutRepoLink   = $("#aboutRepoLink");
+  const searchWrap      = $("#searchWrap");
+  const searchInput     = $("#settingsSearch");
+  const searchResults   = $("#searchResults");
 
   let state = null;
   let lang  = "ru";
   let saveTimer;
   let dirtyFlashTimer;
+  let searchIndex = [];
+  let searchTimer;
+  let searchActiveIdx = -1;
+  const TAB_IDS = ["appearance", "grid", "typography", "widgets", "language", "data", "about"];
 
   function tx(key) { return t(key, lang); }
 
@@ -93,6 +100,7 @@
     document.title = tx("settingsTitle");
     populateFontSelect(fontFamilySelect);
     updateFontSelectCustomVisibility(fontFamilySelect, fontFamilyCustomWrap);
+    buildSearchIndex();
   }
 
   // ---------- font selects ----------
@@ -131,7 +139,8 @@
     fillForm();
     wireEvents();
     wirePresets();
-    wireSidebar();
+    wireTabs();
+    wireSearch();
     updateBgTypeVisibility();
     updateUploadPreview();
     updateBingCopyright();
@@ -175,7 +184,6 @@
     }
     refreshRangeOutputs();
     syncWidgetCollapsed();
-    updateSuggestOpacityVisibility();
   }
 
   // ---------- widget collapsed state ----------
@@ -193,14 +201,6 @@
       const on = !!(input && input.checked);
       block.classList.toggle("is-collapsed", !on);
     }
-  }
-
-  // Показывать ползунок прозрачности подложки подсказок только при включённых подсказках.
-  function updateSuggestOpacityVisibility() {
-    const wrap = $("#quickGoSuggestOpacityWrap");
-    if (!wrap) return;
-    const cb = $('input[name="quickGoSuggest"]');
-    wrap.hidden = !(cb && cb.checked);
   }
 
   function collectSettings() {
@@ -390,31 +390,163 @@
     });
   }
 
-  // ---------- sidebar nav ----------
-  function wireSidebar() {
-    const items = $$(".nav-item");
-    const panels = items.map(a => document.querySelector(a.getAttribute("href")));
-    function update() {
-      const scrollY = window.scrollY + 120;
-      let activeIdx = 0;
-      panels.forEach((p, i) => {
-        if (p && p.offsetTop <= scrollY) activeIdx = i;
-      });
-      items.forEach((a, i) => a.classList.toggle("active", i === activeIdx));
-    }
-    window.addEventListener("scroll", update, { passive: true });
-    items.forEach(a => {
-      a.addEventListener("click", () => {
-        const target = document.querySelector(a.getAttribute("href"));
-        if (target) {
-          setTimeout(() => {
-            const top = target.getBoundingClientRect().top + window.scrollY - 80;
-            window.scrollTo({ top, behavior: "smooth" });
-          }, 0);
-        }
-      });
+  // ---------- tabs ----------
+  function switchTab(tabId, opts) {
+    const scroll = !opts || opts.scroll !== false;
+    const id = TAB_IDS.indexOf(tabId) >= 0 ? tabId : "appearance";
+    $$(".tab").forEach(btn => btn.classList.toggle("active", btn.dataset.tab === id));
+    $$(".tab-panel").forEach(p => { p.hidden = p.dataset.tab !== id; });
+    try { history.replaceState(null, "", "#tab=" + id); } catch (_) {}
+    if (scroll) window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function wireTabs() {
+    $$(".tab").forEach(btn => {
+      btn.addEventListener("click", () => switchTab(btn.dataset.tab));
     });
-    update();
+    const m = (location.hash || "").match(/^#tab=([\w-]+)/);
+    const initial = m && TAB_IDS.indexOf(m[1]) >= 0 ? m[1] : "appearance";
+    $$(".tab").forEach(btn => btn.classList.toggle("active", btn.dataset.tab === initial));
+    $$(".tab-panel").forEach(p => { p.hidden = p.dataset.tab !== initial; });
+  }
+
+  // ---------- settings search ----------
+  function tabName(tabId) {
+    const key = "nav" + tabId.charAt(0).toUpperCase() + tabId.slice(1);
+    const label = tx(key);
+    return label || tabId;
+  }
+
+  function normSearch(s) {
+    return String(s || "").toLowerCase().replace(/\s+/g, " ").trim();
+  }
+
+  function buildSearchIndex() {
+    searchIndex = [];
+    $$(".tab-panel").forEach(panel => {
+      const tabId = panel.dataset.tab;
+      const tabLabel = tabName(tabId);
+      const push = (el) => {
+        const label = el.textContent.replace(/\s+/g, " ").trim();
+        if (label) searchIndex.push({ tabId: tabId, tabLabel: tabLabel, label: label, title: normSearch(label), el: el });
+      };
+      // Блоки виджетов — единым элементом поиска
+      $$(".widget-block", panel).forEach(push);
+      // Обычные контролы (label) вне блоков виджетов
+      $$("label", panel).forEach(l => {
+        if (l.closest(".widget-block")) return;
+        push(l);
+      });
+      // Кнопки действий с данными
+      $$(".data-actions .btn", panel).forEach(push);
+    });
+  }
+
+  function hideSearchResults() {
+    if (!searchResults) return;
+    searchResults.hidden = true;
+    searchResults.innerHTML = "";
+    searchActiveIdx = -1;
+  }
+
+  function renderSearchResults(query) {
+    if (!searchResults) return;
+    const q = normSearch(query);
+    if (q.length < 2) { hideSearchResults(); return; }
+    const words = q.split(" ");
+    const scored = [];
+    for (const item of searchIndex) {
+      let score = 0;
+      if (item.title === q) score = 100;
+      else if (item.title.startsWith(q)) score = 80;
+      else if (item.title.includes(q)) score = 60;
+      else if (words.every(w => item.title.includes(w))) score = 40;
+      if (!score) continue;
+      scored.push({ item: item, score: score });
+    }
+    scored.sort((a, b) => b.score - a.score);
+    const top = scored.slice(0, 8).map(x => x.item);
+
+    searchResults.innerHTML = "";
+    if (top.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "search-empty";
+      empty.textContent = tx("searchEmpty");
+      searchResults.appendChild(empty);
+      searchResults.hidden = false;
+      return;
+    }
+    top.forEach((m, i) => {
+      const div = document.createElement("div");
+      div.className = "search-result";
+      div.role = "option";
+      div.tabIndex = 0;
+      div.dataset.idx = String(searchIndex.indexOf(m));
+      const title = document.createElement("span");
+      title.className = "search-result-title";
+      title.textContent = m.label.length > 70 ? m.label.slice(0, 70) + "…" : m.label;
+      const tab = document.createElement("span");
+      tab.className = "search-result-tab";
+      tab.textContent = m.tabLabel;
+      div.appendChild(title);
+      div.appendChild(tab);
+      searchResults.appendChild(div);
+    });
+    searchResults.hidden = false;
+  }
+
+  function activateSearchResult(m) {
+    if (!m) return;
+    hideSearchResults();
+    if (searchInput) searchInput.value = "";
+    switchTab(m.tabId, { scroll: false });
+    requestAnimationFrame(() => {
+      try { m.el.scrollIntoView({ behavior: "smooth", block: "center" }); } catch (_) { m.el.scrollIntoView(); }
+    });
+    m.el.classList.remove("search-hit");
+    void m.el.offsetWidth;
+    m.el.classList.add("search-hit");
+    const ctrl = m.el.querySelector("input, select, button");
+    if (ctrl && typeof ctrl.focus === "function") {
+      try { ctrl.focus({ preventScroll: true }); } catch (_) { ctrl.focus(); }
+    }
+  }
+
+  function wireSearch() {
+    if (!searchInput || !searchResults) return;
+    let t;
+    searchInput.addEventListener("input", () => {
+      clearTimeout(t);
+      t = setTimeout(() => { renderSearchResults(searchInput.value); }, 120);
+    });
+    searchInput.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        const items = $$(".search-result", searchResults);
+        if (items.length === 0) return;
+        e.preventDefault();
+        const delta = e.key === "ArrowDown" ? 1 : -1;
+        searchActiveIdx = (searchActiveIdx + delta + items.length) % items.length;
+        items.forEach((it, i) => it.classList.toggle("active", i === searchActiveIdx));
+        try { items[searchActiveIdx].scrollIntoView({ block: "nearest" }); } catch (_) {}
+      } else if (e.key === "Enter") {
+        const items = $$(".search-result", searchResults);
+        const active = searchActiveIdx >= 0 && searchActiveIdx < items.length
+          ? items[searchActiveIdx] : items[0];
+        if (active) { e.preventDefault(); active.click(); }
+      } else if (e.key === "Escape") {
+        hideSearchResults();
+        searchInput.value = "";
+      }
+    });
+    searchResults.addEventListener("click", (e) => {
+      const item = e.target.closest(".search-result");
+      if (!item) return;
+      const m = searchIndex[Number(item.dataset.idx)];
+      if (m) activateSearchResult(m);
+    });
+    document.addEventListener("mousedown", (e) => {
+      if (searchWrap && !searchWrap.contains(e.target)) hideSearchResults();
+    });
   }
 
   // ---------- dropzone ----------
@@ -493,7 +625,7 @@
 
     let t;
     const allControls = $$("input, select").filter(el =>
-      el !== uploadInput && el !== importFile);
+      el !== uploadInput && el !== importFile && el !== searchInput);
     allControls.forEach((el) => {
       const handler = () => {
         clearTimeout(t);
@@ -521,9 +653,6 @@
       if (!el) return;
       el.addEventListener("change", syncWidgetCollapsed);
     });
-
-    const suggestOpacityCb = document.querySelector('input[name="quickGoSuggest"]');
-    if (suggestOpacityCb) suggestOpacityCb.addEventListener("change", updateSuggestOpacityVisibility);
 
     if (weatherGeoBtn) {
       weatherGeoBtn.addEventListener("click", () => openGeoModal());

@@ -652,16 +652,14 @@ weatherPopupDaysEl.appendChild(row);
     root.setProperty("--text-color",  s.textColor);
     root.setProperty("--clock-size",  (s.clockSize || 28) + "px");
  root.setProperty("--weather-size", (s.weatherSize || 13) + "px");
- const op = Number(s.quickGoSuggestOpacity);
- const opA = (isFinite(op)? Math.max(0, Math.min(100, op)): 90) / 100;
- root.setProperty("--suggest-bg-opacity", String(opA));
- const wop = Number(s.weatherPopupOpacity);
- const wopA = (isFinite(wop)? Math.max(0, Math.min(100, wop)): 94) / 100;
- root.setProperty("--weather-popup-bg-opacity", String(wopA));
- // Прозрачность подложки ячеек: 0 = полностью прозрачно (по умолчанию), 100 = непрозрачная панель.
- const gop = Number(s.gridOpacity);
- const gopA = (isFinite(gop)? Math.max(0, Math.min(100, gop)): 0) / 100;
- root.setProperty("--grid-bg-opacity", String(gopA));
+ // Единая прозрачность панелей (выпадайки, модалки, контекстное меню),
+ // виджетов и ячеек: 0 = полностью прозрачно, 100 = непрозрачная поверхность.
+ // Значение задаётся одним ползунком "Прозрачность панелей и ячеек".
+ const uop = Number(s.uiOpacity);
+ const uopA = (isFinite(uop)? Math.max(0, Math.min(100, uop)): 90) / 100;
+ root.setProperty("--ui-bg-opacity", String(uopA));
+ // Блюр ячеек включаем только при непрозрачной подложке, чтобы не жечь GPU впустую.
+ document.body.classList.toggle("ui-frost", uopA > 0);
  // Цвет выделения ячейки (используется в .cell.selected / .cell.drop-target).
  root.setProperty("--cell-selected-color", s.cellSelectedColor || "#788cff");
    applyBackground();

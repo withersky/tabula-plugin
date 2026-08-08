@@ -27,119 +27,63 @@
 </head>
 <body>
   <header class="topbar">
-<div class="brand">
-<img class="brand-mark" src="icons/icon128.png" alt="Tabula" width="28" height="28" />
-<h1 data-i18n="settingsTitle">Tabula — Настройки</h1>
-</div>
+    <div class="brand">
+      <img class="brand-mark" src="icons/icon128.png" alt="Tabula" width="28" height="28" />
+      <h1 data-i18n="settingsTitle">Tabula — Настройки</h1>
+    </div>
     <div class="topbar-actions">
+      <div class="search-wrap" id="searchWrap">
+        <input type="search" id="settingsSearch" class="search-input"
+               data-i18n-placeholder="searchSettingsPlaceholder"
+               placeholder="Поиск по настройкам…" autocomplete="off" spellcheck="false" />
+        <div id="searchResults" class="search-results" role="listbox" hidden></div>
+      </div>
       <span id="autoSaveHint" class="autosave-pill" data-i18n="savedAuto">Автосохранение</span>
       <a class="btn ghost" href="newtab.html" target="_blank" data-i18n="backToGrid">Открыть новую вкладку</a>
     </div>
   </header>
 
+  <nav class="tabs-bar" id="tabsBar" aria-label="Settings">
+    <button type="button" class="tab" data-tab="appearance" data-i18n="navAppearance">Оформление</button>
+    <button type="button" class="tab" data-tab="grid"        data-i18n="navGrid">Сетка</button>
+    <button type="button" class="tab" data-tab="typography"  data-i18n="navTypography">Текст</button>
+    <button type="button" class="tab" data-tab="widgets"     data-i18n="navWidgets">Виджеты</button>
+    <button type="button" class="tab" data-tab="language"    data-i18n="navLanguage">Язык</button>
+    <button type="button" class="tab" data-tab="data"        data-i18n="navData">Данные</button>
+    <button type="button" class="tab" data-tab="about"       data-i18n="navAbout">О расширении</button>
+  </nav>
+
   <div class="layout">
-    <aside class="sidebar">
-      <nav id="sideNav">
-        <a href="#grid"        class="nav-item" data-i18n="navGrid">Сетка</a>
-        <a href="#typography"  class="nav-item" data-i18n="navTypography">Текст</a>
-        <a href="#background"  class="nav-item" data-i18n="navBackground">Фон</a>
-        <a href="#behaviour"   class="nav-item" data-i18n="navBehaviour">Поведение</a>
-        <a href="#widgets"     class="nav-item" data-i18n="navWidgets">Виджеты</a>
-        <a href="#language"    class="nav-item" data-i18n="navLanguage">Язык</a>
-        <a href="#data"        class="nav-item" data-i18n="navData">Данные</a>
-        <a href="#about"       class="nav-item" data-i18n="navAbout">О расширении</a>
-      </nav>
-    </aside>
-
     <main>
-      <section id="grid" class="panel">
-        <h2 data-i18n="sectionGrid">Сетка</h2>
-        <p class="hint" data-i18n="hintDefaultColumns">используется при создании новых листов</p>
+      <!-- ======================= Оформление ======================= -->
+      <section id="tab-appearance" class="panel tab-panel" data-tab="appearance">
+        <h2 data-i18n="sectionAppearance">Оформление</h2>
 
-        <div class="grid-2">
-          <label>
-            <span class="row">
-              <span data-i18n="labelDefaultColumns">Колонок по умолчанию</span>
-              <output data-out="defaultColumns"></output>
-            </span>
-            <input type="range" name="defaultColumns" min="3" max="12" step="1" />
-          </label>
-          <label>
-            <span class="row">
-              <span data-i18n="labelGridRows">Строк по умолчанию</span>
-              <output data-out="gridRows"></output>
-            </span>
-            <input type="range" name="gridRows" min="2" max="30" step="1" />
-          </label>
-        </div>
-        <div class="checks" style="margin-top:12px">
-          <label class="check"><input type="checkbox" name="showGrid" /> <span data-i18n="optShowGrid">Показывать линии сетки</span></label>
-        </div>
-        <div class="grid-2" style="margin-top:12px">
-          <label>
-            <span class="row">
-              <span data-i18n="labelGridOpacity">Прозрачность ячеек</span>
-              <output data-out="gridOpacity"></output>
-            </span>
-            <input type="range" name="gridOpacity" min="0" max="100" step="5" />
-          </label>
-          <label>
-            <span class="row">
-              <span data-i18n="labelCellSelectedColor">Цвет выделения</span>
-              <output data-out="cellSelectedColor"></output>
-            </span>
-            <input type="color" name="cellSelectedColor" />
-          </label>
-        </div>
-      </section>
-
-      <section id="typography" class="panel">
-        <h2 data-i18n="sectionTypography">Текст</h2>
-
+        <span class="group-title" data-i18n="groupPanelsCells">Панели и ячейки</span>
         <div class="grid-2">
           <label class="full">
             <span class="row">
-              <span data-i18n="labelFontFamily">Шрифт</span>
-              <span class="hint" data-i18n="labelFontFamilyHint">Шрифт системный</span>
+              <span data-i18n="labelUiOpacity">Прозрачность панелей и ячеек</span>
+              <span class="hint" data-i18n="labelUiOpacityHint">Выпадайки, виджеты и ячейки — одним ползунком</span>
+              <output data-out="uiOpacity"></output>
             </span>
-            <select name="fontFamilyKey" id="fontFamilyKeySelect">
-              <!-- options injected from FONT_FAMILIES in options.js -->
-            </select>
-          </label>
-          <label class="full" id="fontFamilyCustomWrap" hidden>
-            <span class="row">
-              <span data-i18n="labelFontFamily">Шрифт</span>
-              <span class="hint" data-i18n="labelFontFamilyHint">Название шрифта или CSS-список</span>
-            </span>
-            <input type="text" name="fontFamily" placeholder='system-ui, sans-serif' />
+            <input type="range" name="uiOpacity" min="0" max="100" step="5" />
           </label>
           <label>
-            <span class="row">
-              <span data-i18n="labelFontSize">Размер шрифта</span>
-              <span class="hint" data-i18n="unitPx">пикс.</span>
-              <output data-out="fontSize"></output>
-            </span>
-            <input type="range" name="fontSize" min="10" max="20" step="1" />
+            <span class="row"><span data-i18n="labelCellSelectedColor">Цвет выделения</span></span>
+            <input type="color" name="cellSelectedColor" />
           </label>
           <label>
             <span class="row"><span data-i18n="labelTextColor">Цвет текста</span></span>
             <input type="color" name="textColor" />
           </label>
-          <label class="full page-title-field">
-            <span class="row">
-              <span data-i18n="labelPageTitle">Заголовок вкладки</span>
-              <span class="hint" data-i18n="pageTitleHint">Используется как заголовок окна и вкладки</span>
-            </span>
-            <input type="text" name="pageTitle" placeholder="Новая вкладка" />
-          </label>
+        </div>
+        <div class="checks">
+          <label class="check"><input type="checkbox" name="showGrid"     /> <span data-i18n="optShowGrid">Показывать линии сетки</span></label>
+          <label class="check"><input type="checkbox" name="showFavicon"  /> <span data-i18n="optShowFavicon">Показывать иконки сайтов</span></label>
         </div>
 
-        <div class="preview-box font-preview" id="fontPreview">Aa</div>
-      </section>
-
-      <section id="background" class="panel">
-        <h2 data-i18n="sectionBackground">Фон</h2>
-
+        <span class="group-title" data-i18n="groupBackground">Фон</span>
         <label class="full">
           <span class="row"><span data-i18n="labelBgType">Тип фона</span></span>
           <select name="backgroundType" id="bgTypeSelect">
@@ -216,18 +160,83 @@
         <div class="preview-box bg-preview" id="bgPreview"></div>
       </section>
 
-      <section id="behaviour" class="panel">
-        <h2 data-i18n="sectionBehaviour">Поведение</h2>
+      <!-- ======================= Сетка ======================= -->
+      <section id="tab-grid" class="panel tab-panel" data-tab="grid">
+        <h2 data-i18n="sectionGrid">Сетка</h2>
+
+        <span class="group-title" data-i18n="groupGrid">Сетка</span>
+        <p class="hint" data-i18n="hintDefaultColumns">используется при создании новых листов</p>
+        <div class="grid-2">
+          <label>
+            <span class="row">
+              <span data-i18n="labelDefaultColumns">Колонок по умолчанию</span>
+              <output data-out="defaultColumns"></output>
+            </span>
+            <input type="range" name="defaultColumns" min="3" max="12" step="1" />
+          </label>
+          <label>
+            <span class="row">
+              <span data-i18n="labelGridRows">Строк по умолчанию</span>
+              <output data-out="gridRows"></output>
+            </span>
+            <input type="range" name="gridRows" min="2" max="30" step="1" />
+          </label>
+        </div>
         <div class="checks">
-          <label class="check"><input type="checkbox" name="showFavicon"    /> <span data-i18n="optShowFavicon">Показывать иконки сайтов</span></label>
-          <label class="check"><input type="checkbox" name="openInNewTab"   /> <span data-i18n="optOpenInNewTab">Открывать закладки в новой вкладке</span></label>
           <label class="check"><input type="checkbox" name="showRowNumbers" /> <span data-i18n="optShowRowNumbers">Показывать номера строк</span></label>
           <label class="check"><input type="checkbox" name="showColLetters" /> <span data-i18n="optShowColLetters">Показывать буквы колонок</span></label>
           <label class="check"><input type="checkbox" name="showSheetTabs"  /> <span data-i18n="optShowSheetTabs">Показывать вкладки листов</span></label>
         </div>
+
+        <span class="group-title" data-i18n="groupBehaviour">Поведение</span>
+        <div class="checks">
+          <label class="check"><input type="checkbox" name="openInNewTab"   /> <span data-i18n="optOpenInNewTab">Открывать закладки в новой вкладке</span></label>
+        </div>
       </section>
 
-      <section id="widgets" class="panel">
+      <!-- ======================= Текст ======================= -->
+      <section id="tab-typography" class="panel tab-panel" data-tab="typography">
+        <h2 data-i18n="sectionTypography">Текст</h2>
+
+        <div class="grid-2">
+          <label class="full">
+            <span class="row">
+              <span data-i18n="labelFontFamily">Шрифт</span>
+              <span class="hint" data-i18n="labelFontFamilyHint">Шрифт системный</span>
+            </span>
+            <select name="fontFamilyKey" id="fontFamilyKeySelect">
+              <!-- options injected from FONT_FAMILIES in options.js -->
+            </select>
+          </label>
+          <label class="full" id="fontFamilyCustomWrap" hidden>
+            <span class="row">
+              <span data-i18n="labelFontFamily">Шрифт</span>
+              <span class="hint" data-i18n="labelFontFamilyHint">Название шрифта или CSS-список</span>
+            </span>
+            <input type="text" name="fontFamily" placeholder='system-ui, sans-serif' />
+          </label>
+          <label>
+            <span class="row">
+              <span data-i18n="labelFontSize">Размер шрифта</span>
+              <span class="hint" data-i18n="unitPx">пикс.</span>
+              <output data-out="fontSize"></output>
+            </span>
+            <input type="range" name="fontSize" min="10" max="20" step="1" />
+          </label>
+          <label class="full page-title-field">
+            <span class="row">
+              <span data-i18n="labelPageTitle">Заголовок вкладки</span>
+              <span class="hint" data-i18n="pageTitleHint">Используется как заголовок окна и вкладки</span>
+            </span>
+            <input type="text" name="pageTitle" placeholder="Новая вкладка" />
+          </label>
+        </div>
+
+        <div class="preview-box font-preview" id="fontPreview">Aa</div>
+      </section>
+
+      <!-- ======================= Виджеты ======================= -->
+      <section id="tab-widgets" class="panel tab-panel" data-tab="widgets">
         <h2 data-i18n="sectionWidgets">Виджеты</h2>
 
         <div class="widget-block" id="widget-clock">
@@ -292,15 +301,6 @@
               <input type="checkbox" name="quickGoSuggest" />
               <span data-i18n="optQuickGoSuggest">Подсказки поиска</span>
             </label>
-            <div class="grid-2">
-              <label id="quickGoSuggestOpacityWrap" class="full" hidden>
-                <span class="row">
-                  <span data-i18n="optQuickGoSuggestOpacity">Прозрачность подложки</span>
-                  <output data-out="quickGoSuggestOpacity"></output>
-                </span>
-                <input type="range" name="quickGoSuggestOpacity" min="0" max="100" step="5" />
-              </label>
-            </div>
           </div>
         </div>
 
@@ -342,50 +342,44 @@
                   <span class="hint" data-i18n="unitPx">пикс.</span>
                   <output data-out="weatherSize"></output>
                 </span>
-<input type="range" name="weatherSize" min="11" max="22" step="1" />
-</label>
-<label class="full">
-<span class="row">
-<span data-i18n="optWeatherForecastDays">Дней в прогнозе</span>
-<span class="hint" data-i18n="unitDay">дн.</span>
-<output data-out="weatherForecastDays"></output>
-</span>
-<input type="range" name="weatherForecastDays" min="2" max="14" step="1" />
-</label>
-<label class="full">
-<span class="row">
-<span data-i18n="optWeatherPopupOpacity">Прозрачность подложки прогноза</span>
-<output data-out="weatherPopupOpacity"></output>
-</span>
-<input type="range" name="weatherPopupOpacity" min="0" max="100" step="5" />
-</label>
-<label>
-<span class="row">
-<span data-i18n="optWeatherRefreshMin">Интервал обновления погоды</span>
-<span class="hint" data-i18n="unitMin">мин.</span>
-<output data-out="weatherRefreshMin"></output>
-</span>
-<input type="range" name="weatherRefreshMin" min="5" max="180" step="5" />
-</label>
-<label>
-<span class="row">
-<span data-i18n="optWeatherDateFmt">Формат даты в прогнозе</span>
-</span>
-<select name="weatherDateFmt">
-<option value="dd.mm" data-i18n="weatherDateFmtDdMm">дд.мм (15.08)</option>
-<option value="dd.mm.yy" data-i18n="weatherDateFmtDdMmYy">дд.мм.гг (15.08.26)</option>
-<option value="dd.mm.yyyy" data-i18n="weatherDateFmtDdMmYyyy">дд.мм.гггг (15.08.2026)</option>
-<option value="dd.mon" data-i18n="weatherDateFmtDdMon">дд месяц кр. (15 авг)</option>
-<option value="dd.month" data-i18n="weatherDateFmtDdMonth">дд месяц полн. (15 августа)</option>
-<option value="off" data-i18n="weatherDateFmtOff">Не показывать</option>
-</select>
-</label>
+                <input type="range" name="weatherSize" min="11" max="22" step="1" />
+              </label>
+              <label>
+                <span class="row">
+                  <span data-i18n="optWeatherForecastDays">Дней в прогнозе</span>
+                  <span class="hint" data-i18n="unitDay">дн.</span>
+                  <output data-out="weatherForecastDays"></output>
+                </span>
+                <input type="range" name="weatherForecastDays" min="2" max="14" step="1" />
+              </label>
+              <label>
+                <span class="row">
+                  <span data-i18n="optWeatherRefreshMin">Интервал обновления погоды</span>
+                  <span class="hint" data-i18n="unitMin">мин.</span>
+                  <output data-out="weatherRefreshMin"></output>
+                </span>
+                <input type="range" name="weatherRefreshMin" min="5" max="180" step="5" />
+              </label>
+              <label>
+                <span class="row">
+                  <span data-i18n="optWeatherDateFmt">Формат даты в прогнозе</span>
+                </span>
+                <select name="weatherDateFmt">
+                  <option value="dd.mm" data-i18n="weatherDateFmtDdMm">дд.мм (15.08)</option>
+                  <option value="dd.mm.yy" data-i18n="weatherDateFmtDdMmYy">дд.мм.гг (15.08.26)</option>
+                  <option value="dd.mm.yyyy" data-i18n="weatherDateFmtDdMmYyyy">дд.мм.гггг (15.08.2026)</option>
+                  <option value="dd.mon" data-i18n="weatherDateFmtDdMon">дд месяц кр. (15 авг)</option>
+                  <option value="dd.month" data-i18n="weatherDateFmtDdMonth">дд месяц полн. (15 августа)</option>
+                  <option value="off" data-i18n="weatherDateFmtOff">Не показывать</option>
+                </select>
+              </label>
             </div>
           </div>
         </div>
       </section>
 
-      <section id="language" class="panel">
+      <!-- ======================= Язык ======================= -->
+      <section id="tab-language" class="panel tab-panel" data-tab="language">
         <h2 data-i18n="optLanguage">Язык интерфейса</h2>
         <div class="lang-grid">
           <label class="lang-card">
@@ -405,7 +399,8 @@
         </div>
       </section>
 
-      <section id="data" class="panel">
+      <!-- ======================= Данные ======================= -->
+      <section id="tab-data" class="panel tab-panel" data-tab="data">
         <h2 data-i18n="sectionData">Данные</h2>
         <p class="hint" data-i18n="dataHint">Все данные хранятся локально. Экспортируйте, чтобы сделать резервную копию.</p>
         <div class="row data-actions">
@@ -417,7 +412,8 @@
         </div>
       </section>
 
-      <section id="about" class="panel">
+      <!-- ======================= О расширении ======================= -->
+      <section id="tab-about" class="panel tab-panel" data-tab="about">
         <h2 data-i18n="sectionAbout">О расширении</h2>
         <p class="hint" data-i18n="aboutText">Tabula — настраиваемая новая вкладка в стиле электронной таблицы. Хранит данные локально.</p>
 
@@ -447,14 +443,14 @@
           </div>
           <div class="about-row about-repo">
             <span class="about-label" data-i18n="aboutSite">Сайт</span>
-            <a class="about-link" id="aboutRepoLink"
+            <a class="about-link" id="aboutSiteLink"
                href="https://withersky.github.io/tabula-plugin"
                target="_blank" rel="noopener noreferrer"
                data-i18n-title="aboutSiteHint">
               <span class="about-link-icon" aria-hidden="true">
                 <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true">
                   <path
-                    d="m 14.11569,3.0946218 v -0.021394 h -0.01527 a 7.8491954,7.8491954 0 0 0 -12.1876328,0 H 1.898275 v 0.021394 a 7.8354514,7.8354514 0 0 0 0,9.8832672 v 0.02137 h 0.01527 a 7.8491954,7.8491954 0 0 0 12.187633,0 h 0.01603 v -0.02137 a 7.8354514,7.8354514 0 0 0 0,-9.8832672 z M 8.3883733,3.0732273 V 0.99029048 A 3.4611288,3.4611288 0 0 1 10.327766,3.0732273 Z m 2.2409907,0.7635409 a 12.848094,12.848094 0 0 1 0.651299,3.8177033 H 8.3883733 V 3.8367798 Z M 7.6248324,0.99029048 V 3.0732273 H 5.68544 A 3.4611288,3.4611288 0 0 1 7.6248324,0.99029048 Z m 0,2.84647772 V 7.6544715 H 4.7325416 A 12.848094,12.848094 0 0 1 5.3838414,3.8367682 Z M 3.9697643,7.6544715 H 0.92552941 A 7.050532,7.050532 0 0 1 2.2937946,3.8367682 H 4.5721972 A 13.707077,13.707077 0 0 0 3.9690007,7.6544715 Z m 0,0.7635387 A 13.707077,13.707077 0 0 0 4.5721972,12.235713 H 2.2937946 A 7.050532,7.050532 0 0 1 0.92552941,8.4180124 Z m 0.7635416,0 H 7.6248324 V 12.235713 H 5.3838414 A 12.848094,12.848094 0 0 1 4.7325416,8.4180102 Z m 2.8915265,4.5812438 v 2.082937 A 3.4611288,3.4611288 0 0 1 5.68544,12.999254 Z m 0.7635409,2.082937 v -2.082937 h 1.9393927 a 3.4611288,3.4611288 0 0 1 -1.9393927,2.082937 z m 0,-2.846478 V 8.4180102 H 11.280663 A 12.848094,12.848094 0 0 1 10.629364,12.235713 Z M 12.043441,8.4180102 h 3.044235 a 7.050532,7.050532 0 0 1 -1.368263,3.8177028 h -2.278405 a 13.707077,13.707077 0 0 0 0.603197,-3.8177028 z m 0,-0.7635387 A 13.707077,13.707077 0 0 0 11.441008,3.8367704 h 2.278405 a 7.050532,7.050532 0 0 1 1.368263,3.8177033 z M 13.075747,3.0732273 H 11.166134 A 6.5084183,6.5084183 0 0 0 10.065873,1.2422585 7.1055069,7.1055069 0 0 1 13.075747,3.0732273 Z M 5.9473355,1.2422607 A 6.5084183,6.5084183 0 0 0 4.8478354,3.0732295 H 2.9366941 A 7.1055069,7.1055069 0 0 1 5.9465713,1.2422607 Z M 2.9374577,12.999256 h 1.9096171 a 6.5084183,6.5084183 0 0 0 1.1002607,1.830969 7.1055069,7.1055069 0 0 1 -3.0098778,-1.830969 z m 7.1284153,1.830969 a 6.5084183,6.5084183 0 0 0 1.099497,-1.830969 h 1.910377 a 7.1055069,7.1055069 0 0 1 -3.009874,1.830969 z"
+                    d="m 14.11569,3.0946218 v -0.021394 h -0.01527 a 7.8491954,7.8491954 0 0 0 -12.1876328,0 H 1.898275 v 0.021394 a 7.8354514,7.8354514 0 0 0 0,9.8832672 v 0.02137 h 0.01527 a 7.8491954,7.8491954 0 0 0 12.187633,0 h 0.01603 v -0.02137 a 7.8354514,7.8354514 0 0 0 0,-9.8832672 z M 8.3883733,3.0732273 V 0.99029048 A 3.4611288,3.4611288 0 0 1 10.327766,3.0732273 Z m 2.2409907,0.7635409 a 12.848094,12.848094 0 0 1 0.651299,3.8177033 H 8.3883733 V 3.8367798 Z m -3.0045315,-3.83677982 V 3.0732273 H 5.68544 A 3.4611288,3.4611288 0 0 1 7.6248324,0.99029048 Z m 0,2.84647772 V 7.6544715 H 4.7325416 A 12.848094,12.848094 0 0 1 5.3838414,3.8367682 Z M 3.9697643,7.6544715 H 0.92552941 A 7.050532,7.050532 0 0 1 2.2937946,3.8367682 H 4.5721972 A 13.707077,13.707077 0 0 0 3.9690007,7.6544715 Z m 0,0.7635387 A 13.707077,13.707077 0 0 0 4.5721972,12.235713 H 2.2937946 A 7.050532,7.050532 0 0 1 0.92552941,8.4180124 Z m 0.7635416,0 H 7.6248324 V 12.235713 H 5.3838414 A 12.848094,12.848094 0 0 1 4.7325416,8.4180102 Z m 2.8915265,4.5812438 v 2.082937 A 3.4611288,3.4611288 0 0 1 5.68544,12.999254 Z m 0.7635409,2.082937 v -2.082937 h 1.9393927 a 3.4611288,3.4611288 0 0 1 -1.9393927,2.082937 z m 0,-2.846478 V 8.4180102 H 11.280663 A 12.848094,12.848094 0 0 1 10.629364,12.235713 Z M 12.043441,8.4180102 h 3.044235 a 7.050532,7.050532 0 0 1 -1.368263,3.8177028 h -2.278405 a 13.707077,13.707077 0 0 0 0.603197,-3.8177028 z m 0,-0.7635387 A 13.707077,13.707077 0 0 0 11.441008,3.8367704 h 2.278405 a 7.050532,7.050532 0 0 1 1.368263,3.8177033 z M 13.075747,3.0732273 H 11.166134 A 6.5084183,6.5084183 0 0 0 10.065873,1.2422585 7.1055069,7.1055069 0 0 1 13.075747,3.0732273 Z M 5.9473355,1.2422607 A 6.5084183,6.5084183 0 0 0 4.8478354,3.0732295 H 2.9366941 A 7.1055069,7.1055069 0 0 1 5.9465713,1.2422607 Z M 2.9374577,12.999256 h 1.9096171 a 6.5084183,6.5084183 0 0 0 1.1002607,1.830969 7.1055069,7.1055069 0 0 1 -3.0098778,-1.830969 z m 7.1284153,1.830969 a 6.5084183,6.5084183 0 0 0 1.09...
                     id="path1"
                     style="stroke-width:0.763535" />
                 </svg>

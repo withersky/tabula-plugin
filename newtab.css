@@ -22,23 +22,33 @@
   --font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-size: 13px;
   --text-color: #e8e8f0;
-  --bar-bg: rgba(0, 0, 0, 0.35);
+  /* Единая прозрачность панелей (выпадайки, модалки, меню), виджетов и ячеек.
+     Задаётся одним ползунком uiOpacity (0..1). */
+  --ui-bg-opacity: 0.9;
+  /* Общая подложка панелей: виджеты, нижний бар и кнопка настроек используют
+     один множитель, чтобы выглядели одинаково. */
+  --panel-bg: rgba(0, 0, 0, calc(var(--ui-bg-opacity) * 0.5));
+  --panel-bg-hover: rgba(0, 0, 0, calc(var(--ui-bg-opacity) * 0.62));
+  --bar-bg: var(--panel-bg);
   --cell-hover-bg: rgba(255, 255, 255, 0.07);
   --cell-selected-bg: rgba(255, 255, 255, 0.10);
   --cell-selected-color: #788cff;
   --grid-line: rgba(255,255,255,0.10);
   --grid-line-strong: rgba(255,255,255,0.18);
-  --modal-bg: #1a1a2a;
+  --modal-bg: rgba(26, 26, 42, var(--ui-bg-opacity));
   --modal-border: rgba(255,255,255,0.18);
   --input-bg: rgba(255,255,255,0.06);
   --input-border: rgba(255,255,255,0.18);
-  --topbar-bg: rgba(0,0,0,0.25);
-  --topbar-bg-hover: rgba(0,0,0,0.5);
+  --topbar-bg: rgba(0,0,0, calc(var(--ui-bg-opacity) * 0.28));
+  --topbar-bg-hover: var(--panel-bg);
   --sheet-tab-bg: rgba(255,255,255,0.04);
   --sheet-tab-bg-hover: rgba(255,255,255,0.08);
   --sheet-tab-active: rgba(255,255,255,0.12);
-  --ctx-bg: #1a1a2a;
-  --toast-bg: #1a1a2a;
+  --ctx-bg: rgba(26, 26, 42, var(--ui-bg-opacity));
+  --toast-bg: rgba(26, 26, 42, var(--ui-bg-opacity));
+  /* Ячейки: лёгкий тон + постоянный блюр (см. body.ui-frost .cell.filled),
+     чтобы выглядели как матовое стекло, а не просто прозрачные прямоугольники. */
+  --cell-bg: rgba(26, 26, 42, calc(var(--ui-bg-opacity) * 0.3));
 }
 
 html, body, #bg, .sheet-bar, .topbar, .quick-go input, .modal-card,
@@ -47,6 +57,29 @@ html, body, #bg, .sheet-bar, .topbar, .quick-go input, .modal-card,
 .clock-time, .clock-date, .weather-widget, .weather-icon {
   transition: background-color 240ms ease, color 240ms ease,
               border-color 240ms ease, box-shadow 240ms ease;
+}
+
+/* Блюр («матовое стекло») включается только при непрозрачной подложке
+   (body.ui-frost ставится из applySettings), иначе нулевая прозрачность
+   не тратит ресурсы GPU на backdrop-filter. */
+body.ui-frost .clock-widget,
+body.ui-frost .weather-widget,
+body.ui-frost .quick-go input,
+body.ui-frost .opts-fab,
+body.ui-frost .sheet-bar,
+body.ui-frost .ctx-menu,
+body.ui-frost .modal-card,
+body.ui-frost .toast,
+body.ui-frost .quick-suggest,
+body.ui-frost .weather-popup {
+  backdrop-filter: blur(calc(var(--ui-bg-opacity, 0.9) * 14px));
+  -webkit-backdrop-filter: blur(calc(var(--ui-bg-opacity, 0.9) * 14px));
+}
+/* Ячейки блюрятся постоянным радиусом: даже при слабой прозрачности
+   эффект «матового стекла» остаётся заметным. */
+body.ui-frost .cell.filled {
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(-4px); }
@@ -111,7 +144,7 @@ body.no-clock.no-quick-go.no-weather .topbar { display: none; }
   padding: 6px 12px;
   border-radius: 12px;
   border: 1px solid transparent;
-  background: rgba(0,0,0,0.18);
+  background: var(--panel-bg);
   color: var(--text-color);
   line-height: 1.1;
   user-select: none;
@@ -121,7 +154,7 @@ body.no-clock.no-quick-go.no-weather .topbar { display: none; }
   overflow: hidden;
   transition: background 160ms ease, border-color 160ms ease;
 }
-.clock-widget:hover { background: rgba(0,0,0,0.42); border-color: var(--input-border); }
+.clock-widget:hover { background: var(--panel-bg-hover); border-color: var(--input-border); }
 .clock-time {
   font-family: var(--font-family);
   font-size: clamp(16px, var(--clock-size, 28px), 36px);
@@ -150,7 +183,7 @@ body.no-clock.no-quick-go.no-weather .topbar { display: none; }
   padding: calc(var(--weather-size, 13px) * 0.45) calc(var(--weather-size, 13px) * 0.9);
   border-radius: 12px;
   border: 1px solid transparent;
-  background: rgba(0,0,0,0.18);
+  background: var(--panel-bg);
   color: var(--text-color);
   font-size: var(--weather-size, 13px);
   line-height: 1.25;
@@ -159,7 +192,7 @@ body.no-clock.no-quick-go.no-weather .topbar { display: none; }
   transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
   animation: fadeIn 240ms ease;
 }
-.weather-widget:hover { background: rgba(0,0,0,0.42); border-color: var(--input-border); }
+.weather-widget:hover { background: var(--panel-bg-hover); border-color: var(--input-border); }
 .weather-widget.is-off { visibility: hidden; }
 .weather-widget:focus-visible { outline: 2px solid rgba(120,140,255,0.7); outline-offset: 1px; }
 .weather-icon { font-size: calc(var(--weather-size, 13px) * 1.7); line-height: 1; flex: 0 0 auto; }
@@ -193,9 +226,7 @@ body.no-clock.no-quick-go.no-weather .topbar { display: none; }
   scrollbar-width: thin;
   scrollbar-color: rgba(255,255,255,0.28) transparent;
   padding: 8px 10px 10px;
-  background: rgba(22, 24, 32, var(--weather-popup-bg-opacity, 0.94));
-  backdrop-filter: blur(calc(var(--weather-popup-bg-opacity, 0.94) * 14px));
-  -webkit-backdrop-filter: blur(calc(var(--weather-popup-bg-opacity, 0.94) * 14px));
+  background: rgba(22, 24, 32, var(--ui-bg-opacity, 0.94));
   border: 1px solid rgba(255,255,255,0.14);
   border-radius: 12px;
   box-shadow: 0 12px 32px rgba(0,0,0,0.45);
@@ -328,7 +359,7 @@ body.no-quick-go .quick-go { display: none; }
   padding: 9px 14px 9px 38px;
   border-radius: 999px;
   border: 1px solid var(--input-border);
-  background: var(--topbar-bg);
+  background: var(--panel-bg);
   color: var(--text-color);
   font: inherit;
   font-size: 14px;
@@ -336,7 +367,7 @@ body.no-quick-go .quick-go { display: none; }
   transition: background 160ms ease, border-color 160ms ease;
 }
 .quick-go input::placeholder { color: rgba(255,255,255,0.45); }
-.quick-go input:focus { background: rgba(0, 0, 0, 0.45); border-color: rgba(255,255,255,0.3); }
+.quick-go input:focus { background: var(--panel-bg-hover); border-color: rgba(255,255,255,0.3); }
 
 .quick-suggest {
   position: absolute;
@@ -344,9 +375,7 @@ body.no-quick-go .quick-go { display: none; }
   left: 0; right: 0;
   z-index: 60;
   padding: 4px;
-  background: rgba(22, 24, 32, var(--suggest-bg-opacity, 0.94));
-  backdrop-filter: blur(calc(var(--suggest-bg-opacity, 0.94) * 14px));
-  -webkit-backdrop-filter: blur(calc(var(--suggest-bg-opacity, 0.94) * 14px));
+  background: rgba(22, 24, 32, var(--ui-bg-opacity, 0.94));
   border: 1px solid rgba(255,255,255,0.14);
   border-radius: 12px;
   box-shadow: 0 12px 32px rgba(0,0,0,0.45);
@@ -436,8 +465,6 @@ white-space: nowrap;
   height: 40px;
   border-radius: 50%;
   background: var(--topbar-bg-hover);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   font-size: 18px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
   border: 1px solid var(--input-border);
@@ -548,8 +575,9 @@ body.no-quick-go.no-clock.no-weather.no-sheet-bar .grid-wrap { top: 0; bottom: 0
 
 .cell.filled {
   flex-direction: row; justify-content: flex-start; cursor: grab;
-  /* Фон заполненной ячейки; прозрачность задаётся настройкой (0 = прозрачно по умолчанию). */
-  background: rgba(26, 26, 42, var(--grid-bg-opacity, 0));
+  /* Лёгкий тон подложки; постоянный блюр (body.ui-frost .cell.filled)
+     делает ячейку матовым стеклом: фон просвечивает, но размыт. */
+  background: var(--cell-bg);
 }
 .cell.filled .favicon {
   width: 20px; height: 20px;
@@ -618,8 +646,6 @@ body.no-quick-go.no-clock.no-weather.no-sheet-bar .grid-wrap { top: 0; bottom: 0
   align-items: center;
   flex-wrap: nowrap;
   background: var(--bar-bg);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   border-top: 1px solid var(--grid-line-strong);
   padding: 4px 8px;
   gap: 4px;
