@@ -601,6 +601,67 @@ select { cursor: pointer; }
 .check:hover { background: rgba(255,255,255,0.04); }
 .check input { accent-color: var(--primary); transform: scale(1.1); }
 
+/* ---------- radio chips ---------- */
+.radio-box {
+  padding: 12px 14px;
+  gap: 10px;
+}
+.radio-box > span:first-child { color: var(--text); }
+/* Все кнопки в одну строку (без переноса в столбик), равной ширины,
+   выровнены по центру блока. */
+.radio-row {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+}
+.radio-chip {
+  flex: 1 1 0;
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 7px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.04);
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+.radio-chip:hover { background: rgba(255,255,255,0.08); color: var(--text); border-color: var(--border-strong); }
+.radio-chip:has(input:checked) {
+  background: rgba(120,140,255,0.20);
+  border-color: var(--primary);
+  color: var(--text);
+}
+.radio-chip:focus-within { outline: 2px solid var(--primary); outline-offset: 2px; }
+.radio-chip input[type="radio"] {
+  appearance: auto;
+  -webkit-appearance: auto;
+  order: 0;
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: var(--primary);
+}
+.radio-chip > span { order: 1; }
+.radio-row > input[type="color"] {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 32px;
+  padding: 2px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(0,0,0,0.25);
+  cursor: pointer;
+}
+
 /* ---------- chips / presets ---------- */
 .preset-row {
   display: flex;

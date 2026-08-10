@@ -68,7 +68,7 @@
 Настройки открываются иконкой ⚙ на новой вкладке и состоят из карточек:
 
 - **Оформление** — тема, линии сетки.
-- **Сетка** — колонки и строки новых листов, единая прозрачность панелей, виджетов и ячеек (с блюром) и цвет выделения.
+- **Сетка** — колонки и строки новых листов, единая прозрачность панелей, виджетов и ячеек (с блюром) и цвет выделения (свой или **AutoColor** — автоматически подбирается под текущий фон: изображение, градиент или сплошной цвет).
 - **Текст** — общий шрифт вкладки, размер шрифта в ячейках, цвет.
 - **Фон** — пять режимов, включая Bing-обои дня.
 - **Поведение** — фавиконы, новая вкладка, номера строк, буквы колонок, листы, поиск, линии, часы, погода.
@@ -83,40 +83,59 @@
 
 ```
 tabula-plugin/
-├── manifest.json           MV3 (Chrome): service_worker, newtab override
-├── manifest.firefox.json   MV3 (Firefox 140+): background.scripts, gecko.id
-├── background.js           service worker / event page: проксирует Bing и met.no
-├── lib/
-│   ├── browser.js          кросс-браузерная обёртка ext.* (chrome.* / browser.*)
-│   └── storage.js          дефолты, миграция v1→v2→v3, i18n, helpers
-├── newtab.html/css/js      новая вкладка: сетка, листы, модалки, drag-drop
-├── options.html/css/js     страница настроек
-├── build.sh                сборка dist/{chrome,firefox}
-├── site/                   сайт-визитка (GitHub Pages)
-│   └── icons/              копии иконок расширения (на Pages деплоится только site/)
-├── icons/
+├── src/                       исходники расширения (содержимое = пакет)
+│   ├── manifest.json          MV3 (Chrome): service_worker, newtab override
+│   ├── manifest.firefox.json  MV3 (Firefox 140+): background.scripts, gecko.id
+│   ├── background.js          service worker / event page: проксирует Bing и met.no
+│   ├── lib/
+│   │   ├── browser.js         кросс-браузерная обёртка ext.* (chrome.* / browser.*)
+│   │   ├── core.js            чистая логика: URL, погода, даты, ключи ячеек
+│   │   └── storage.js         дефолты, миграция v1→v2→v3, i18n, helpers
+│   ├── newtab/                страница новой вкладки
+│   │   ├── newtab.html
+│   │   ├── newtab.css
+│   │   └── js/                ES-модули (main, state, grid, sheets, weather, …)
+│   ├── options/               страница настроек
+│   │   ├── options.html
+│   │   ├── options.css
+│   │   └── js/                ES-модули (main, form, preview, widgets, data, …)
+│   └── icons/
+├── build.sh                   сборка dist/{chrome,firefox} из src/
+├── site/                      сайт-визитка (GitHub Pages)
+│   └── icons/                 копии иконок расширения (на Pages деплоится только site/)
+├── tests/                     юнит-тесты чистой логики (см. tests/README.md)
 └── .github/workflows/
-    ├── release.yml         сборка релизов по коммитам `vX.Y.Z`
-    └── site.yml            деплой сайта по коммитам `site:`
+    ├── release.yml            сборка релизов по коммитам `vX.Y.Z` (с прогоном тестов)
+    └── site.yml               деплой сайта по коммитам `site:`
 ```
 
 ### Запуск в режиме разработки
 
 Сборка не нужна: отредактируйте файлы и обновите расширение из `chrome://extensions`
 (в Firefox — перезагрузите дополнение в `about:debugging`). Все обращения к API
-расширения идут через тонкую обёртку [`lib/browser.js`](lib/browser.js:1), поэтому
+расширения идут через тонкую обёртку [`src/lib/browser.js`](src/lib/browser.js:1), поэтому
 Chrome и Firefox используют одну и ту же кодовую базу.
 
 ### Сборка релизных архивов
 
 ```bash
-./build.sh chrome    # -> dist/chrome/   (используется manifest.json)
-./build.sh firefox   # -> dist/firefox/  (используется manifest.firefox.json)
+./build.sh chrome    # -> dist/chrome/   (используется src/manifest.json)
+./build.sh firefox   # -> dist/firefox/  (используется src/manifest.firefox.json)
 ./build.sh all       # -> оба варианта
 ```
 
 Полученные папки можно упаковывать в zip и загружать в магазины
 (Chrome Web Store, AMO). Папки `site/`, `dist/` и сам `build.sh` в архивы не попадают.
+
+### Тесты
+
+Юнит-тесты чистой логики ([`src/lib/core.js`](src/lib/core.js:1), [`src/lib/storage.js`](src/lib/storage.js:1))
+на Robot Framework — подробности в [`tests/README.md`](tests/README.md:1).
+
+```bash
+./tests/run_tests.sh            # прогнать все тесты
+./tests/run_tests.sh --dryrun   # только проверить синтаксис, без исполнения
+```
 
 ## Релизы
 
@@ -124,8 +143,8 @@ Chrome и Firefox используют одну и ту же кодовую ба
 при каждом push в `main`/`master`. Если **первая строка** commit message начинается
 с `vX.Y.Z`, он:
 
-1. Проверяет, что поле `"version"` в [`manifest.json`](manifest.json:1) и
-   [`manifest.firefox.json`](manifest.firefox.json:1) совпадает с `X.Y.Z` (страховка от рассинхрона).
+1. Проверяет, что поле `"version"` в [`src/manifest.json`](src/manifest.json:1) и
+   [`src/manifest.firefox.json`](src/manifest.firefox.json:1) совпадает с `X.Y.Z` (страховка от рассинхрона).
 2. Собирает оба варианта через `./build.sh all` и упаковывает в
    `tabula-chrome-vX.Y.Z.zip` и `tabula-firefox-vX.Y.Z.zip`.
 3. Ставит git-тег `vX.Y.Z` и публикует GitHub Release с архивами и полным текстом
@@ -135,7 +154,7 @@ Chrome и Firefox используют одну и ту же кодовую ба
 
 **Процедура релиза:**
 
-1. Поднимите версию в **обоих** манифестах (`manifest.json`, `manifest.firefox.json`).
+1. Поднимите версию в **обоих** манифестах (`src/manifest.json`, `src/manifest.firefox.json`).
 2. Коммит, первая строка которого выглядит так:
 
    ```text
@@ -152,7 +171,7 @@ Chrome и Firefox используют одну и ту же кодовую ба
 
 **Автообновление Firefox (update_url):**
 
-Firefox-манифест [`manifest.firefox.json`](manifest.firefox.json:1) содержит
+Firefox-манифест [`src/manifest.firefox.json`](src/manifest.firefox.json:1) содержит
 `browser_specific_settings.gecko.update_url`, указывающий на
 [`site/updates.json`](site/updates.json:1) (GitHub Pages). Это update-манифест,
 по которому Firefox находит новые версии для пользователей, установивших
@@ -186,11 +205,11 @@ Mozilla `.xpi` (неподписанный `-unsign` файл он отклон�
 
 Папка [`site/`](site/index.html:1) — статичный одностраничный сайт с кнопками
 скачивания. Стиль сайта повторяет интерфейс расширения (та же палитра, что в
-[`options.css`](options.css:1), и CSS-мокап новой вкладки), а в шапке и фавиконке
+[`src/options/options.css`](src/options/options.css:1), и CSS-мокап новой вкладки), а в шапке и фавиконке
 используется настоящая иконка Tabula, в кнопках скачивания — логотипы браузеров
 (`chromium.svg`, `firefox.svg`). Копии всех этих ресурсов лежат в `site/icons/`
 (на GitHub Pages публикуется только папка `site/`, поэтому иконки продублированы
-рядом). Если вы поменяете `icons/icon*.png` или `icons/*.svg` в корне — обновите
+рядом). Если вы поменяете `src/icons/icon*.png` или `src/icons/*.svg` — обновите
 и копии в `site/icons/`.
 
 Скрипт [`site/main.js`](site/main.js:1) подставляет кнопкам прямые ссылки на
@@ -201,7 +220,7 @@ Mozilla `.xpi` (неподписанный `-unsign` файл он отклон�
 `tabula-chrome-vX.Y.Z-unsign.zip` и `tabula-firefox-vX.Y.Z-unsign.xpi`.
 
 В той же папке лежит [`site/updates.json`](site/updates.json:1) — Firefox
-update-манифест для `update_url` из [`manifest.firefox.json`](manifest.firefox.json:1).
+update-манифест для `update_url` из [`src/manifest.firefox.json`](src/manifest.firefox.json:1).
 Workflow генерирует его при каждом релизе (и добавляет `update_hash`, если в релиз
 уже загружен подписанный `.xpi`), поэтому файл всегда актуален и доступен по
 `https://withersky.github.io/tabula-plugin/updates.json`.
@@ -265,11 +284,11 @@ Workflow генерирует его при каждом релизе (и доб
 
 Частые правки:
 
-- Стартовые закладки и листы — `defaultData()` в [`lib/storage.js`](lib/storage.js:1).
+- Стартовые закладки и листы — `defaultData()` в [`src/lib/storage.js`](src/lib/storage.js:1).
 - Дефолтная тема — объект `settings` там же.
-- CSS-переменные (`--columns`, `--font-family`, …) — в `:root` в [`newtab.css`](newtab.css:1).
+- CSS-переменные (`--columns`, `--font-family`, …) — в `:root` в [`src/newtab/newtab.css`](src/newtab/newtab.css:1).
   Строки грида делят доступную высоту поровну; их количество задаётся `settings.gridRows`.
-- Переводы — добавьте язык в `I18N` в [`lib/storage.js`](lib/storage.js:1) и `<option>` в [`options.html`](options.html:1) (`#languageSelect`).
+- Переводы — добавьте язык в `I18N` в [`src/lib/storage.js`](src/lib/storage.js:1) и radio-карточку `name="language"` в [`src/options/options.html`](src/options/options.html:432).
 - Ссылки на скачивание на сайте — меняются автоматически из последнего релиза, ничего править не нужно.
 
 ## Заметки

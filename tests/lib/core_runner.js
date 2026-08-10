@@ -25,7 +25,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const LIB_DIR = path.resolve(__dirname, "..", "..", "lib");
+const LIB_DIR = path.resolve(__dirname, "..", "..", "src", "lib");
 
 let raw = "";
 process.stdin.setEncoding("utf8");

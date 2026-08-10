@@ -5,5 +5,5 @@
 # или, если пакета нет в репозитории:
 #   python3 -m pip install --user --break-system-packages robotframework
 #
-# Также требуется Node.js (для lib/core.js и lib/storage.js).
+# Также требуется Node.js (для src/lib/core.js и src/lib/storage.js).
 robotframework==7.4.2

@@ -28,7 +28,7 @@
 <body>
   <header class="topbar">
     <div class="brand">
-      <img class="brand-mark" src="icons/icon128.png" alt="Tabula" width="28" height="28" />
+      <img class="brand-mark" src="../icons/icon128.png" alt="Tabula" width="28" height="28" />
       <h1 data-i18n="settingsTitle">Tabula — Настройки</h1>
     </div>
     <div class="topbar-actions">
@@ -39,7 +39,7 @@
         <div id="searchResults" class="search-results" role="listbox" hidden></div>
       </div>
       <span id="autoSaveHint" class="autosave-pill" data-i18n="savedAuto">Автосохранение</span>
-      <a class="btn ghost" href="newtab.html" target="_blank" data-i18n="backToGrid">Открыть новую вкладку</a>
+      <a class="btn ghost" href="../newtab/newtab.html" target="_blank" data-i18n="backToGrid">Открыть новую вкладку</a>
     </div>
   </header>
 
@@ -139,10 +139,21 @@
             <span class="row"><span data-i18n="labelTextColor">Цвет текста</span></span>
             <input type="color" name="textColor" />
           </label>
-          <label>
+          <div class="radio-box">
             <span class="row"><span data-i18n="labelCellSelectedColor">Цвет выделения</span></span>
-            <input type="color" name="cellSelectedColor" />
-          </label>
+            <span class="radio-row">
+              <label class="radio-chip">
+                <input type="radio" name="cellSelectedMode" value="custom" />
+                <span data-i18n="selColorCustom">Свой цвет</span>
+              </label>
+              <label class="radio-chip">
+                <input type="radio" name="cellSelectedMode" value="autoColor" />
+                <span data-i18n="selColorAutoColor">AutoColor (из фона)</span>
+              </label>
+              <input type="color" name="cellSelectedColor" id="cellSelectedColorInput" />
+            </span>
+            <p class="hint" id="cellSelectedAutoColorHint" data-i18n="selColorAutoColorHint" hidden></p>
+          </div>
           <label class="full">
             <span class="row">
               <span data-i18n="labelUiOpacity">Прозрачность панелей и ячеек</span>
@@ -162,23 +173,44 @@
           <label class="check"><input type="checkbox" name="showFavicon"    /> <span data-i18n="optShowFavicon">Показывать иконки сайтов</span></label>
         </div>
         <div class="grid-2">
-          <label>
+          <div class="radio-box">
             <span class="row"><span data-i18n="labelCellAlign">Выравнивание надписей в ячейках</span></span>
-            <select name="cellTextAlign">
-              <option value="left"   data-i18n="alignLeft">Слева</option>
-              <option value="center" data-i18n="alignCenter">По центру</option>
-              <option value="right"  data-i18n="alignRight">Справа</option>
-            </select>
-          </label>
-          <label>
+            <span class="radio-row">
+              <label class="radio-chip">
+                <input type="radio" name="cellTextAlign" value="left" />
+                <span data-i18n="alignLeft">Слева</span>
+              </label>
+              <label class="radio-chip">
+                <input type="radio" name="cellTextAlign" value="center" />
+                <span data-i18n="alignCenter">По центру</span>
+              </label>
+              <label class="radio-chip">
+                <input type="radio" name="cellTextAlign" value="right" />
+                <span data-i18n="alignRight">Справа</span>
+              </label>
+            </span>
+          </div>
+          <div class="radio-box">
             <span class="row"><span data-i18n="labelFaviconPosition">Расположение иконки в ячейке</span></span>
-            <select name="faviconPosition">
-              <option value="left"   data-i18n="faviconPosLeft">Слева от текста</option>
-              <option value="right"  data-i18n="faviconPosRight">Справа от текста</option>
-              <option value="top"    data-i18n="faviconPosTop">Над текстом</option>
-              <option value="bottom" data-i18n="faviconPosBottom">Под текстом</option>
-            </select>
-          </label>
+            <span class="radio-row">
+              <label class="radio-chip">
+                <input type="radio" name="faviconPosition" value="left" />
+                <span data-i18n="faviconPosLeft">Слева от текста</span>
+              </label>
+              <label class="radio-chip">
+                <input type="radio" name="faviconPosition" value="right" />
+                <span data-i18n="faviconPosRight">Справа от текста</span>
+              </label>
+              <label class="radio-chip">
+                <input type="radio" name="faviconPosition" value="top" />
+                <span data-i18n="faviconPosTop">Над текстом</span>
+              </label>
+              <label class="radio-chip">
+                <input type="radio" name="faviconPosition" value="bottom" />
+                <span data-i18n="faviconPosBottom">Под текстом</span>
+              </label>
+            </span>
+          </div>
         </div>
         <div class="grid-2">
           <label>
@@ -205,7 +237,7 @@
               <span class="hint" data-i18n="labelFontFamilyHint">Шрифт системный</span>
             </span>
             <select name="fontFamilyKey" id="fontFamilyKeySelect">
-              <!-- options injected from FONT_FAMILIES in options.js -->
+              <!-- options injected from FONT_FAMILIES in js/options/i18n.js -->
             </select>
           </label>
           <label class="full" id="fontFamilyCustomWrap" hidden>
@@ -294,21 +326,21 @@
               <label class="lang-card">
                 <input type="radio" name="searchEngine" value="google" />
                 <div class="lang-card-inner">
-                  <div class="se-logo" aria-hidden="true"><img src="icons/se-google.svg" alt="" /></div>
+                  <div class="se-logo" aria-hidden="true"><img src="../icons/se-google.svg" alt="" /></div>
                   <div class="lang-name" data-i18n="searchEngineGoogle">Google</div>
                 </div>
               </label>
               <label class="lang-card">
                 <input type="radio" name="searchEngine" value="yandex" />
                 <div class="lang-card-inner">
-                  <div class="se-logo" aria-hidden="true"><img src="icons/se-yandex.svg" alt="" /></div>
+                  <div class="se-logo" aria-hidden="true"><img src="../icons/se-yandex.svg" alt="" /></div>
                   <div class="lang-name" data-i18n="searchEngineYandex">Yandex</div>
                 </div>
               </label>
               <label class="lang-card">
                 <input type="radio" name="searchEngine" value="bing" />
                 <div class="lang-card-inner">
-                  <div class="se-logo" aria-hidden="true"><img src="icons/se-bing.svg" alt="" /></div>
+                  <div class="se-logo" aria-hidden="true"><img src="../icons/se-bing.svg" alt="" /></div>
                   <div class="lang-name" data-i18n="searchEngineBing">Bing</div>
                 </div>
               </label>
@@ -494,7 +526,7 @@
             <div class="preview-url">tabula://newtab</div>
           </div>
           <div class="preview-frame">
-            <iframe id="previewFrame" src="newtab.html?preview=1" title="Tabula preview"></iframe>
+            <iframe id="previewFrame" src="../newtab/newtab.html?preview=1" title="Tabula preview"></iframe>
           </div>
         </div>
       </div>
@@ -554,9 +586,9 @@
     </div>
   </div>
 
-  <script src="lib/browser.js"></script>
-  <script src="lib/core.js"></script>
-  <script src="lib/storage.js"></script>
-  <script src="options.js"></script>
+  <script src="../lib/browser.js"></script>
+  <script src="../lib/core.js"></script>
+  <script src="../lib/storage.js"></script>
+  <script type="module" src="js/main.js"></script>
 </body>
 </html>

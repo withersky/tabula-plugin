@@ -1,6 +1,6 @@
 """Robot Framework библиотека для юнит-тестов Tabula.
 
-Ключевые слова запускают чистые функции из ``lib/core.js`` и ``lib/storage.js``
+Ключевые слова запускают чистые функции из ``src/lib/core.js`` и ``src/lib/storage.js``
 в отдельном Node-процессе (``tests/lib/core_runner.js``) и возвращают результат
 в виде Python-объекта (словари, списки, числа, строки, None).
 
@@ -23,7 +23,7 @@ _NUMBER_RE = re.compile(r"^-?\d+(\.\d+)?([eE][+-]?\d+)?$")
 
 
 class TabulaCoreLibrary:
-    """Ключевые слова для вызова функций lib/core.js и lib/storage.js."""
+    """Ключевые слова для вызова функций src/lib/core.js и src/lib/storage.js."""
 
     ROBOT_LIBRARY_SCOPE = "SUITE"
 
@@ -36,11 +36,11 @@ class TabulaCoreLibrary:
     # ------------------------------------------------------------------
 
     def call_core_function(self, fn_name, *args):
-        """Вызывает функцию из lib/core.js и возвращает результат."""
+        """Вызывает функцию из src/lib/core.js и возвращает результат."""
         return self._call("core", fn_name, args)
 
     def call_storage_function(self, fn_name, *args):
-        """Вызывает функцию из lib/storage.js и возвращает результат."""
+        """Вызывает функцию из src/lib/storage.js и возвращает результат."""
         return self._call("storage", fn_name, args)
 
     # ------------------------------------------------------------------
@@ -48,12 +48,12 @@ class TabulaCoreLibrary:
     # ------------------------------------------------------------------
 
     def core_function_should_equal(self, fn_name, expected, *args):
-        """Вызывает функцию из lib/core.js и сравнивает результат с expected."""
+        """Вызывает функцию из src/lib/core.js и сравнивает результат с expected."""
         actual = self._call("core", fn_name, args)
         self._assert_equal(fn_name, args, expected, actual)
 
     def storage_function_should_equal(self, fn_name, expected, *args):
-        """Вызывает функцию из lib/storage.js и сравнивает результат с expected."""
+        """Вызывает функцию из src/lib/storage.js и сравнивает результат с expected."""
         actual = self._call("storage", fn_name, args)
         self._assert_equal(fn_name, args, expected, actual)
 
@@ -62,14 +62,14 @@ class TabulaCoreLibrary:
     # ------------------------------------------------------------------
 
     def core_function_should_error(self, fn_name, *args):
-        """Вызывает функцию из lib/core.js и ожидает исключение.
+        """Вызывает функцию из src/lib/core.js и ожидает исключение.
 
         Возвращает текст ошибки для дальнейших проверок.
         """
         return self._call_expect_error("core", fn_name, args)
 
     def storage_function_should_error(self, fn_name, *args):
-        """Вызывает функцию из lib/storage.js и ожидает исключение.
+        """Вызывает функцию из src/lib/storage.js и ожидает исключение.
 
         Возвращает текст ошибки для дальнейших проверок.
         """

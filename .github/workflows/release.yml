@@ -95,7 +95,7 @@ jobs:
           set -euo pipefail
           VERSION="${{ steps.meta.outputs.version }}"
 
-          for f in manifest.json manifest.firefox.json; do
+          for f in src/manifest.json src/manifest.firefox.json; do
             actual="$(jq -r '.version' "$f")"
             if [[ "$actual" != "$VERSION" ]]; then
               echo "::error file=$f::version '$actual' does not match release '$VERSION'." \
@@ -104,6 +104,26 @@ jobs:
             fi
             echo "$f: $actual ✓"
           done
+
+      - name: Run unit tests (robot + node --check)
+        if: steps.meta.outputs.skip != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Синтаксис ES-модулей (node --check парсит, но не резолвит импорты).
+          for f in src/newtab/js/*.js src/options/js/*.js; do
+            node --input-type=module --check < "$f"
+          done
+          echo "ES modules syntax: OK"
+
+          # Юнит-тесты чистой логики (src/lib/core.js, src/lib/storage.js)
+          # на Robot Framework — те же, что гоняются локально.
+          python3 -m venv .venv
+          .venv/bin/python -m pip install --quiet --upgrade pip
+          .venv/bin/python -m pip install --quiet -r tests/requirements.txt
+          PYTHON="$(pwd)/.venv/bin/python" ./tests/run_tests.sh
+          echo "Robot tests: OK"
 
       - name: Build artifacts
         if: steps.meta.outputs.skip != 'true'

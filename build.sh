@@ -33,36 +33,16 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 DIST="$ROOT/dist"
 
-CHROME_FILES=(
-  manifest.json
-  manifest.firefox.json
-  background.js
-  newtab.html
-  newtab.css
-  newtab.js
-  options.html
-  options.css
-  options.js
-  lib
-  icons
-)
-
-# Files that must NOT be shipped in the final extension package.
-EXCLUDE_FROM_DIST=(
-  manifest.firefox.json
-  build.sh
-  README.md
-  dist
-)
+# Содержимое src/ — это и есть пакет расширения (manifest.json, страницы,
+# модули, lib, иконки). build.sh копирует его целиком и выбирает манифест.
+SRC_DIR="$ROOT/src"
 
 build_chrome() {
   local out="$DIST/chrome"
   rm -rf "$out"
   mkdir -p "$out"
 
-  for f in "${CHROME_FILES[@]}"; do
-    cp -R "$ROOT/$f" "$out/"
-  done
+  cp -R "$SRC_DIR/." "$out/"
 
   # Remove Firefox-specific manifest from Chrome build.
   rm -f "$out/manifest.firefox.json"
@@ -75,13 +55,11 @@ build_firefox() {
   rm -rf "$out"
   mkdir -p "$out"
 
-  for f in "${CHROME_FILES[@]}"; do
-    cp -R "$ROOT/$f" "$out/"
-  done
+  cp -R "$SRC_DIR/." "$out/"
 
   # Replace Chrome manifest with the Firefox-specific one.
   rm -f "$out/manifest.json"
-  cp "$ROOT/manifest.firefox.json" "$out/manifest.json"
+  cp "$SRC_DIR/manifest.firefox.json" "$out/manifest.json"
   rm -f "$out/manifest.firefox.json"
 
   echo "Firefox build -> $out"

@@ -261,6 +261,9 @@ const I18N = {
     previewTitle: "Предпросмотр",
     previewHint: "Изменения применяются сразу",
     labelCellSelectedColor: "Цвет выделения",
+    selColorCustom: "Свой цвет",
+    selColorAutoColor: "AutoColor (из фона)",
+    selColorAutoColorHint: "Цвет выделения подбирается автоматически под текущий фон: изображение, градиент или сплошной цвет",
     labelFontFamily: "Шрифт вкладки",
     labelFontFamilyHint: "Название шрифта или CSS-список",
     labelFontSize: "Размер шрифта ячеек",
@@ -500,6 +503,9 @@ const I18N = {
     previewTitle: "Preview",
     previewHint: "Changes apply instantly",
     labelCellSelectedColor: "Selection color",
+    selColorCustom: "Custom color",
+    selColorAutoColor: "AutoColor (from background)",
+    selColorAutoColorHint: "Selection color is picked automatically from the current background: image, gradient or solid color",
     labelFontFamily: "Tab font",
     labelFontFamilyHint: "Font name or CSS font list",
     labelFontSize: "Cell font size",
@@ -613,6 +619,7 @@ function defaultData() {
       uiOpacity: 90,
       uiScale: 100,
       cellSelectedColor: "#788cff",
+      cellSelectedMode: "custom",
       gridRows: 6,
       fontFamilyKey: "system",
       fontFamily: "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
@@ -763,6 +770,10 @@ function mergeWithDefaults(data) {
   if (data && data.settings && typeof data.settings === "object") {
     out.settings = Object.assign({}, out.settings, data.settings);
     out.settings.defaultColumns = clampCols(out.settings.defaultColumns);
+    // cellSelectedMode: "custom" (ручной цвет) | "autoColor" (автоцвет из фона).
+    if (!["custom", "autoColor"].includes(out.settings.cellSelectedMode)) {
+      out.settings.cellSelectedMode = "custom";
+    }
     delete out.settings.cellBg;
     delete out.settings.cellBgHover;
     delete out.settings.cellBorder;
