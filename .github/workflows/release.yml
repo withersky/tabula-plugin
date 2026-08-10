@@ -50,10 +50,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Фиксируем версии инструментов: ubuntu-latest со временем меняет
+      # дефолтные Node.js и Python, а шаги тестов зависят от них.
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
 
       - name: Parse version from commit message
         id: meta
@@ -105,22 +117,33 @@ jobs:
             echo "$f: $actual ✓"
           done
 
-      - name: Run unit tests (robot + node --check)
+      - name: Check JS module syntax
         if: steps.meta.outputs.skip != 'true'
         shell: bash
         run: |
           set -euo pipefail
 
-          # Синтаксис ES-модулей (node --check парсит, но не резолвит импорты).
+          # node --check парсит синтаксис без исполнения и без резолва импортов.
+          # Парсим файлы как ES-модули через временную копию с расширением .mjs:
+          # node --input-type=module со stdin ведёт себя по-разному в разных
+          # версиях Node, а расширение .mjs гарантирует ESM-парсинг везде.
           for f in src/newtab/js/*.js src/options/js/*.js; do
-            node --input-type=module --check < "$f"
+            tmp="$(mktemp --suffix=.mjs)"
+            cp "$f" "$tmp"
+            node --check "$tmp"
+            rm -f "$tmp"
           done
           echo "ES modules syntax: OK"
+
+      - name: Run robot unit tests
+        if: steps.meta.outputs.skip != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
 
           # Юнит-тесты чистой логики (src/lib/core.js, src/lib/storage.js)
           # на Robot Framework — те же, что гоняются локально.
           python3 -m venv .venv
-          .venv/bin/python -m pip install --quiet --upgrade pip
           .venv/bin/python -m pip install --quiet -r tests/requirements.txt
           PYTHON="$(pwd)/.venv/bin/python" ./tests/run_tests.sh
           echo "Robot tests: OK"

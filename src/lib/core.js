@@ -323,8 +323,9 @@
   }
 
   // Сворачивает почасовой timeseries met.no в прогноз по дням.
-  // День считается по локальному времени устройства, чтобы попап показывал
-  // «Сегодня / Завтра / …» так же, как их видит пользователь.
+  // День и «полдень» считаются по времени точки наблюдения (смещение указано
+  // в ISO-строке), а не по часовому поясу машины, чтобы результат был
+  // одинаковым на любом устройстве и в CI.
   function buildDailyForecast(timeseries, lang) {
     const days = [];
     let currentDayKey = null;
@@ -340,7 +341,11 @@
     for (const item of timeseries) {
       const d = new Date(item.time);
       if (isNaN(d.getTime())) continue;
-      const key = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+      // Дата и час из ISO-строки («2026-03-05T12:00:00+03:00» → день 2026-03-05,
+      // час 12) — это локальное время точки, не зависящее от TZ окружения.
+      const iso = typeof item.time === "string" ? /^(\d{4}-\d{2}-\d{2})T(\d{2}):/.exec(item.time) : null;
+      const key = iso ? iso[1] : (d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"));
+      const hour = iso ? Number(iso[2]) : d.getHours();
       if (key !== currentDayKey) {
         push();
         currentDayKey = key;
@@ -362,8 +367,9 @@
       const sym = (item.data && item.data.next_1_hours && item.data.next_1_hours.summary && item.data.next_1_hours.summary.symbol_code) ||
         (item.data && item.data.next_6_hours && item.data.next_6_hours.summary && item.data.next_6_hours.summary.symbol_code) ||
         null;
-      // Берём символ на 12:00 дня — он лучше всего описывает «дневную» погоду.
-      if (sym && d.getHours() === 12) current.symbol = sym;
+      // Берём символ на 12:00 дня (по времени точки) — он лучше всего
+      // описывает «дневную» погоду.
+      if (sym && hour === 12) current.symbol = sym;
       if (!current.symbol && sym) current.symbol = sym;
       current.n++;
     }

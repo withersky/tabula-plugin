@@ -13,6 +13,7 @@ Thumbs.db
 # Local overrides
 *.local
 .env
+.venv/
 
 # Robot Framework test results
 tests/results/
