@@ -47,7 +47,7 @@ concurrency:
 jobs:
   release:
     name: Build & publish release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -134,6 +134,19 @@ jobs:
             rm -f "$tmp"
           done
           echo "ES modules syntax: OK"
+
+      # src/i18n/generated/*.js — производный артефакт, в git не хранится
+      # (генерируется из src/i18n/*.json). Генерируем заранее, чтобы сломанный
+      # JSON-словарь или генератор упали до шага сборки с понятной ошибкой.
+      - name: Generate i18n bridge scripts
+        if: steps.meta.outputs.skip != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/gen-i18n.mjs
+          node --check src/i18n/generated/ui.js
+          node --check src/i18n/generated/symbols.js
+          echo "i18n bridge scripts: OK"
 
       - name: Run robot unit tests
         if: steps.meta.outputs.skip != 'true'

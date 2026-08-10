@@ -1,6 +1,21 @@
 /*
  * Tabula — spreadsheet-style new tab page browser extension.
  *
+ * Copyright (C) 2026 withersky
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
  * Вкладка «Данные»: сброс, экспорт/импорт конфига и импорт из закладок
  * браузера (папка → новый лист). Слушатели собирает bindDataEvents(),
  * вызываемый из main.wireEvents().
@@ -172,7 +187,7 @@ export function onBookmarksFolderChange() {
     bookmarksImportBtn.disabled = true;
     return;
   }
-  bookmarksFolderInfo.textContent = tx("bookmarksFolderInfo")(folder.count);
+  bookmarksFolderInfo.textContent = tx("bookmarksFolderInfo")({ n: folder.count });
   bookmarksFolderInfo.hidden = false;
   bookmarksImportBtn.disabled = false;
 }
@@ -186,7 +201,7 @@ export async function onBookmarksImport() {
   if (!node) { flash(tx("bookmarksUnavailable"), true); return; }
   const urls = collectBookmarkUrls(node, []);
   if (urls.length === 0) { flash(tx("bookmarksFolderEmpty"), true); return; }
-  if (!(await confirmDialog(tx("bookmarksConfirm")(folder.name, urls.length)))) return;
+  if (!(await confirmDialog(tx("bookmarksConfirm")({ name: folder.name, n: urls.length })))) return;
   try {
     await Storage.update((d) => {
       const cols = clampCols(Number(d.settings.defaultColumns) || 8);
@@ -198,7 +213,7 @@ export async function onBookmarksImport() {
       });
       d.sheets.push(sheet);
     });
-    flash(tx("bookmarksImported")(urls.length));
+    flash(tx("bookmarksImported")({ n: urls.length }));
     closeBookmarksModal();
   } catch (e) {
     flash(tx("importFailed"), true);

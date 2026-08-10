@@ -37,6 +37,15 @@ DIST="$ROOT/dist"
 # модули, lib, иконки). build.sh копирует его целиком и выбирает манифест.
 SRC_DIR="$ROOT/src"
 
+# Генерируем браузерные i18n-скрипты из JSON-словарей (src/i18n/*.json →
+# src/i18n/generated/*.js). Нужен Node.js; без него сборка продолжается,
+# но переводы могут устареть.
+if command -v node >/dev/null 2>&1; then
+  node "$ROOT/scripts/gen-i18n.mjs"
+else
+  echo "Warning: node not found, skipping i18n generation" >&2
+fi
+
 build_chrome() {
   local out="$DIST/chrome"
   rm -rf "$out"

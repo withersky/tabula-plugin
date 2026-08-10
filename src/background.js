@@ -22,6 +22,8 @@
 
 // Load cross-browser API shim. Works in Chromium service workers and Firefox background scripts.
 try { importScripts("lib/browser.js"); } catch (_) { /* ignore if not in worker context */ }
+// i18n data (JSON → generated script) before lib/core.js, which reads the global.
+try { importScripts("i18n/generated/symbols.js"); } catch (_) { /* ignore if not in worker context */ }
 // Pure helpers (weather symbol mapping, forecast folding) live in lib/core.js.
 try { importScripts("lib/core.js"); } catch (_) { /* ignore if not in worker context */ }
 

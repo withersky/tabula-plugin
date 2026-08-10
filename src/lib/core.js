@@ -55,82 +55,14 @@
 
   // Человеко-понятные описания symbol_code met.no.
   // База — это symbol без суффиксов _day / _night / _polartwilight.
-  const SYMBOL_DESC = {
-    ru: {
-      clearsky:                     "Ясно",
-      fair:                         "Преимущественно ясно",
-      partlycloudy:                 "Переменная облачность",
-      cloudy:                       "Облачно",
-      rainshowers:                  "Ливни",
-      rainshowersandthunder:        "Гроза с ливнем",
-      sleetshowers:                 "Мокрый снег",
-      snowshowers:                  "Снегопад",
-      rain:                         "Дождь",
-      heavyrain:                    "Сильный дождь",
-      sleet:                        "Мокрый снег",
-      snow:                         "Снег",
-      heavysnow:                    "Сильный снегопад",
-      fog:                          "Туман",
-      lightrain:                    "Небольшой дождь",
-      lightsleet:                   "Слабый мокрый снег",
-      heavysleet:                   "Сильный мокрый снег",
-      lightsnow:                    "Небольшой снег",
-      lightfog:                     "Лёгкий туман",
-      lightrainshowers:             "Небольшие ливни",
-      heavyrainshowers:             "Сильные ливни",
-      lightsleetshowers:            "Слабый мокрый снег",
-      heavysleetshowers:            "Сильный мокрый снег",
-      lightsnowshowers:             "Небольшой снег",
-      heavysnowshowers:             "Сильный снег",
-      lightrainshowersandthunder:   "Небольшая гроза",
-      heavyrainshowersandthunder:   "Сильная гроза",
-      lightsleetshowersandthunder:  "Гроза, мокрый снег",
-      heavysleetshowersandthunder:  "Сильная гроза с мокрым снегом",
-      lightsnowshowersandthunder:   "Гроза со снегом",
-      heavysnowshowersandthunder:   "Сильная гроза со снегом",
-      rainandthunder:               "Дождь с грозой",
-      heavyrainandthunder:          "Сильный дождь с грозой",
-      snowandthunder:               "Снег с грозой",
-      heavysnowandthunder:          "Сильный снег с грозой"
-    },
-    en: {
-      clearsky:                     "Clear",
-      fair:                         "Mostly clear",
-      partlycloudy:                 "Partly cloudy",
-      cloudy:                       "Cloudy",
-      rainshowers:                  "Showers",
-      rainshowersandthunder:        "Thunder showers",
-      sleetshowers:                 "Sleet showers",
-      snowshowers:                  "Snow showers",
-      rain:                         "Rain",
-      heavyrain:                    "Heavy rain",
-      sleet:                        "Sleet",
-      snow:                         "Snow",
-      heavysnow:                    "Heavy snow",
-      fog:                          "Fog",
-      lightrain:                    "Light rain",
-      lightsleet:                   "Light sleet",
-      heavysleet:                   "Heavy sleet",
-      lightsnow:                    "Light snow",
-      lightfog:                     "Light fog",
-      lightrainshowers:             "Light showers",
-      heavyrainshowers:             "Heavy showers",
-      lightsleetshowers:            "Light sleet showers",
-      heavysleetshowers:            "Heavy sleet showers",
-      lightsnowshowers:             "Light snow showers",
-      heavysnowshowers:             "Heavy snow showers",
-      lightrainshowersandthunder:   "Light thunder showers",
-      heavyrainshowersandthunder:   "Heavy thunder showers",
-      lightsleetshowersandthunder:  "Thunder with sleet",
-      heavysleetshowersandthunder:  "Heavy thunder with sleet",
-      lightsnowshowersandthunder:   "Thunder with snow",
-      heavysnowshowersandthunder:   "Heavy thunder with snow",
-      rainandthunder:               "Rain with thunder",
-      heavyrainandthunder:          "Heavy rain with thunder",
-      snowandthunder:               "Snow with thunder",
-      heavysnowandthunder:          "Heavy snow with thunder"
-    }
-  };
+  // Словари вынесены в JSON (src/i18n/symbols.*.json), чтобы переводы
+  // могло добавлять сообщество. В браузере данные подставляет
+  // src/i18n/generated/symbols.js (глобал I18N_SYMBOLS); в Node — require.
+  const SYMBOL_DESC =
+    (typeof globalThis !== "undefined" && globalThis.I18N_SYMBOLS) ||
+    (typeof require === "function"
+      ? { ru: require("../i18n/symbols.ru.json"), en: require("../i18n/symbols.en.json") }
+      : { ru: {}, en: {} });
 
   function describeSymbol(symbol, lang) {
     if (!symbol) return "";

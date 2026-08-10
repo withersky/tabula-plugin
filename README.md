@@ -91,6 +91,10 @@ tabula-plugin/
 │   │   ├── browser.js         кросс-браузерная обёртка ext.* (chrome.* / browser.*)
 │   │   ├── core.js            чистая логика: URL, погода, даты, ключи ячеек
 │   │   └── storage.js         дефолты, миграция v1→v2→v3, i18n, helpers
+│   ├── i18n/                  переводы (JSON — правят сообществом)
+│   │   ├── ru.json, en.json        словарь интерфейса
+│   │   ├── symbols.{ru,en}.json    описания погодных символов met.no
+│   │   └── generated/              генерируется gen-i18n.mjs; в git не хранится
 │   ├── newtab/                страница новой вкладки
 │   │   ├── newtab.html
 │   │   ├── newtab.css
@@ -100,6 +104,8 @@ tabula-plugin/
 │   │   ├── options.css
 │   │   └── js/                ES-модули (main, form, preview, widgets, data, …)
 │   └── icons/
+├── scripts/
+│   └── gen-i18n.mjs           генератор src/i18n/generated/*.js из JSON
 ├── build.sh                   сборка dist/{chrome,firefox} из src/
 ├── site/                      сайт-визитка (GitHub Pages)
 │   └── icons/                 копии иконок расширения (на Pages деплоится только site/)
@@ -116,6 +122,13 @@ tabula-plugin/
 расширения идут через тонкую обёртку [`src/lib/browser.js`](src/lib/browser.js:1), поэтому
 Chrome и Firefox используют одну и ту же кодовую базу.
 
+Перед первой загрузкой `src/` как unpacked сгенерируйте браузерные i18n-скрипты —
+в репозитории их нет (это производный артефакт):
+
+```bash
+node scripts/gen-i18n.mjs   # требуется Node.js; повторяйте после правки src/i18n/*.json
+```
+
 ### Сборка релизных архивов
 
 ```bash
@@ -123,6 +136,9 @@ Chrome и Firefox используют одну и ту же кодовую ба
 ./build.sh firefox   # -> dist/firefox/  (используется src/manifest.firefox.json)
 ./build.sh all       # -> оба варианта
 ```
+
+Перед копированием `build.sh` генерирует браузерные i18n-скрипты из JSON-словарей
+(`node scripts/gen-i18n.mjs`), так что после добавления нового языка достаточно пересобрать.
 
 Полученные папки можно упаковывать в zip и загружать в магазины
 (Chrome Web Store, AMO). Папки `site/`, `dist/` и сам `build.sh` в архивы не попадают.
@@ -288,7 +304,10 @@ Workflow генерирует его при каждом релизе (и доб
 - Дефолтная тема — объект `settings` там же.
 - CSS-переменные (`--columns`, `--font-family`, …) — в `:root` в [`src/newtab/newtab.css`](src/newtab/newtab.css:1).
   Строки грида делят доступную высоту поровну; их количество задаётся `settings.gridRows`.
-- Переводы — добавьте язык в `I18N` в [`src/lib/storage.js`](src/lib/storage.js:1) и radio-карточку `name="language"` в [`src/options/options.html`](src/options/options.html:432).
+- Переводы — добавьте `src/i18n/<lang>.json` (и при необходимости `src/i18n/symbols.<lang>.json`),
+  затем запустите `node scripts/gen-i18n.mjs` и добавьте radio-карточку `name="language"` в
+  [`src/options/options.html`](src/options/options.html:432). JSON не требует правки JS-кода,
+  поэтому переводы легко делать сообществу. Строки с плейсхолдерами используют `{name}`/`{n}`.
 - Ссылки на скачивание на сайте — меняются автоматически из последнего релиза, ничего править не нужно.
 
 ## Заметки

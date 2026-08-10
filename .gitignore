@@ -4,6 +4,9 @@ tabula-chrome-*.zip
 tabula-firefox-*.zip
 release_notes.md
 
+# Generated i18n bridge scripts (produced by `node scripts/gen-i18n.mjs`)
+src/i18n/generated/
+
 # OS / IDE junk
 .DS_Store
 Thumbs.db
