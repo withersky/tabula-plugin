@@ -13,3 +13,7 @@ Thumbs.db
 # Local overrides
 *.local
 .env
+
+# Robot Framework test results
+tests/results/
+tests/lib/__pycache__/

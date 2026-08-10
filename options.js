@@ -20,7 +20,7 @@
 (() => {
   "use strict";
 
-  const RANGE_KEYS = ["defaultColumns", "uiOpacity", "fontSize", "clockSize", "weatherSize", "weatherRefreshMin", "weatherForecastDays", "cellSelectedColor", "gridRows"];
+  const RANGE_KEYS = ["defaultColumns", "uiOpacity", "uiScale", "fontSize", "clockSize", "weatherSize", "weatherRefreshMin", "weatherForecastDays", "cellSelectedColor", "gridRows"];
   const TEXT_KEYS = ["fontFamily",
                      "backgroundColor", "backgroundGradient", "backgroundImage"];
   const NUMBER_KEYS = ["weatherLat", "weatherLon"];
@@ -36,6 +36,7 @@
   const exportBtn   = $("#exportBtn");
   const importBtn   = $("#importBtn");
   const importFile  = $("#importFile");
+  const previewFrame = $("#previewFrame");
   const weatherGeoBtn = $("#weatherGeoBtn");
   const geoModal       = $("#geoModal");
   const geoForm        = $("#geoForm");
@@ -86,7 +87,7 @@
   let searchIndex = [];
   let searchTimer;
   let searchActiveIdx = -1;
-  const TAB_IDS = ["appearance", "grid", "typography", "widgets", "language", "data", "about"];
+  const TAB_IDS = ["appearance", "widgets", "language", "data", "about"];
 
   function tx(key) { return t(key, lang); }
 
@@ -184,6 +185,7 @@
     }
     refreshRangeOutputs();
     syncWidgetCollapsed();
+    sendPreview();
   }
 
   // ---------- widget collapsed state ----------
@@ -222,6 +224,17 @@
       settings[key] = v;
     }
     return settings;
+  }
+
+  // Отправляет текущее состояние формы в iframe-превью (newtab.html?preview=1).
+  // Страница превью применяет настройки на лету, ничего не сохраняя в storage.
+  function sendPreview() {
+    if (!previewFrame || !previewFrame.contentWindow) return;
+    const settings = collectSettings();
+    previewFrame.contentWindow.postMessage({
+      type: "tabula-preview-settings",
+      settings
+    }, "*");
   }
 
   function refreshRangeOutputs() {
@@ -628,6 +641,7 @@
       el !== uploadInput && el !== importFile && el !== searchInput);
     allControls.forEach((el) => {
       const handler = () => {
+        sendPreview();
         clearTimeout(t);
         t = setTimeout(async () => {
           await persistSettings();
@@ -646,6 +660,12 @@
         if (out) out.textContent = el.value;
       });
     });
+
+    // Превью: синхронизируемся с iframe после его загрузки (и после каждой
+    // перезагрузки, например при изменении языка страница пересоздаётся).
+    if (previewFrame) {
+      previewFrame.addEventListener("load", sendPreview);
+    }
 
     // Мгновенно сворачивать/разворачивать блок виджета по клику на тоггл
     ["showClock", "showQuickGo", "showWeather"].forEach(k => {

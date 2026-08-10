@@ -202,9 +202,9 @@ button { font: inherit; }
   gap: 4px;
   padding: 8px 22px;
   border-bottom: 1px solid var(--border);
-  background: rgba(26,26,36,0.88);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(26,26,36,0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 .tab {
   appearance: none;
@@ -229,14 +229,123 @@ button { font: inherit; }
 
 /* ---------- layout ---------- */
 .layout {
-  max-width: 1200px;
+  max-width: 1440px;
   margin: 0 auto;
   padding: 0 22px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 460px;
+  gap: 24px;
+  align-items: start;
 }
 
 main {
-  padding: 22px 0 80px;
+  padding: 22px 0 40px;
   min-width: 0;
+}
+
+/* ---------- live preview pane ---------- */
+/* Правый блок статичен: фиксированная высота, всегда вписан в экран. */
+.preview-pane {
+  position: sticky;
+  top: calc(var(--topbar-h) + 56px);
+  /* Выравниваем верх превью с первой карточкой настроек:
+     main padding-top 22px + margin первого панеля 22px. */
+  margin-top: 44px;
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - var(--topbar-h) - 68px);
+  min-height: 320px;
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+/* Декоративный «рабочий стол» под окном браузера */
+.preview-window {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  padding: 12px;
+  background:
+    radial-gradient(500px 260px at 50% -20%, rgba(120,140,255,0.22), transparent 70%),
+    linear-gradient(140deg, #3b4054 0%, #282c3a 55%, #1c1f29 100%);
+  overflow: hidden;
+}
+/* Окно браузера */
+.preview-browser {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow:
+    0 18px 40px rgba(0,0,0,0.5),
+    0 4px 14px rgba(0,0,0,0.35),
+    inset 0 0 0 1px rgba(255,255,255,0.08);
+}
+.preview-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 11px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0.04));
+  border-bottom: 1px solid rgba(255,255,255,0.10);
+  flex: 0 0 auto;
+}
+.preview-dots {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.preview-dots .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.dot-red    { background: #ff5f57; }
+.dot-yellow { background: #febc2e; }
+.dot-green  { background: #28c840; }
+.preview-url {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  margin-right: 42px; /* балансирует три точки слева */
+  padding: 3px 12px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.72);
+  font-size: 11px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.preview-frame {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 0;
+  background: #000;
+}
+.preview-frame iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+@media (max-width: 1080px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+  .preview-pane {
+    position: static;
+    max-height: none;
+    height: 520px;
+    margin-top: 0;
+  }
 }
 
 .panel {
@@ -283,24 +392,38 @@ main {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px 18px;
-  margin-top: 12px;
+  margin-top: 10px;
 }
 @media (max-width: 640px) {
   .grid-2 { grid-template-columns: 1fr; }
 }
-.grid-2 label.page-title-field {
+.grid-2 label.page-title-field,
+.panel > label.page-title-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
   padding: 12px 14px;
   margin: 4px 0 8px;
   border-radius: 10px;
   background: rgba(120,140,255,0.08);
   border: 1px solid rgba(120,140,255,0.30);
 }
-.grid-2 label.page-title-field > .row { color: rgba(190,200,255,1); }
-.grid-2 label, .grid-2 > div {
+.grid-2 label.page-title-field > .row,
+.panel > label.page-title-field > .row { color: rgba(190,200,255,1); }
+/* Единые отступы пунктов формы: ползунки, селекты, чекбоксы и поля
+   выглядят одинаково во всех вкладках настроек. */
+.panel > label,
+.bg-only > label,
+.grid-2 label,
+.grid-2 > div {
   display: flex;
   flex-direction: column;
   gap: 6px;
   font-size: 13px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.025);
 }
 .grid-2 label.full, .grid-2 .full { grid-column: 1 / -1; }
 
@@ -458,7 +581,7 @@ select { cursor: pointer; }
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 6px 18px;
-  margin-top: 6px;
+  margin-top: 10px;
 }
 @media (max-width: 640px) {
   .checks { grid-template-columns: 1fr; }
@@ -470,8 +593,9 @@ select { cursor: pointer; }
   gap: 10px;
   cursor: pointer;
   font-size: 13px;
-  padding: 8px 10px;
-  border-radius: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.025);
   transition: background 120ms ease;
 }
 .check:hover { background: rgba(255,255,255,0.04); }

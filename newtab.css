@@ -19,6 +19,8 @@
 
 :root {
   --columns: 8;
+  /* Общий масштаб виджетов и нижнего бара (0.5..1.5), задаётся ползунком uiScale. */
+  --ui-scale: 1;
   --font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-size: 13px;
   --text-color: #e8e8f0;
@@ -29,13 +31,17 @@
      один множитель, чтобы выглядели одинаково. */
   --panel-bg: rgba(0, 0, 0, calc(var(--ui-bg-opacity) * 0.5));
   --panel-bg-hover: rgba(0, 0, 0, calc(var(--ui-bg-opacity) * 0.62));
+  /* Плавающие поверхности (выпадайки, меню, модалки, тосты) темнее виджетов:
+     они накладываются поверх произвольного фона, и текст должен оставаться
+     читаемым. Управляются тем же ползунком uiOpacity, но с бОльшим множителем. */
+  --dropdown-bg: rgba(0, 0, 0, calc(var(--ui-bg-opacity) * 0.75));
   --bar-bg: var(--panel-bg);
   --cell-hover-bg: rgba(255, 255, 255, 0.07);
   --cell-selected-bg: rgba(255, 255, 255, 0.10);
   --cell-selected-color: #788cff;
   --grid-line: rgba(255,255,255,0.10);
   --grid-line-strong: rgba(255,255,255,0.18);
-  --modal-bg: rgba(26, 26, 42, var(--ui-bg-opacity));
+  --modal-bg: var(--dropdown-bg);
   --modal-border: rgba(255,255,255,0.18);
   --input-bg: rgba(255,255,255,0.06);
   --input-border: rgba(255,255,255,0.18);
@@ -44,11 +50,14 @@
   --sheet-tab-bg: rgba(255,255,255,0.04);
   --sheet-tab-bg-hover: rgba(255,255,255,0.08);
   --sheet-tab-active: rgba(255,255,255,0.12);
-  --ctx-bg: rgba(26, 26, 42, var(--ui-bg-opacity));
-  --toast-bg: rgba(26, 26, 42, var(--ui-bg-opacity));
-  /* Ячейки: лёгкий тон + постоянный блюр (см. body.ui-frost .cell.filled),
-     чтобы выглядели как матовое стекло, а не просто прозрачные прямоугольники. */
-  --cell-bg: rgba(26, 26, 42, calc(var(--ui-bg-opacity) * 0.3));
+  --ctx-bg: var(--dropdown-bg);
+  --toast-bg: var(--dropdown-bg);
+  /* Ячейки: лёгкий тон + градиентный блик + постоянный блюр
+     (см. body.ui-frost .cell.filled), чтобы выглядели как матовое стекло,
+     а не просто прозрачные прямоугольники. Блик синхронизирован с ползунком. */
+  --cell-bg:
+    linear-gradient(180deg, rgba(255,255,255,calc(var(--ui-bg-opacity) * 0.09)), rgba(255,255,255,calc(var(--ui-bg-opacity) * 0.02)) 45%, rgba(255,255,255,calc(var(--ui-bg-opacity) * 0.05))),
+    rgba(26, 26, 42, calc(var(--ui-bg-opacity) * 0.38));
 }
 
 html, body, #bg, .sheet-bar, .topbar, .quick-go input, .modal-card,
@@ -76,10 +85,11 @@ body.ui-frost .weather-popup {
   -webkit-backdrop-filter: blur(calc(var(--ui-bg-opacity, 0.9) * 14px));
 }
 /* Ячейки блюрятся постоянным радиусом: даже при слабой прозрачности
-   эффект «матового стекла» остаётся заметным. */
+   эффект «матового стекла» остаётся заметным. Сатурация усиливает
+   стеклянность — цвета фона за ячейкой становятся сочнее. */
 body.ui-frost .cell.filled {
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
 }
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(-4px); }
@@ -119,8 +129,8 @@ html, body {
   display: grid;
   grid-template-columns: auto 1fr auto auto;
   align-items: center;
-  column-gap: 12px;
-  padding: 12px 16px;
+  column-gap: calc(12px * var(--ui-scale));
+  padding: calc(12px * var(--ui-scale)) calc(16px * var(--ui-scale));
   position: relative;
 }
 body.no-quick-go.no-clock.no-weather .topbar { display: none; }
@@ -140,9 +150,9 @@ body.no-clock.no-quick-go.no-weather .topbar { display: none; }
   grid-column: 1;
   justify-self: start;
   display: flex; flex-direction: column; align-items: flex-start; justify-content: center;
-  gap: 2px;
-  padding: 6px 12px;
-  border-radius: 12px;
+  gap: calc(2px * var(--ui-scale));
+  padding: calc(6px * var(--ui-scale)) calc(12px * var(--ui-scale));
+  border-radius: calc(12px * var(--ui-scale));
   border: 1px solid transparent;
   background: var(--panel-bg);
   color: var(--text-color);
@@ -157,7 +167,7 @@ body.no-clock.no-quick-go.no-weather .topbar { display: none; }
 .clock-widget:hover { background: var(--panel-bg-hover); border-color: var(--input-border); }
 .clock-time {
   font-family: var(--font-family);
-  font-size: clamp(16px, var(--clock-size, 28px), 36px);
+  font-size: clamp(calc(16px * var(--ui-scale)), calc(var(--clock-size, 28px) * var(--ui-scale)), calc(36px * var(--ui-scale)));
   line-height: 1.05;
   font-weight: 600;
   letter-spacing: -0.01em;
@@ -165,10 +175,10 @@ body.no-clock.no-quick-go.no-weather .topbar { display: none; }
 }
 .clock-date {
   font-family: var(--font-family);
-  font-size: clamp(10px, calc(var(--clock-size, 28px) * 0.32), 13px);
+  font-size: clamp(calc(10px * var(--ui-scale)), calc(var(--clock-size, 28px) * 0.32 * var(--ui-scale)), calc(13px * var(--ui-scale)));
   line-height: 1;
   opacity: 0.65;
-  margin-top: 2px;
+  margin-top: calc(2px * var(--ui-scale));
   text-transform: lowercase;
   font-weight: 400;
   letter-spacing: 0.01em;
@@ -177,15 +187,15 @@ body.no-clock.no-quick-go.no-weather .topbar { display: none; }
 .weather-widget {
   grid-column: 3;
   justify-self: end;
-  display: flex; align-items: center; gap: calc(var(--weather-size, 13px) * 0.75);
+  display: flex; align-items: center; gap: calc(var(--weather-size, 13px) * 0.75 * var(--ui-scale));
   min-width: 0;
-  width: clamp(180px, 22vw, 260px);
-  padding: calc(var(--weather-size, 13px) * 0.45) calc(var(--weather-size, 13px) * 0.9);
-  border-radius: 12px;
+  width: clamp(calc(180px * var(--ui-scale)), 22vw, calc(260px * var(--ui-scale)));
+  padding: calc(var(--weather-size, 13px) * 0.45 * var(--ui-scale)) calc(var(--weather-size, 13px) * 0.9 * var(--ui-scale));
+  border-radius: calc(12px * var(--ui-scale));
   border: 1px solid transparent;
   background: var(--panel-bg);
   color: var(--text-color);
-  font-size: var(--weather-size, 13px);
+  font-size: calc(var(--weather-size, 13px) * var(--ui-scale));
   line-height: 1.25;
   user-select: none;
   cursor: pointer;
@@ -195,19 +205,19 @@ body.no-clock.no-quick-go.no-weather .topbar { display: none; }
 .weather-widget:hover { background: var(--panel-bg-hover); border-color: var(--input-border); }
 .weather-widget.is-off { visibility: hidden; }
 .weather-widget:focus-visible { outline: 2px solid rgba(120,140,255,0.7); outline-offset: 1px; }
-.weather-icon { font-size: calc(var(--weather-size, 13px) * 1.7); line-height: 1; flex: 0 0 auto; }
+.weather-icon { font-size: calc(var(--weather-size, 13px) * 1.7 * var(--ui-scale)); line-height: 1; flex: 0 0 auto; }
 .weather-text {
   flex: 1 1 auto;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: calc(1px * var(--ui-scale));
   overflow: hidden;
 }
-.weather-line { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.weather-line { display: flex; align-items: baseline; gap: calc(8px * var(--ui-scale)); min-width: 0; }
 .weather-temp { font-weight: 600; font-variant-numeric: tabular-nums; flex: 0 0 auto; }
 .weather-desc { opacity: 0.78; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.weather-city { opacity: 0.6; font-size: calc(var(--weather-size, 13px) * 0.85); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.weather-city { opacity: 0.6; font-size: calc(var(--weather-size, 13px) * 0.85 * var(--ui-scale)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .weather-widget {
   position: relative;
 }
@@ -225,13 +235,13 @@ body.no-clock.no-quick-go.no-weather .topbar { display: none; }
   overflow-x: hidden;
   scrollbar-width: thin;
   scrollbar-color: rgba(255,255,255,0.28) transparent;
-  padding: 8px 10px 10px;
-  background: rgba(22, 24, 32, var(--ui-bg-opacity, 0.94));
+  padding: calc(8px * var(--ui-scale)) calc(10px * var(--ui-scale)) calc(10px * var(--ui-scale));
+  background: var(--dropdown-bg);
   border: 1px solid rgba(255,255,255,0.14);
-  border-radius: 12px;
+  border-radius: calc(12px * var(--ui-scale));
   box-shadow: 0 12px 32px rgba(0,0,0,0.45);
   animation: fadeIn 160ms ease;
-  font-size: 13px;
+  font-size: calc(13px * var(--ui-scale));
   line-height: 1.3;
   user-select: none;
   cursor: default;
@@ -246,19 +256,19 @@ body.no-clock.no-quick-go.no-weather .topbar { display: none; }
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 10px;
-  padding: 2px 2px 6px;
+  gap: calc(10px * var(--ui-scale));
+  padding: calc(2px * var(--ui-scale)) calc(2px * var(--ui-scale)) calc(6px * var(--ui-scale));
   border-bottom: 1px solid rgba(255,255,255,0.12);
-  margin-bottom: 6px;
+  margin-bottom: calc(6px * var(--ui-scale));
 }
 .weather-popup-title {
   font-weight: 600;
-  font-size: 14px;
+  font-size: calc(14px * var(--ui-scale));
   white-space: nowrap;
 }
 .weather-popup-city {
   opacity: 0.6;
-  font-size: 12px;
+  font-size: calc(12px * var(--ui-scale));
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -267,15 +277,15 @@ body.no-clock.no-quick-go.no-weather .topbar { display: none; }
 .weather-popup-days {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: calc(2px * var(--ui-scale));
 }
 .weather-popup-day {
   display: grid;
-  grid-template-columns: 64px 26px 1fr auto;
+  grid-template-columns: calc(64px * var(--ui-scale)) calc(26px * var(--ui-scale)) 1fr auto;
   align-items: center;
-  gap: 8px;
-  padding: 5px 4px;
-  border-radius: 8px;
+  gap: calc(8px * var(--ui-scale));
+  padding: calc(5px * var(--ui-scale)) calc(4px * var(--ui-scale));
+  border-radius: calc(8px * var(--ui-scale));
   transition: background 120ms ease;
 }
 .weather-popup-day:hover { background: rgba(255,255,255,0.06); }
@@ -288,19 +298,19 @@ body.no-clock.no-quick-go.no-weather .topbar { display: none; }
 }
 .weather-popup-day-label.today { color: rgba(140, 160, 255, 0.95); }
 .weather-popup-day-date {
-  font-size: 11px;
+  font-size: calc(11px * var(--ui-scale));
   font-weight: 400;
   opacity: 0.55;
   font-variant-numeric: tabular-nums;
 }
 .weather-popup-day-icon {
-  font-size: 18px;
+  font-size: calc(18px * var(--ui-scale));
   line-height: 1;
   text-align: center;
 }
 .weather-popup-day-desc {
   opacity: 0.7;
-  font-size: 12px;
+  font-size: calc(12px * var(--ui-scale));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -314,14 +324,14 @@ body.no-clock.no-quick-go.no-weather .topbar { display: none; }
 .weather-popup-open {
   display: block;
   width: 100%;
-  margin-top: 8px;
-  padding: 7px 10px;
-  border-radius: 8px;
+  margin-top: calc(8px * var(--ui-scale));
+  padding: calc(7px * var(--ui-scale)) calc(10px * var(--ui-scale));
+  border-radius: calc(8px * var(--ui-scale));
   border: 1px solid rgba(255,255,255,0.16);
   background: rgba(255,255,255,0.06);
   color: var(--text-color);
   font: inherit;
-  font-size: 12px;
+  font-size: calc(12px * var(--ui-scale));
   cursor: pointer;
   transition: background 120ms ease, border-color 120ms ease;
 }
@@ -329,19 +339,19 @@ body.no-clock.no-quick-go.no-weather .topbar { display: none; }
 .weather-popup-empty {
   text-align: center;
   opacity: 0.6;
-  padding: 14px 0;
-  font-size: 12px;
+  padding: calc(14px * var(--ui-scale)) 0;
+  font-size: calc(12px * var(--ui-scale));
 }
 body.no-quick-go .quick-go { display: none; }
 
-.quick-go { position: relative; grid-column: 2; justify-self: stretch; min-width: 0; max-width: 720px; width: 100%; margin: 0 auto; animation: fadeIn 240ms ease; }
+.quick-go { position: relative; grid-column: 2; justify-self: stretch; min-width: 0; max-width: calc(720px * var(--ui-scale)); width: 100%; margin: 0 auto; animation: fadeIn 240ms ease; }
 .quick-go-icon {
   position: absolute;
   top: 50%;
-  left: 14px;
+  left: calc(14px * var(--ui-scale));
   transform: translateY(-50%);
-  width: 16px;
-  height: 16px;
+  width: calc(16px * var(--ui-scale));
+  height: calc(16px * var(--ui-scale));
   display: grid;
   place-items: center;
   pointer-events: none;
@@ -349,20 +359,20 @@ body.no-quick-go .quick-go { display: none; }
   z-index: 1;
 }
 .quick-go-icon img {
-  width: 16px;
-  height: 16px;
+  width: calc(16px * var(--ui-scale));
+  height: calc(16px * var(--ui-scale));
   object-fit: contain;
 }
 .quick-go-icon:empty { display: none; }
 .quick-go input {
   width: 100%;
-  padding: 9px 14px 9px 38px;
+  padding: calc(9px * var(--ui-scale)) calc(14px * var(--ui-scale)) calc(9px * var(--ui-scale)) calc(38px * var(--ui-scale));
   border-radius: 999px;
   border: 1px solid var(--input-border);
   background: var(--panel-bg);
   color: var(--text-color);
   font: inherit;
-  font-size: 14px;
+  font-size: calc(14px * var(--ui-scale));
   outline: none;
   transition: background 160ms ease, border-color 160ms ease;
 }
@@ -374,12 +384,12 @@ body.no-quick-go .quick-go { display: none; }
   top: calc(100% + 6px);
   left: 0; right: 0;
   z-index: 60;
-  padding: 4px;
-  background: rgba(22, 24, 32, var(--ui-bg-opacity, 0.94));
+  padding: calc(4px * var(--ui-scale));
+  background: var(--dropdown-bg);
   border: 1px solid rgba(255,255,255,0.14);
-  border-radius: 12px;
+  border-radius: calc(12px * var(--ui-scale));
   box-shadow: 0 12px 32px rgba(0,0,0,0.45);
-  max-height: 300px;
+  max-height: calc(300px * var(--ui-scale));
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: rgba(255,255,255,0.28) transparent;
@@ -408,10 +418,10 @@ body.no-quick-go .quick-go { display: none; }
 .quick-suggest-item {
 display: flex;
 align-items: center;
-gap: 8px;
-padding: 8px 12px;
-border-radius: 8px;
-font-size: 14px;
+gap: calc(8px * var(--ui-scale));
+padding: calc(8px * var(--ui-scale)) calc(12px * var(--ui-scale));
+border-radius: calc(8px * var(--ui-scale));
+font-size: calc(14px * var(--ui-scale));
 color: var(--text-color);
 cursor: pointer;
 white-space: nowrap;
@@ -421,12 +431,12 @@ transition: background 100ms ease;
 }
 .quick-suggest-item .suggest-icon {
 flex: 0 0 auto;
-width: 16px;
-height: 16px;
+width: calc(16px * var(--ui-scale));
+height: calc(16px * var(--ui-scale));
 display: grid;
 place-items: center;
 opacity: 0.55;
-font-size: 14px;
+font-size: calc(14px * var(--ui-scale));
 line-height: 1;
 }
 .quick-suggest-item .suggest-text {
@@ -442,30 +452,30 @@ white-space: nowrap;
 }
 .quick-suggest-item.active { color: #fff; }
 
-.topbar-actions { display: flex; gap: 6px; }
+.topbar-actions { display: flex; gap: calc(6px * var(--ui-scale)); }
 .icon-btn {
-  width: 36px; height: 36px;
-  border-radius: 10px;
+  width: calc(36px * var(--ui-scale)); height: calc(36px * var(--ui-scale));
+  border-radius: calc(10px * var(--ui-scale));
   border: 1px solid var(--input-border);
   background: var(--topbar-bg);
   color: var(--text-color);
-  font-size: 18px;
+  font-size: calc(18px * var(--ui-scale));
   cursor: pointer;
   display: grid; place-items: center;
   transition: background 160ms ease, transform 160ms ease, border-color 160ms ease;
 }
 .icon-btn:hover { background: var(--topbar-bg-hover); transform: translateY(-1px); }
 .icon-btn:active { transform: translateY(0) scale(0.97); }
-.icon-btn.small { width: 26px; height: 26px; font-size: 13px; border-radius: 8px; }
+.icon-btn.small { width: calc(26px * var(--ui-scale)); height: calc(26px * var(--ui-scale)); font-size: calc(13px * var(--ui-scale)); border-radius: calc(8px * var(--ui-scale)); }
 
 .opts-fab {
   grid-column: 4;
   justify-self: end;
-  width: 40px;
-  height: 40px;
+  width: calc(40px * var(--ui-scale));
+  height: calc(40px * var(--ui-scale));
   border-radius: 50%;
   background: var(--topbar-bg-hover);
-  font-size: 18px;
+  font-size: calc(18px * var(--ui-scale));
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
   border: 1px solid var(--input-border);
   animation: fadeIn 240ms ease, fabSpin 600ms ease-out;
@@ -575,9 +585,20 @@ body.no-quick-go.no-clock.no-weather.no-sheet-bar .grid-wrap { top: 0; bottom: 0
 
 .cell.filled {
   flex-direction: row; justify-content: flex-start; cursor: grab;
-  /* Лёгкий тон подложки; постоянный блюр (body.ui-frost .cell.filled)
+  /* Лёгкий тон подложки + блик; постоянный блюр (body.ui-frost .cell.filled)
      делает ячейку матовым стеклом: фон просвечивает, но размыт. */
   background: var(--cell-bg);
+}
+/* Верхний световой блик — характерная деталь стекла. Прозрачность блика
+   привязана к тому же ползунку, что и весь интерфейс. */
+.cell.filled::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.03) 35%, transparent 60%);
+  opacity: var(--ui-bg-opacity, 0.9);
 }
 .cell.filled .favicon {
   width: 20px; height: 20px;
@@ -609,6 +630,74 @@ body.no-quick-go.no-clock.no-weather.no-sheet-bar .grid-wrap { top: 0; bottom: 0
   white-space: nowrap;
   font-weight: 500;
 }
+/* Выравнивание содержимого ячейки: слева / по центру / справа.
+   Выравнивается вся группа «иконка + текст» целиком — иконка всегда
+   «приклеена» к тексту и двигается вместе с ним. Позиция иконки задаёт
+   только взаимное расположение (до/после/над/под текстом).
+   Выравнивание «слева» — поведение по умолчанию, оно зашито прямо в правила
+   позиций иконки, поэтому НЕ зависит от наличия классов cell-align-*.
+   Направления flex отличаются:
+   - row / row-reverse      — горизонталь = главная ось → justify-content;
+   - column / column-reverse — горизонталь = поперечная ось → align-items. */
+
+/* Иконка слева (row): дефолт «слева» уже задан в .cell.filled (flex-start);
+   центр и право — поверх. */
+body.cell-align-center .cell.filled { justify-content: center; }
+body.cell-align-right  .cell.filled { justify-content: flex-end; }
+
+/* Иконка справа (row-reverse): главная ось обращена, концы меняются местами.
+   Дефолт «слева» = flex-end на обращённой оси (иначе без класса cell-align-left
+   иконка «магнитится» к правому краю). */
+body.favicon-pos-right .cell.filled {
+  flex-direction: row-reverse;
+  justify-content: flex-end;
+}
+body.favicon-pos-right.cell-align-center .cell.filled { justify-content: center; }
+body.favicon-pos-right.cell-align-right  .cell.filled { justify-content: flex-start; }
+
+/* Иконка сверху/снизу (column / column-reverse): горизонталь = поперечная ось.
+   Дефолт «слева» = align-items: flex-start; по вертикали группа всегда
+   центрируется (justify-content в колонке — это вертикаль). */
+body.favicon-pos-top .cell.filled,
+body.favicon-pos-bottom .cell.filled {
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+}
+body.favicon-pos-bottom .cell.filled { flex-direction: column-reverse; }
+body.favicon-pos-top.cell-align-center .cell.filled,
+body.favicon-pos-bottom.cell-align-center .cell.filled { align-items: center; }
+body.favicon-pos-top.cell-align-right .cell.filled,
+body.favicon-pos-bottom.cell-align-right  .cell.filled { align-items: flex-end; }
+
+/* Текст при любом выравнивании не растягивается на всю ширину ячейки
+   (flex: 0 1 auto): ширина группы равна содержимому, появляется свободное
+   место, и выравнивание двигает группу целиком, а не только текст.
+   Если бы текст оставался flex: 1, в row-reverse иконка «магнитилась»
+   бы к правому краю даже при выравнивании слева. */
+body.cell-align-left  .cell.filled .title-text,
+body.cell-align-center .cell.filled .title-text,
+body.cell-align-right  .cell.filled .title-text {
+  flex: 0 1 auto;
+}
+/* Длинные названия переносятся на несколько строк (overflow-wrap: anywhere) —
+   иначе текст ужимается ровно до ширины ячейки, свободного места не остаётся,
+   и группа не выравнивается (а в row-reverse иконка уезжает к правому краю).
+   text-align НЕ используем: при длинном названии он двигал бы только текст,
+   «отклеивая» иконку. */
+body.cell-align-left  .cell.filled .title-text,
+body.cell-align-center .cell.filled .title-text,
+body.cell-align-right  .cell.filled .title-text {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+/* В колонке текст не должен тянуться по вертикали — только по ширине. */
+body.favicon-pos-top .cell.filled .title-text,
+body.favicon-pos-bottom .cell.filled .title-text {
+  flex: 0 1 auto;
+  max-width: 100%;
+  min-width: 0;
+}
 
 .cell.selected,
 .cell.filled.selected,
@@ -639,33 +728,33 @@ body.no-quick-go.no-clock.no-weather.no-sheet-bar .grid-wrap { top: 0; bottom: 0
 .sheet-bar {
   position: fixed;
   left: 0; right: 0; bottom: 0;
-  height: 40px;
-  min-height: 40px;
-  max-height: 40px;
+  height: calc(40px * var(--ui-scale));
+  min-height: calc(40px * var(--ui-scale));
+  max-height: calc(40px * var(--ui-scale));
   display: flex;
   align-items: center;
   flex-wrap: nowrap;
   background: var(--bar-bg);
   border-top: 1px solid var(--grid-line-strong);
-  padding: 4px 8px;
-  gap: 4px;
+  padding: calc(4px * var(--ui-scale)) calc(8px * var(--ui-scale));
+  gap: calc(4px * var(--ui-scale));
   overflow: hidden;
   animation: barIn 240ms ease-out;
 }
 @keyframes barIn {
-  from { transform: translateY(40px); }
+  from { transform: translateY(calc(40px * var(--ui-scale))); }
   to   { transform: translateY(0); }
 }
 body.no-sheet-bar .sheet-bar { display: none; }
 
 .sheet-scroll {
   flex: 0 0 auto;
-  width: 24px; height: 28px;
-  border-radius: 6px;
+  width: calc(24px * var(--ui-scale)); height: calc(28px * var(--ui-scale));
+  border-radius: calc(6px * var(--ui-scale));
   border: 1px solid transparent;
   background: rgba(255,255,255,0.04);
   color: var(--text-color);
-  font-size: 18px;
+  font-size: calc(18px * var(--ui-scale));
   line-height: 1;
   cursor: pointer;
   display: grid; place-items: center;
@@ -678,8 +767,8 @@ body.no-sheet-bar .sheet-bar { display: none; }
 }
 .sheet-scroll:hover { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.28); }
 .sheet-scroll[disabled] { opacity: 0.15; cursor: default; }
-.sheet-scroll.left { margin-right: 2px; }
-.sheet-scroll.right { margin-left: 2px; }
+.sheet-scroll.left { margin-right: calc(2px * var(--ui-scale)); }
+.sheet-scroll.right { margin-left: calc(2px * var(--ui-scale)); }
 
 .sheet-tabs {
   flex: 1 1 0;
@@ -687,9 +776,9 @@ body.no-sheet-bar .sheet-bar { display: none; }
   position: relative;
   display: flex;
   flex-wrap: nowrap;
-  gap: 2px;
+  gap: calc(2px * var(--ui-scale));
   align-items: center;
-  min-height: 32px;
+  min-height: calc(32px * var(--ui-scale));
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: none;
@@ -697,18 +786,18 @@ body.no-sheet-bar .sheet-bar { display: none; }
 .sheet-tabs::-webkit-scrollbar { display: none; }
 .sheet-tab {
   flex: 0 0 auto;
-  display: inline-flex; align-items: center; gap: 6px;
-  height: 28px;
-  padding: 0 12px;
-  border-radius: 6px 6px 0 0;
+  display: inline-flex; align-items: center; gap: calc(6px * var(--ui-scale));
+  height: calc(28px * var(--ui-scale));
+  padding: 0 calc(12px * var(--ui-scale));
+  border-radius: calc(6px * var(--ui-scale)) calc(6px * var(--ui-scale)) 0 0;
   background: var(--sheet-tab-bg);
   border: 1px solid transparent;
   border-bottom: 0;
   color: var(--text-color);
-  font-size: 12px;
+  font-size: calc(12px * var(--ui-scale));
   cursor: pointer;
   user-select: none;
-  max-width: 180px;
+  max-width: calc(180px * var(--ui-scale));
   min-width: 0;
   position: relative;
   top: 1px;
@@ -719,14 +808,14 @@ body.no-sheet-bar .sheet-bar { display: none; }
   to   { opacity: 1; transform: translateY(0); }
 }
 .sheet-tab .sheet-icon {
-  font-size: 14px;
+  font-size: calc(14px * var(--ui-scale));
   line-height: 1;
 }
 .sheet-tab .name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 160px;
+  max-width: calc(160px * var(--ui-scale));
 }
 .sheet-tab:hover { background: var(--sheet-tab-bg-hover); }
 .sheet-tab.active {
@@ -750,13 +839,13 @@ body.no-sheet-bar .sheet-bar { display: none; }
 }
 
 .sheet-tab input.sheet-name-input {
-  font: inherit; font-size: 12px;
+  font: inherit; font-size: calc(12px * var(--ui-scale));
   background: rgba(0,0,0,0.3);
   border: 1px solid rgba(255,255,255,0.25);
   color: var(--text-color);
-  border-radius: 4px;
-  padding: 2px 6px;
-  width: 140px;
+  border-radius: calc(4px * var(--ui-scale));
+  padding: calc(2px * var(--ui-scale)) calc(6px * var(--ui-scale));
+  width: calc(140px * var(--ui-scale));
   outline: none;
 }
 .sheet-tab .sheet-icon {
@@ -769,24 +858,24 @@ body.no-sheet-bar .sheet-bar { display: none; }
   background: rgba(120,140,255,0.20);
 }
 .sheet-tab input.sheet-icon-input {
-  font: inherit; font-size: 14px;
+  font: inherit; font-size: calc(14px * var(--ui-scale));
   background: rgba(0,0,0,0.3);
   border: 1px solid rgba(255,255,255,0.25);
   color: var(--text-color);
-  border-radius: 4px;
-  padding: 1px 4px;
-  width: 56px;
+  border-radius: calc(4px * var(--ui-scale));
+  padding: calc(1px * var(--ui-scale)) calc(4px * var(--ui-scale));
+  width: calc(56px * var(--ui-scale));
   text-align: center;
   outline: none;
 }
 
 .sheet-add {
-  width: 28px; height: 28px;
-  border-radius: 6px;
+  width: calc(28px * var(--ui-scale)); height: calc(28px * var(--ui-scale));
+  border-radius: calc(6px * var(--ui-scale));
   border: 1px dashed rgba(255,255,255,0.18);
   background: transparent;
   color: var(--text-color);
-  font-size: 16px;
+  font-size: calc(16px * var(--ui-scale));
   cursor: pointer;
   display: grid; place-items: center;
   flex: 0 0 auto;

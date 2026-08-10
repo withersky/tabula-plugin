@@ -20,6 +20,10 @@
 (() => {
   "use strict";
 
+  // Режим предпросмотра: newtab.html?preview=1 открывается в iframe настроек.
+  // Применяет настройки из options по postMessage и ничего не пишет в storage.
+  const PREVIEW_MODE = new URLSearchParams(location.search).get("preview") === "1";
+
   const gridEl     = document.getElementById("grid");
   const bgEl       = document.getElementById("bg");
   const sheetTabsEl= document.getElementById("sheetTabs");
@@ -123,111 +127,6 @@
     clockTimer = setInterval(updateClock, 15 * 1000);
   }
 
-  const WEATHER_ICON_EMOJI = {
-    113: "☀️", 116: "⛅️", 119: "☁️", 122: "☁️",
-    143: "🌫", 176: "🌦", 179: "🌧", 182: "🌧", 185: "🌧",
-    200: "⛈", 227: "🌨", 230: "❄️", 248: "🌫", 260: "🌫",
-    263: "🌦", 266: "🌧", 281: "🌧", 284: "🌧", 293: "🌦",
-    296: "🌧", 299: "🌧", 302: "🌧", 305: "🌧", 308: "🌧",
-    311: "🌧", 314: "🌧", 317: "🌧", 320: "🌨", 323: "🌨",
-    326: "🌨", 329: "❄️", 332: "❄️", 335: "❄️", 338: "❄️",
-    350: "🌧", 353: "🌦", 356: "🌧", 359: "🌧", 362: "🌦",
-    365: "🌧", 368: "🌨", 371: "❄️", 374: "🌧", 377: "🌧",
-    386: "⛈", 389: "⛈", 392: "🌨", 395: "❄️"
-  };
-
-  // Человеко-понятные описания symbol_code met.no.
-  // База — это symbol без суффиксов _day / _night / _polartwilight.
-  const SYMBOL_DESC = {
-    ru: {
-      clearsky:                     "Ясно",
-      fair:                         "Преимущественно ясно",
-      partlycloudy:                 "Переменная облачность",
-      cloudy:                       "Облачно",
-      rainshowers:                  "Ливни",
-      rainshowersandthunder:        "Гроза с ливнем",
-      sleetshowers:                 "Мокрый снег",
-      snowshowers:                  "Снегопад",
-      rain:                         "Дождь",
-      heavyrain:                    "Сильный дождь",
-      sleet:                        "Мокрый снег",
-      snow:                         "Снег",
-      heavysnow:                    "Сильный снегопад",
-      fog:                          "Туман",
-      lightrain:                    "Небольшой дождь",
-      lightsleet:                   "Слабый мокрый снег",
-      heavysleet:                   "Сильный мокрый снег",
-      lightsnow:                    "Небольшой снег",
-      lightfog:                     "Лёгкий туман",
-      lightrainshowers:             "Небольшие ливни",
-      heavyrainshowers:             "Сильные ливни",
-      lightsleetshowers:            "Слабый мокрый снег",
-      heavysleetshowers:            "Сильный мокрый снег",
-      lightsnowshowers:             "Небольшой снег",
-      heavysnowshowers:             "Сильный снег",
-      lightrainshowersandthunder:   "Небольшая гроза",
-      heavyrainshowersandthunder:   "Сильная гроза",
-      lightsleetshowersandthunder:  "Гроза, мокрый снег",
-      heavysleetshowersandthunder:  "Сильная гроза с мокрым снегом",
-      lightsnowshowersandthunder:   "Гроза со снегом",
-      heavysnowshowersandthunder:   "Сильная гроза со снегом",
-      rainandthunder:               "Дождь с грозой",
-      heavyrainandthunder:          "Сильный дождь с грозой",
-      snowandthunder:               "Снег с грозой",
-      heavysnowandthunder:          "Сильный снег с грозой"
-    },
-    en: {
-      clearsky:                     "Clear",
-      fair:                         "Mostly clear",
-      partlycloudy:                 "Partly cloudy",
-      cloudy:                       "Cloudy",
-      rainshowers:                  "Showers",
-      rainshowersandthunder:        "Thunder showers",
-      sleetshowers:                 "Sleet showers",
-      snowshowers:                  "Snow showers",
-      rain:                         "Rain",
-      heavyrain:                    "Heavy rain",
-      sleet:                        "Sleet",
-      snow:                         "Snow",
-      heavysnow:                    "Heavy snow",
-      fog:                          "Fog",
-      lightrain:                    "Light rain",
-      lightsleet:                   "Light sleet",
-      heavysleet:                   "Heavy sleet",
-      lightsnow:                    "Light snow",
-      lightfog:                     "Light fog",
-      lightrainshowers:             "Light showers",
-      heavyrainshowers:             "Heavy showers",
-      lightsleetshowers:            "Light sleet showers",
-      heavysleetshowers:            "Heavy sleet showers",
-      lightsnowshowers:             "Light snow showers",
-      heavysnowshowers:             "Heavy snow showers",
-      lightrainshowersandthunder:   "Light thunder showers",
-      heavyrainshowersandthunder:   "Heavy thunder showers",
-      lightsleetshowersandthunder:  "Thunder with sleet",
-      heavysleetshowersandthunder:  "Heavy thunder with sleet",
-      lightsnowshowersandthunder:   "Thunder with snow",
-      heavysnowshowersandthunder:   "Heavy thunder with snow",
-      rainandthunder:               "Rain with thunder",
-      heavyrainandthunder:          "Heavy rain with thunder",
-      snowandthunder:               "Snow with thunder",
-      heavysnowandthunder:          "Heavy snow with thunder"
-    }
-  };
-  function describeSymbol(symbol) {
-    if (!symbol) return "";
-    const base = String(symbol).replace(/_day$|_night$|_polartwilight$/, "");
-    const dict = SYMBOL_DESC[lang] || SYMBOL_DESC.ru;
-    if (dict[base]) return dict[base];
-    // Если базовый ключ не нашёлся, попробуем снять префиксы light/heavy.
-    const stripped = base.replace(/^(light|heavy)/, "");
-    if (dict[stripped]) return dict[stripped];
-    return base;
-  }
-
-  function weatherIconFor(code) {
-    return WEATHER_ICON_EMOJI[code] || "⛅️";
-  }
 
   function setWeatherText(icon, temp, desc, city) {
     if (weatherIconEl) weatherIconEl.textContent = icon;
@@ -264,7 +163,7 @@
       _weatherHasError = false;
       weatherIconEl.textContent = weatherIconFor(cache.code);
       const temp = (cache.tempC != null) ? (Math.round(cache.tempC) + "°") : "—";
-      const desc = describeSymbol(cache.symbol) || cache.desc || "";
+      const desc = describeSymbol(cache.symbol, lang) || cache.desc || "";
       const city = cache.city
         ? (cache.city + (cache.country ? ", " + cache.country : ""))
         : (s.weatherCity || "");
@@ -278,16 +177,6 @@
     } else {
       setWeatherText("⏳", "—", tx("weatherLoading"), cityFallback);
     }
-  }
-
-  function withTimeout(promise, ms) {
-    return new Promise((resolve, reject) => {
-      const t = setTimeout(() => reject(new Error("timeout")), ms);
-      promise.then(
-        (v) => { clearTimeout(t); resolve(v); },
-        (e) => { clearTimeout(t); reject(e); }
-      );
-    });
   }
 
   async function geocodeAndSave(city) {
@@ -359,7 +248,7 @@
       );
       if (myGen !== _weatherGen) return;
       if (!resp || resp.error || !resp.ok) throw new Error(resp && resp.error || "no response");
-      const humanDesc = describeSymbol(resp.symbol);
+      const humanDesc = describeSymbol(resp.symbol, lang);
       if (humanDesc) resp.desc = humanDesc;
       const s2 = state && state.settings;
       resp.city = (s2 && s2.weatherCity) || resp.city || "";
@@ -401,22 +290,9 @@
     }
   }
 
-  function aggregatorUrl(lat, lon, cityName) {
-    // Используем Яндекс.Погоду по координатам, формат вида
-    // https://yandex.ru/pogoda/ru?lat=55.75581741&lon=37.61764526
-    const hasCoords = isFinite(Number(lat)) && isFinite(Number(lon));
-    if (hasCoords) {
-      const langPath = (lang === "en") ? "en" : "ru";
-      return "https://yandex.ru/pogoda/" + langPath + "?lat=" + encodeURIComponent(String(lat)) + "&lon=" + encodeURIComponent(String(lon));
-    }
-    const name = (cityName || "").trim();
-    if (name) return "https://yandex.ru/pogoda/search?request=" + encodeURIComponent(name);
-    return "https://yandex.ru/pogoda";
-  }
-
 function openWeatherAggregator() {
 const s = state && state.settings;
-const url = aggregatorUrl(s && s.weatherLat, s && s.weatherLon, (s && s.weatherCity) || "");
+const url = aggregatorUrl(s && s.weatherLat, s && s.weatherLon, (s && s.weatherCity) || "", lang);
 window.open(url, "_blank", "noopener,noreferrer");
 }
 
@@ -453,41 +329,6 @@ _weatherPopupClosing = false;
 weatherPopupEl.hidden = false;
 }
 
- function dayLabel(date, idx, isToday) {
- if (isToday) return tx("weatherToday");
- const d = date || new Date();
- const tomorrow = new Date(Date.now() + 86400000);
- if (d.toDateString() === tomorrow.toDateString()) return tx("weatherTomorrow");
- const opts = { weekday: "short" };
- const locale = (lang === "en") ? "en-GB" : "ru-RU";
- try {
- return d.toLocaleDateString(locale, opts).replace(/\.$/, "");
- } catch (_) {
- return d.toLocaleDateString("ru-RU", opts).replace(/\.$/, "");
- }
- }
- 
- function formatDateFmt(d, fmt) {
- if (!d || !fmt || fmt === "off") return "";
- const dd = String(d.getDate()).padStart(2, "0");
- const mm = String(d.getMonth() + 1).padStart(2, "0");
- if (fmt === "dd.mm.yyyy") return dd + "." + mm + "." + d.getFullYear();
- if (fmt === "dd.mm.yy") return dd + "." + mm + "." + String(d.getFullYear()).slice(-2);
- if (fmt === "dd.mon" || fmt === "dd.month") {
- const locale = (lang === "en") ? "en-GB" : "ru-RU";
- try {
- const s = d.toLocaleDateString(locale, {
- day: "2-digit",
- month: (fmt === "dd.mon") ? "short" : "long"
- });
- return s.replace(/\./g, "");
- } catch (_) {
- return dd + "." + mm;
- }
- }
- return dd + "." + mm;
- }
-
 function renderWeatherPopup() {
 if (!weatherPopupEl || !weatherPopupDaysEl) return;
 const s = state && state.settings;
@@ -515,12 +356,12 @@ const date = day.date ? new Date(day.date + "T12:00:00") : new Date(now.getTime(
 const isToday = idx === 0 || date.toDateString() === today;
 const label = document.createElement("span");
 label.className = "weather-popup-day-label" + (isToday ? " today" : "");
-label.textContent = dayLabel(date, idx, isToday);
+label.textContent = dayLabel(date, idx, isToday, lang, tx);
 const fmt = (s && s.weatherDateFmt) || "dd.mm";
 if (fmt && fmt !== "off") {
 const dateEl = document.createElement("span");
 dateEl.className = "weather-popup-day-date";
-dateEl.textContent = formatDateFmt(date, fmt);
+dateEl.textContent = formatDateFmt(date, fmt, lang);
 label.appendChild(dateEl);
 }
 const icon = document.createElement("span");
@@ -528,7 +369,7 @@ icon.className = "weather-popup-day-icon";
 icon.textContent = weatherIconFor(day.code);
 const descEl = document.createElement("span");
 descEl.className = "weather-popup-day-desc";
-descEl.textContent = describeSymbol(day.desc) || describeSymbol(day.symbol) || day.desc || "";
+descEl.textContent = describeSymbol(day.desc, lang) || describeSymbol(day.symbol, lang) || day.desc || "";
 const range = document.createElement("span");
 range.className = "weather-popup-day-range";
 const max = (day.maxC != null) ? Math.round(day.maxC) + "°" : "—";
@@ -543,32 +384,12 @@ weatherPopupDaysEl.appendChild(row);
 });
 }
 
-  function normalizeUrl(u) {
-    if (!u) return "#";
-    let s = String(u).trim();
-    if (!/^https?:\/\//i.test(s) && !s.startsWith("chrome://") && !s.startsWith("file://")) {
-      s = "https://" + s;
-    }
-    return s;
-  }
-
-  function faviconUrl(u) {
-    try {
-      const url = normalizeUrl(u);
-      const host = new URL(url).hostname;
-      if (!host) return "";
-      return "https://www.google.com/s2/favicons?domain=" + encodeURIComponent(host) + "&sz=64";
-    } catch (_) {
-      return "";
-    }
-  }
-
   function cssEscape(v) { return String(v).replace(/"/g, '\\"'); }
 
   function letterBadge(title) {
     const span = document.createElement("span");
     span.className = "letter";
-    span.textContent = (title || "?").trim().charAt(0).toUpperCase();
+    span.textContent = letterChar(title);
     return span;
   }
 
@@ -579,6 +400,11 @@ weatherPopupDaysEl.appendChild(row);
 
   async function init() {
     state = await Storage.get();
+    if (PREVIEW_MODE) {
+      // Превью ничего не пишет в chrome.storage: все «сохранения» (погода, фон,
+      // активный лист) мутируют state в памяти и исчезают при закрытии настроек.
+      Storage.update = async (mutator) => { mutator(state); };
+    }
     lang = state.settings.language || "ru";
     applySettings();
     applyLayoutFlags();
@@ -586,7 +412,11 @@ weatherPopupDaysEl.appendChild(row);
     renderGrid();
     renderSheetBar();
     applySheetBarHeight();
-    bindEvents();
+    if (PREVIEW_MODE) {
+      bindPreview();
+    } else {
+      bindEvents();
+    }
     maybeLoadBingBackground();
     startClock();
     startWeather();
@@ -605,6 +435,11 @@ weatherPopupDaysEl.appendChild(row);
       ro2.observe(sb);
     }
     requestAnimationFrame(() => { applyTopbarHeight(); applySheetBarHeight(); });
+
+    if (PREVIEW_MODE) {
+      window.addEventListener("message", onPreviewMessage);
+      return;
+    }
 
     Storage.onChanged((next) => {
       if (!next) return;
@@ -643,10 +478,65 @@ weatherPopupDaysEl.appendChild(row);
     });
   }
 
+  // ---------- preview mode (newtab.html?preview=1 inside options iframe) ----------
+  function onPreviewMessage(e) {
+    const d = e.data;
+    if (!d || d.type !== "tabula-preview-settings") return;
+    const incoming = d.settings;
+    if (!incoming || typeof incoming !== "object") return;
+    const prev = state.settings || {};
+    const merged = Object.assign({}, prev, incoming);
+    const langChanged = (merged.language || "ru") !== lang;
+    state.settings = merged;
+    lang = merged.language || "ru";
+    applySettings();
+    applyLayoutFlags();
+    if (langChanged) applyI18nStatic();
+    else applyPageTitle();
+    renderGrid();
+    renderSheetBar();
+    refreshSheetCtx();
+    startClock();
+    const weatherSettingsChanged =
+      merged.showWeather       !== prev.showWeather       ||
+      merged.weatherLat        !== prev.weatherLat        ||
+      merged.weatherLon        !== prev.weatherLon        ||
+      merged.weatherCity       !== prev.weatherCity       ||
+      merged.weatherRefreshMin !== prev.weatherRefreshMin;
+    if (weatherSettingsChanged) startWeather();
+    else renderWeather();
+    requestAnimationFrame(() => { applyTopbarHeight(); applySheetBarHeight(); });
+  }
+
+  function bindPreview() {
+    // Превью неинтерактивно: не открываем закладки, листы и меню,
+    // но оставляем hover-состояния и всплывающее окно погоды.
+    document.addEventListener("click", (e) => {
+      const t = e.target;
+      if (t && t.closest &&
+          t.closest(".cell, .sheet-tab, .sheet-add, .sheet-scroll, .quick-go, .icon-btn, .opts-fab, .clock-widget")) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }, true);
+    document.addEventListener("contextmenu", (e) => e.preventDefault(), true);
+    document.addEventListener("auxclick", (e) => e.preventDefault(), true);
+    if (quickGo) quickGo.addEventListener("submit", (e) => e.preventDefault());
+    if (weatherWidget) {
+      weatherWidget.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleWeatherPopup();
+      });
+    }
+  }
+
   function applySettings() {
     const s = state.settings;
     const root = document.documentElement.style;
-    root.setProperty("--columns",     String(s.defaultColumns));
+    // Число колонок сетки всегда зажимается clampCols (см. renderGrid):
+    // CSS-треки должны совпадать с количеством букв и ячеек.
+    root.setProperty("--columns",     String(clampCols(s.defaultColumns)));
     root.setProperty("--font-family", resolveFont(s.fontFamilyKey, s.fontFamily));
     root.setProperty("--font-size",   s.fontSize + "px");
     root.setProperty("--text-color",  s.textColor);
@@ -662,6 +552,10 @@ weatherPopupDaysEl.appendChild(row);
  document.body.classList.toggle("ui-frost", uopA > 0);
  // Цвет выделения ячейки (используется в .cell.selected / .cell.drop-target).
  root.setProperty("--cell-selected-color", s.cellSelectedColor || "#788cff");
+ // Общий масштаб виджетов и нижнего бара (50%..150%), задаётся ползунком uiScale.
+ const usc = Number(s.uiScale);
+ const uscV = (isFinite(usc) && usc > 0) ? Math.min(1.5, Math.max(0.5, usc / 100)) : 1;
+ root.setProperty("--ui-scale", String(uscV));
    applyBackground();
     renderQuickGoIcon();
     requestAnimationFrame(applyTopbarHeight);
@@ -675,6 +569,16 @@ weatherPopupDaysEl.appendChild(row);
     document.body.classList.toggle("no-col-letters", !s.showColLetters);
     document.body.classList.toggle("no-clock", !s.showClock);
     document.body.classList.toggle("no-weather", !s.showWeather);
+    // Выравнивание содержимого ячейки: слева / по центру / справа.
+    // Класс cell-align-left добавляется всегда, чтобы CSS-комбинации с
+    // favicon-pos-* (row-reverse / column) работали для всех трёх состояний.
+    const align = ["left", "center", "right"].includes(s.cellTextAlign) ? s.cellTextAlign : "left";
+    document.body.classList.remove("cell-align-left", "cell-align-center", "cell-align-right");
+    document.body.classList.add("cell-align-" + align);
+    // Расположение иконки в ячейке: слева (по умолчанию), справа, над/под текстом.
+    const fpos = ["left", "right", "top", "bottom"].includes(s.faviconPosition) ? s.faviconPosition : "left";
+    document.body.classList.remove("favicon-pos-right", "favicon-pos-top", "favicon-pos-bottom");
+    if (fpos !== "left") document.body.classList.add("favicon-pos-" + fpos);
     // Виджеты остаются в DOM, чтобы сохранять колонки топбара и не «прыгать» строке поиска.
     // Скрываем только визуально через CSS-класс is-off.
     if (clockWidget)   clockWidget.classList.toggle("is-off",   !s.showClock);
@@ -771,9 +675,15 @@ weatherPopupDaysEl.appendChild(row);
     if (showCol) {
       const headerRow = document.createElement("div");
       headerRow.className = "grid-row header";
-      const corner = document.createElement("div");
-      corner.className = "corner";
-      headerRow.appendChild(corner);
+      // Уголок рисуем только при включённых номерах строк: он заполняет ячейку
+      // над колонкой номеров. Если добавить его всегда, при выключенных номерах
+      // буквы сдвигаются на колонку вправо, а последняя буква переносится
+      // на вторую строку — визуально «буквы начинаются не с A».
+      if (showRow) {
+        const corner = document.createElement("div");
+        corner.className = "corner";
+        headerRow.appendChild(corner);
+      }
       for (let c = 0; c < cols; c++) {
         const letter = document.createElement("div");
         letter.className = "col-letter";
@@ -1434,23 +1344,6 @@ closeWeatherPopup();
     return gridEl.querySelector('.cell[data-key="' + cssAttr(key) + '"]');
   }
 
-  function keyParts(key) {
-    const p = String(key).split(",");
-    return [parseInt(p[0], 10) || 0, parseInt(p[1], 10) || 0];
-  }
-
-  function rangeKeys(a, b) {
-    const [r0, c0] = keyParts(a);
-    const [r1, c1] = keyParts(b);
-    const rmin = Math.min(r0, r1), rmax = Math.max(r0, r1);
-    const cmin = Math.min(c0, c1), cmax = Math.max(c0, c1);
-    const keys = [];
-    for (let r = rmin; r <= rmax; r++) {
-      for (let c = cmin; c <= cmax; c++) keys.push(r + "," + c);
-    }
-    return keys;
-  }
-
   function applySelection(anchorKey, keys) {
     selAnchorKey = anchorKey;
     selRange = keys;
@@ -1565,7 +1458,7 @@ closeWeatherPopup();
         openEditModal(bm, key);
         break;
       case "duplicate": {
-        const newKey = nextEmptyAfter(sh, key);
+        const newKey = nextEmptyAfter(sh, key, clampCols(state.settings.defaultColumns));
         const dupTitle = bm.title + " (" + tx("duplicate").toLowerCase() + ")";
         await Storage.update((d) => {
           const cur = d.sheets.find(s => s.id === d.activeSheetId);
@@ -1620,23 +1513,6 @@ closeWeatherPopup();
     return SHEET_ICON_PALETTE[Math.floor(Math.random() * SHEET_ICON_PALETTE.length)];
   }
 
-
-  function nextEmptyAfter(sh, key) {
-    const parts = key.split(",");
-    const r = parseInt(parts[0], 10) || 0;
-    const c = parseInt(parts[1], 10) || 0;
-    const cols = clampCols(state.settings.defaultColumns);
-    for (let dr = 0; dr < 100; dr++) {
-      for (let dc = 0; dc < cols; dc++) {
-        const rr = r + dr;
-        const cc = (dr === 0 ? c + 1 : 0) + dc;
-        if (cc >= cols) continue;
-        const k = rr + "," + cc;
-        if (!sh.cells[k]) return k;
-      }
-    }
-    return null;
-  }
 
   async function onAddBookmarkTop() {
     const sh = activeSheet();
