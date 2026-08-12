@@ -24,7 +24,7 @@
 import { getState } from "./state.js";
 import { sendPreview } from "./preview.js";
 
-export const RANGE_KEYS = ["defaultColumns", "uiOpacity", "uiScale", "fontSize", "clockSize", "weatherSize", "weatherRefreshMin", "weatherForecastDays", "cellSelectedColor", "gridRows"];
+export const RANGE_KEYS = ["defaultColumns", "uiOpacity", "uiScale", "fontSize", "weatherRefreshMin", "weatherForecastDays", "cellSelectedColor", "gridRows"];
 
 const $  = (sel, root) => (root || document).querySelector(sel);
 const $$ = (sel, root) => Array.from((root || document).querySelectorAll(sel));

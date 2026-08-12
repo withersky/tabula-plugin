@@ -75,8 +75,9 @@ function applySettings() {
   root.setProperty("--font-family", resolveFont(s.fontFamilyKey, s.fontFamily));
   root.setProperty("--font-size",   s.fontSize + "px");
   root.setProperty("--text-color",  s.textColor);
-  root.setProperty("--clock-size",  (s.clockSize || 28) + "px");
-  root.setProperty("--weather-size", (s.weatherSize || 13) + "px");
+  // Фиксированные размеры виджетов (управляются через --ui-scale)
+  root.setProperty("--clock-size",  "28px");
+  root.setProperty("--weather-size", "13px");
   // Единая прозрачность панелей (выпадайки, модалки, контекстное меню),
   // виджетов и ячеек: 0 = полностью прозрачно, 100 = непрозрачная поверхность.
   // Значение задаётся одним ползунком "Прозрачность панелей и ячеек".
