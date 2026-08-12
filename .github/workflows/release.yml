@@ -39,6 +39,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: release-${{ github.ref }}
@@ -302,6 +303,12 @@ jobs:
             git push origin "HEAD:${GITHUB_REF_NAME}"
             echo "Pushed site/latest.json and site/updates.json (${TAG})."
           fi
+
+          # Пуш от GITHUB_TOKEN не триггерит соседние workflow (защита от
+          # рекурсии), поэтому site.yml по path filter site/** не запустится
+          # сам. Явно дёрнем деплой сайта, чтобы Pages обновил latest.json/updates.json.
+          echo "Triggering site deploy (site.yml)…"
+          gh workflow run site.yml --ref "${GITHUB_REF_NAME}"
 
       # Финализацию Firefox-обновления (добавление update_hash) вынесли в
       # отдельный воркфлоу firefox-finalize.yml. Запускайте его вручную
