@@ -129,7 +129,7 @@ tabula-plugin/
 ├── tests/                     юнит-тесты чистой логики (см. tests/README.md)
 └── .github/workflows/
     ├── release.yml            сборка релизов по коммитам `vX.Y.Z` (с прогоном тестов)
-    └── site.yml               деплой сайта по коммитам `site:`
+    └── firefox-finalize.yml  ручной долив `update_hash` в updates.json после подписи AMO
 ```
 
 ### Запуск в режиме разработки
@@ -209,8 +209,9 @@ node scripts/gen-i18n.mjs   # требуется Node.js; повторяйте �
    архива — `tabula-chrome-v1.2.3-unsign.zip` (Chrome) и
    `tabula-firefox-v1.2.3-unsign.xpi` (Firefox, неподписанный). Workflow также
    запишет [`site/latest.json`](site/latest.json:1) и [`site/updates.json`](site/updates.json:1)
-   (без `update_hash`) и закоммитит их — сайт пересоберётся автоматически
-   (см. раздел «Сайт-визитка»), чтобы кнопки скачивания указывали на новый релиз.
+   (без `update_hash`) и закоммитит их. Поскольку сайт публикуется из ветки
+   (см. раздел «Сайт-визитка»), изменения в `site/` подхватятся GitHub Pages
+   автоматически, и кнопки скачивания будут указывать на новый релиз.
 
 **Автообновление Firefox (update_url):**
 
@@ -243,8 +244,9 @@ Mozilla `.xpi` (неподписанный `-unsign` файл он отклон�
 4. Запустите вручную воркфлоу [`.github/workflows/firefox-finalize.yml`](.github/workflows/firefox-finalize.yml:1)
   (Actions → firefox-finalize, поле `version` = `1.2.3`). Он возьмёт подписанный
   `.xpi` из релиза, посчитает `sha256` и допишет `update_hash` в `updates.json`,
-  затем закоммитит — сайт пересоберётся. Пока подписанный файл не загружен и
-  `update_hash` не добавлен, Firefox проверит подпись по https при скачивании.
+  затем закоммитит. Поскольку сайт публикуется из ветки (см. ниже), изменения
+  в `site/` подхватятся GitHub Pages автоматически. Пока подписанный файл не
+  загружен и `update_hash` не добавлен, Firefox проверит подпись по https при скачивании.
 
 ## Сайт-визитка и GitHub Pages
 
@@ -271,22 +273,23 @@ Release workflow пишет его при каждом релизе (без `upd
 `sha256` (`update_hash`) после загрузки подписанного `.xpi`. Файл всегда актуален
 и доступен по `https://withersky.github.io/tabula-plugin/updates.json`.
 
-Деплой — воркфлоу [`.github/workflows/site.yml`](.github/workflows/site.yml:1).
-Он срабатывает автоматически при **любом изменении в папке `site/**`**
-(path filter) и публикует содержимое `site/` на GitHub Pages. Никаких префиксов
-в сообщении коммита не требуется — достаточно, чтобы коммит менял файлы в `site/`
-(это делают и release workflow, и firefox-finalize после своих правок).
+Деплой сайта настроен **без отдельного workflow**: в **Settings → Pages →
+Build and deployment** выбран источник **«Deploy from a branch»**, ветка
+**`main`**, папка **`/site`**. GitHub Pages публикует **только содержимое папки
+`site/`** — остальные папки репозитория (`src/`, `Tests/`, `.github/` и т.д.)
+на сайт не попадают и остаются приватными. Любой пуш, меняющий файлы в `site/`
+(его делают и release workflow, и firefox-finalize после своих правок),
+автоматически обновляет опубликованный сайт.
 
 **Как опубликовать сайт:**
 
 1. Измените файлы в `site/`.
-2. Обычный коммит и push в `main` — папка `site/` изменилась, значит сайт
-   пересоберётся.
+2. Обычный коммит и push в `main` — раз папка `site/` изменилась, GitHub Pages
+   пересоберёт сайт сам.
 3. Через ~1 минуту сайт обновится на `https://withersky.github.io/tabula-plugin/`.
 
 **Требование:** в **Settings → Pages → Build and deployment** источник должен быть
-**«GitHub Actions»** (а не ветка). Права workflow выдаёт себе сам через `permissions`,
-секреты не нужны.
+**«Deploy from a branch» → `main` → `/site`** (не «GitHub Actions»). Секреты не нужны.
 
 ## Модель данных
 
