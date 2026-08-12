@@ -69,27 +69,36 @@ const SHORTCUT_GROUPS = [
   },
 ];
 
-function escapeHtml(s) {
-  return String(s).replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">");
-}
-
 /** Перерисовывает список хоткеев из конфига и i18n. */
 function renderShortcuts() {
   if (!shortcutList) return;
-  let html = "";
+  shortcutList.textContent = "";
   for (const group of SHORTCUT_GROUPS) {
-    html += '<div class="shortcut-group">';
-    html += '<div class="shortcut-group-title">' + tx(group.group) + "</div>";
+    const groupDiv = document.createElement("div");
+    groupDiv.className = "shortcut-group";
+    const titleDiv = document.createElement("div");
+    titleDiv.className = "shortcut-group-title";
+    titleDiv.textContent = tx(group.group);
+    groupDiv.appendChild(titleDiv);
     for (const item of group.items) {
-      const keys = item.keys.map(k => "<kbd>" + escapeHtml(k) + "</kbd>").join("");
-      html += '<div class="shortcut-row">';
-      html += '<div class="shortcut-keys">' + keys + "</div>";
-      html += '<div class="shortcut-label">' + tx(item.label) + "</div>";
-      html += "</div>";
+      const rowDiv = document.createElement("div");
+      rowDiv.className = "shortcut-row";
+      const keysDiv = document.createElement("div");
+      keysDiv.className = "shortcut-keys";
+      for (const k of item.keys) {
+        const kbd = document.createElement("kbd");
+        kbd.textContent = k;
+        keysDiv.appendChild(kbd);
+      }
+      const labelDiv = document.createElement("div");
+      labelDiv.className = "shortcut-label";
+      labelDiv.textContent = tx(item.label);
+      rowDiv.appendChild(keysDiv);
+      rowDiv.appendChild(labelDiv);
+      groupDiv.appendChild(rowDiv);
     }
-    html += "</div>";
+    shortcutList.appendChild(groupDiv);
   }
-  shortcutList.innerHTML = html;
 }
 
 /** Открыта ли справка по горячим клавишам. */
