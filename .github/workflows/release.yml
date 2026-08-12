@@ -251,12 +251,12 @@ jobs:
             --clobber
           echo "Uploaded unsign artifacts to release $TAG."
 
-      # Обновляем статические снимки релиза на сайте, чтобы кнопки скачивания
-      # работали даже при недоступности api.github.com, а Firefox находил
-      # обновления по update_url из manifest.firefox.json (updates.json).
-      # Коммит с префиксом "site:" деплоит сайт через site.yml, а release.yml
-      # его пропускает.
-      - name: Sync site files (latest.json + updates.json)
+      # Пишем статический снимок релиза на сайте. update_hash (sha256
+      # подписанного xpi) пока НЕ добавляем — файл ещё не подписан в AMO.
+      # Его допишет отдельный воркфлоу firefox-finalize.yml (ручной запуск
+      # после загрузки подписанного xpi). Сам коммит меняет site/**, поэтому
+      # site.yml автоматически пересоберёт сайт (без префикса в сообщении).
+      - name: Write site snapshot (latest.json + updates.json)
         if: steps.meta.outputs.skip != 'true'
         shell: bash
         run: |
@@ -274,25 +274,6 @@ jobs:
           }
           EOF
 
-          # Firefox update-манифест. update_link обязан вести на ПОДПИСАННЫЙ
-          # xpi (неподписанный Firefox отклонит). Подписанный файл Mozilla
-          # отдаёт в Центре разработчиков после ревью; его нужно загрузить
-          # в этот релиз под именем tabula-firefox-vX.Y.Z.xpi (без -unsign).
-          # Пока файла нет, update_hash опущен — Firefox проверит подпись
-          # по https при скачивании.
-          UPDATE_HASH=""
-          if gh release download "$TAG" --pattern "${SIGNED_XPI}" --clobber 2>/dev/null; then
-            UPDATE_HASH="$(sha256sum "${SIGNED_XPI}" | cut -d' ' -f1)"
-            echo "Signed xpi found: ${SIGNED_XPI} (sha256:${UPDATE_HASH})"
-          else
-            echo "Signed xpi not found yet — upload ${SIGNED_XPI} to release ${TAG} later."
-          fi
-
-          if [[ -n "${UPDATE_HASH}" ]]; then
-            HASH_LINE=",\"update_hash\": \"sha256:${UPDATE_HASH}\""
-          else
-            HASH_LINE=""
-          fi
           cat > site/updates.json <<EOF
           {
             "addons": {
@@ -300,7 +281,7 @@ jobs:
                 "updates": [
                   {
                     "version": "${VERSION}",
-                    "update_link": "https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/${SIGNED_XPI}"${HASH_LINE}
+                    "update_link": "https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/${SIGNED_XPI}"
                   }
                 ]
               }
@@ -317,30 +298,12 @@ jobs:
           if git diff --cached --quiet; then
             echo "Site files unchanged — nothing to commit."
           else
-            git commit -m "site: sync release ${TAG}"
+            git commit -m "release: update site snapshot for ${TAG}"
             git push origin "HEAD:${GITHUB_REF_NAME}"
             echo "Pushed site/latest.json and site/updates.json (${TAG})."
           fi
 
-      - name: Post-publish instructions (v${{ steps.meta.outputs.version }})
-        if: steps.meta.outputs.skip != 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          VERSION="${{ steps.meta.outputs.version }}"
-          TAG="v${VERSION}"
-          echo "::notice::Релиз ${TAG} опубликован. Что дальше?"
-          echo ""
-          echo "1. Подписанный XPI для автообновления:"
-          echo "   - Скачайте tabula-firefox-v${VERSION}-unsign.xpi из релиза ${TAG}."
-          echo "   - Загрузите его в Центр разработчиков AMO (режим Self-hosted) и получите ПОДПИСАННЫЙ xpi."
-          echo "   - Переименуйте его в tabula-firefox-v${VERSION}.xpi (без -unsign)."
-          echo ""
-          echo "2. Загрузите подписанный файл в ТОТ ЖЕ релиз ${TAG} на GitHub:"
-          echo "   gh release upload ${TAG} tabula-firefox-v${VERSION}.xpi"
-          echo ""
-          echo "3. Перезапустите этот workflow (Actions → release → Re-run),"
-          echo "   чтобы в site/updates.json добавился update_hash (sha256)."
-          echo ""
-          echo "4. Убедитесь, что сайт показывает 'Firefox: подписан' и кнопка Firefox"
-          echo "   ведёт на подписанный tabula-firefox-v${VERSION}.xpi."
+      # Финализацию Firefox-обновления (добавление update_hash) вынесли в
+      # отдельный воркфлоу firefox-finalize.yml. Запускайте его вручную
+      # (Actions → firefox-finalize) ПОСЛЕ того, как подписанный
+      # tabula-firefox-vX.Y.Z.xpi загружен в релиз.

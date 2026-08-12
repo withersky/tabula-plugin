@@ -197,17 +197,19 @@ node scripts/gen-i18n.mjs   # требуется Node.js; повторяйте �
 1. Поднимите версию в **обоих** манифестах (`src/manifest.json`, `src/manifest.firefox.json`).
 2. Коммит, первая строка которого выглядит так:
 
-   ```text
-   v1.2.3 - короткое описание релиза
+  ```text
+  v1.2.3 - короткое описание релиза
 
-   - подробности изменения 1
-   - подробности изменения 2
-   ```
+  - подробности изменения 1
+  - подробности изменения 2
+  ```
 
 3. `git push origin main`. Через ~30 секунд в разделе **Releases** появятся
-   `v1.2.3` и два zip-архива (их можно скачать с сайта-визитки). Workflow также
-   обновит [`site/latest.json`](site/latest.json:1) и [`site/updates.json`](site/updates.json:1)
-   и задеплоит сайт, чтобы кнопки скачивания указывали на новый релиз.
+  `v1.2.3` и два архива — `tabula-chrome-v1.2.3-unsign.zip` (Chrome) и
+  `tabula-firefox-v1.2.3-unsign.xpi` (Firefox, неподписанный). Workflow также
+  запишет [`site/latest.json`](site/latest.json:1) и [`site/updates.json`](site/updates.json:1)
+  (без `update_hash`) и закоммитит их — сайт пересоберётся автоматически
+  (см. раздел «Сайт-визитка»), чтобы кнопки скачивания указывали на новый релиз.
 
 **Автообновление Firefox (update_url):**
 
@@ -219,13 +221,13 @@ Firefox-манифест [`src/manifest.firefox.json`](src/manifest.firefox.json
 
 ```json
 {
-  "addons": {
-    "tabula@withersky.local": {
-      "updates": [
-        { "version": "1.2.3", "update_link": "https://github.com/withersky/tabula-plugin/releases/download/v1.2.3/tabula-firefox-v1.2.3.xpi" }
-      ]
-    }
-  }
+ "addons": {
+   "tabula@withersky.local": {
+     "updates": [
+       { "version": "1.2.3", "update_link": "https://github.com/withersky/tabula-plugin/releases/download/v1.2.3/tabula-firefox-v1.2.3.xpi" }
+     ]
+   }
+ }
 }
 ```
 
@@ -236,10 +238,12 @@ Mozilla `.xpi` (неподписанный `-unsign` файл он отклон�
 1. Скачайте подписанный `.xpi` из Центра разработчиков.
 2. Переименуйте его в `tabula-firefox-v1.2.3.xpi` (без суффикса `-unsign`).
 3. Загрузите в **тот же релиз** `v1.2.3` на GitHub (через интерфейс
-   **Releases → Attach a file** или командой `gh release upload`).
-4. Workflow добавит `update_hash` (sha256) в `updates.json` при следующем запуске
-   (или перезапустите вручную уже прошедший release workflow). Пока подписанный
-   файл не загружен, `update_hash` опущен — Firefox проверит подпись по https.
+  **Releases → Attach a file** или командой `gh release upload`).
+4. Запустите вручную воркфлоу [`.github/workflows/firefox-finalize.yml`](.github/workflows/firefox-finalize.yml:1)
+  (Actions → firefox-finalize, поле `version` = `1.2.3`). Он возьмёт подписанный
+  `.xpi` из релиза, посчитает `sha256` и допишет `update_hash` в `updates.json`,
+  затем закоммитит — сайт пересоберётся. Пока подписанный файл не загружен и
+  `update_hash` не добавлен, Firefox проверит подпись по https при скачивании.
 
 ## Сайт-визитка и GitHub Pages
 
@@ -261,19 +265,22 @@ Mozilla `.xpi` (неподписанный `-unsign` файл он отклон�
 
 В той же папке лежит [`site/updates.json`](site/updates.json:1) — Firefox
 update-манифест для `update_url` из [`src/manifest.firefox.json`](src/manifest.firefox.json:1).
-Workflow генерирует его при каждом релизе (и добавляет `update_hash`, если в релиз
-уже загружен подписанный `.xpi`), поэтому файл всегда актуален и доступен по
-`https://withersky.github.io/tabula-plugin/updates.json`.
+Release workflow пишет его при каждом релизе (без `update_hash`), а
+[`firefox-finalize.yml`](.github/workflows/firefox-finalize.yml:1) дописывает
+`sha256` (`update_hash`) после загрузки подписанного `.xpi`. Файл всегда актуален
+и доступен по `https://withersky.github.io/tabula-plugin/updates.json`.
 
 Деплой — воркфлоу [`.github/workflows/site.yml`](.github/workflows/site.yml:1).
-Он срабатывает, когда **первая строка** commit message начинается с `site:`
-(например `site: обновил кнопки скачивания`), и публикует содержимое `site/`
-на GitHub Pages. Обычные коммиты сайт не трогают.
+Он срабатывает автоматически при **любом изменении в папке `site/**`**
+(path filter) и публикует содержимое `site/` на GitHub Pages. Никаких префиксов
+в сообщении коммита не требуется — достаточно, чтобы коммит менял файлы в `site/`
+(это делают и release workflow, и firefox-finalize после своих правок).
 
 **Как опубликовать сайт:**
 
 1. Измените файлы в `site/`.
-2. Коммит с первой строкой `site: ...` и push в `main`.
+2. Обычный коммит и push в `main` — папка `site/` изменилась, значит сайт
+   пересоберётся.
 3. Через ~1 минуту сайт обновится на `https://withersky.github.io/tabula-plugin/`.
 
 **Требование:** в **Settings → Pages → Build and deployment** источник должен быть
