@@ -19,11 +19,14 @@ name: site
 
 # Деплой сайта-визитки (папка `site/`) на GitHub Pages.
 #
-# Триггерится вручную (workflow_dispatch) и программно из других воркфлоу
-# (release.yml, firefox-finalize.yml) через `gh workflow run site.yml`.
-# Авто-триггер по path filter site/** не используем намеренно: пуш от
-# GITHUB_TOKEN в соседнем workflow НЕ запускает другие workflow (защита
-# GitHub от рекурсии), поэтому site/ обновляется только явным вызовом.
+# Триггерится двумя способами:
+#   1. push в любые файлы `site/**` — для ваших ручных правок статики сайта
+#      (коммит от обычного пользователя/токена с правами запускает workflow).
+#   2. вручную (workflow_dispatch) и программно из других воркфлоу
+#      (release.yml, firefox-finalize.yml) через `gh workflow run site.yml`.
+# Примечание: пуш от GITHUB_TOKEN в соседнем workflow НЕ запускает этот
+# workflow (защита GitHub от рекурсии), поэтому релизы дёргают его явно
+# через `gh workflow run`, а не полагаются на push-триггер.
 #
 # Требования к репозиторию:
 #   - В Settings → Pages → Build and deployment источник должен быть
@@ -32,6 +35,9 @@ name: site
 #     секреты не нужны.
 
 on:
+  push:
+    paths:
+      - 'site/**'
   workflow_dispatch:
 
 permissions:

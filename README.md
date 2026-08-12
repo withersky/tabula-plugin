@@ -282,20 +282,23 @@ Release workflow пишет его при каждом релизе (без `upd
 **«GitHub Actions»** (а не ветка). Это требование самого `site.yml` — иначе
 деплой не сработает.
 
-Воркфлоу запускается двумя способами:
-- **Вручную** — Actions → site → Run workflow (например, при правке статики сайта).
-- **Автоматически** — из [`release.yml`](.github/workflows/release.yml:1) и
-  [`firefox-finalize.yml`](.github/workflows/firefox-finalize.yml:1) через
-  `gh workflow run site.yml`. Прямой вызов нужен, потому что пуш от `GITHUB_TOKEN`
-  не запускает соседние воркфлоу (защита GitHub от рекурсии), иначе сайт бы
-  не обновился после правок `site/` этими воркфлоу.
+Воркфлоу запускается тремя способами:
+- **Автоматически при правке статики** — любой push, меняющий файлы в `site/`
+  (обычный коммит пользователя), запускает `site.yml` через `push: paths:
+  ['site/**']`. Сайт пересоберётся сам.
+- **Вручную** — Actions → site → Run workflow.
+- **Из релизных воркфлоу** — [`release.yml`](.github/workflows/release.yml:1) и
+  [`firefox-finalize.yml`](.github/workflows/firefox-finalize.yml:1) вызывают
+  `gh workflow run site.yml` явно. Прямой вызов нужен, потому что пуш от
+  `GITHUB_TOKEN` в соседнем воркфлоу **не** запускает этот воркфлоу (защита
+  GitHub от рекурсии) — поэтому релизные правки `site/` деплоятся именно
+  явным вызовом, а не push-триггером.
 
-**Как опубликовать правки сайта вручную:**
+**Как опубликовать правки сайта:**
 
 1. Измените файлы в `site/`.
-2. Обычный коммит и push в `main`.
-3. Запустите воркфлоу `site` вручную (Actions → site → Run workflow).
-4. Через ~1 минуту сайт обновится на `https://withersky.github.io/tabula-plugin/`.
+2. Обычный коммит и push в `main` — `site.yml` запустится сам по `push`-триггеру.
+3. Через ~1 минуту сайт обновится на `https://withersky.github.io/tabula-plugin/`.
 
 ## Модель данных
 
