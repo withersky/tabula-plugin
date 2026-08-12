@@ -139,24 +139,26 @@ jobs:
           if ! grep -q '"update_hash"' site/updates.json; then
             # Дописываем update_hash к записи релиза. Формат совпадает с тем,
             # что пишет release.yml (без hash). Если записи нет — создаём.
-            python3 - "$VERSION" "$TAG" "$ADDON_ID" "$SIGNED_XPI" "$HASH" "$GITHUB_REPOSITORY" <<'PY'
-           import json, sys
-           version, tag, addon_id, signed_xpi, h, repo = sys.argv[1:7]
-           path = "site/updates.json"
-           with open(path, encoding="utf-8") as f:
-               data = json.load(f)
-           updates = data["addons"][addon_id]["updates"]
-           target = next((u for u in updates if u.get("version") == version), None)
-           if target is None:
-               target = {"version": version}
-               updates.append(target)
-           target["update_link"] = f"https://github.com/{repo}/releases/download/{tag}/{signed_xpi}"
-           target["update_hash"] = h
-          with open(path, "w", encoding="utf-8") as f:
-              json.dump(data, f, indent=2, ensure_ascii=False)
-              f.write("\n")
-          print("Patched site/updates.json with update_hash.")
-          PY
+            UPDATE_LINK="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/${SIGNED_XPI}"
+            jq --arg v "$VERSION" \
+               --arg link "$UPDATE_LINK" \
+               --arg hash "$HASH" \
+               --arg id "$ADDON_ID" '
+              .addons[$id].updates as $u
+              | ($u | map(.version == $v) | any) as $has
+              | if $has then
+                  .addons[$id].updates |= map(
+                    if .version == $v
+                    then .update_link = $link | .update_hash = $hash
+                    else . end)
+                else
+                  .addons[$id].updates += [{
+                    version: $v, update_link: $link, update_hash: $hash
+                  }]
+                end
+              ' site/updates.json > site/updates.json.tmp
+            mv site/updates.json.tmp site/updates.json
+            echo "Patched site/updates.json with update_hash."
           else
             echo "update_hash already present in site/updates.json — skipping patch."
           fi
