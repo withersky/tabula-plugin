@@ -218,11 +218,14 @@ jobs:
           git push --force origin "refs/tags/$TAG"
           echo "Pushed tag $TAG at $(git rev-parse --short HEAD)."
 
-      # При Re-run релиз уже существует, а softprops/action-gh-release по
-      # умолчанию не обновляет существующие релизы — поэтому нужны
-      # allowUpdates: true и предварительная очистка старых -unsign ассетов
-      # (иначе загрузка файла с тем же именем упадёт на "asset already exists").
-      - name: Clean existing unsign assets
+      # Публикуем релиз НЕДЕСТРУКТИВНО: не пересоздаём и не удаляем
+      # существующие ассеты (в т.ч. подписанный xpi, загруженный вручную).
+      # При Re-run релиз уже существует — создание пропускаем, а -unsign
+      # архивы просто доливаем/перезаписываем через `gh release upload
+      # --clobber`, что НЕ трогает подписанный файл. Шаг Sync ниже сможет
+      # его найти и дописать update_hash (раньше allowUpdates:true стирал
+      # ручной подписанный xpi ещё до шага Sync).
+      - name: Publish GitHub Release
         if: steps.meta.outputs.skip != 'true'
         shell: bash
         run: |
@@ -230,32 +233,23 @@ jobs:
           VERSION="${{ steps.meta.outputs.version }}"
           TAG="v${VERSION}"
 
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release view "$TAG" --json assets -q '.assets[].name' | while read -r NAME; do
-              case "$NAME" in
-                *-unsign.zip|*-unsign.xpi)
-                  echo "Deleting existing asset: $NAME"
-                  gh release delete-asset "$TAG" "$NAME" --yes
-                  ;;
-              esac
-            done
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" \
+              --title "Tabula v${VERSION}" \
+              --notes-file release_notes.md
+            echo "Created release $TAG."
           else
-            echo "Release $TAG does not exist yet — nothing to clean."
+            echo "Release $TAG already exists — skipping create (non-destructive)."
           fi
 
-      - name: Publish GitHub Release
-        if: steps.meta.outputs.skip != 'true'
-        uses: softprops/action-gh-release@v2
-        with:
-          name: "Tabula v${{ steps.meta.outputs.version }}"
-          tag_name: v${{ steps.meta.outputs.version }}
-          body_path: release_notes.md
-          generate_release_notes: false
-          allowUpdates: true
-          fail_on_unmatched_files: true
-          files: |
-            tabula-chrome-v${{ steps.meta.outputs.version }}-unsign.zip
-            tabula-firefox-v${{ steps.meta.outputs.version }}-unsign.xpi
+          # Доливаем/обновляем только неподписанные сборки. Подписанный
+          # tabula-firefox-vX.Y.Z.xpi (без -unsign), загруженный вручную,
+          # остаётся нетронутым.
+          gh release upload "$TAG" \
+            "tabula-chrome-v${VERSION}-unsign.zip" \
+            "tabula-firefox-v${VERSION}-unsign.xpi" \
+            --clobber
+          echo "Uploaded unsign artifacts to release $TAG."
 
       # Обновляем статические снимки релиза на сайте, чтобы кнопки скачивания
       # работали даже при недоступности api.github.com, а Firefox находил
