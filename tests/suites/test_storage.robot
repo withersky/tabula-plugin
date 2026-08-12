@@ -1,3 +1,20 @@
+# Tabula — spreadsheet-style new tab page browser extension.
+#
+# Copyright (C) 2026 withersky
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 *** Settings ***
 Documentation    Юнит-тесты src/lib/storage.js: буквы столбцов, листы, i18n,
 ...              миграции, слияние с дефолтами, экспорт констант.
@@ -165,3 +182,55 @@ Merge With Defaults CellSelectedMode / Слияние: режим цвета в�
     Should Be Equal    ${d}[settings][cellSelectedMode]    custom
     ${d} =    Call Storage Function    mergeWithDefaults    {"settings":{}}
     Should Be Equal    ${d}[settings][cellSelectedMode]    custom
+
+Default Data Weather Cities / Дефолтные города погоды и часов
+    ${d} =    Call Storage Function    defaultData
+    ${wlen} =    Get Length    ${d}[settings][weatherCities]
+    Should Be Equal As Numbers    ${wlen}    0
+    Should Be Equal    ${d}[settings][weatherActiveCityId]    ${None}
+    Should Be Empty    ${d}[settings][weatherCity]
+    Should Be Equal    ${d}[settings][weatherLat]    ${None}
+    Should Be Equal    ${d}[settings][weatherLon]    ${None}
+    Should Be Empty    ${d}[settings][clockCities]
+    Should Be Equal    ${d}[settings][clockActiveCityId]    ${None}
+    ${clen} =    Get Length    ${d}[weatherCaches]
+    Should Be Equal As Numbers    ${clen}    0
+
+Merge With Defaults Legacy Weather City / Слияние: легаси-город погоды
+    ${d} =    Call Storage Function    mergeWithDefaults    {"settings":{"weatherCities":[],"weatherCity":"Москва","weatherLat":55.75,"weatherLon":37.62}}
+    ${len} =    Get Length    ${d}[settings][weatherCities]
+    Should Be Equal As Numbers    ${len}    1
+    Should Be Equal    ${d}[settings][weatherCities][0][name]    Москва
+    Should Be Equal As Numbers    ${d}[settings][weatherCities][0][lat]    55.75
+    Should Be Equal As Numbers    ${d}[settings][weatherCities][0][lon]    37.62
+    Should Be Equal    ${d}[settings][weatherActiveCityId]    ${d}[settings][weatherCities][0][id]
+
+Merge With Defaults Weather Cache Migration / Слияние: перенос legacy-кэша погоды
+    ${d} =    Call Storage Function    mergeWithDefaults    {"settings":{"weatherCities":[],"weatherCity":"Москва","weatherLat":55.75,"weatherLon":37.62},"weatherCache":{"ok":true,"fetchedAt":123}}
+    ${cityId} =    Set Variable    ${d}[settings][weatherActiveCityId]
+    Should Be True    ${d}[weatherCaches][${cityId}][ok]
+    Should Be Equal As Numbers    ${d}[weatherCaches][${cityId}][fetchedAt]    123
+
+Merge With Defaults Weather Caches Kept / Слияние: готовый словарь кэшей
+    ${d} =    Call Storage Function    mergeWithDefaults    {"settings":{"weatherCities":[]},"weatherCaches":{"cid":{"ok":true,"temp":5}}}
+    Should Be True    ${d}[weatherCaches][cid][ok]
+    Should Be Equal As Numbers    ${d}[weatherCaches][cid][temp]    5
+    ${len} =    Get Length    ${d}[weatherCaches]
+    Should Be Equal As Numbers    ${len}    1
+
+Merge With Defaults Clock Cities / Слияние: города часов
+    ${d} =    Call Storage Function    mergeWithDefaults    {"settings":{"clockCities":[{"id":"a","name":"London","timezone":"Europe/London"},{"name":"Tokyo"}],"clockActiveCityId":"a"}}
+    ${len} =    Get Length    ${d}[settings][clockCities]
+    Should Be Equal As Numbers    ${len}    2
+    Should Be Equal    ${d}[settings][clockCities][0][name]    London
+    Should Be Equal    ${d}[settings][clockCities][0][timezone]    Europe/London
+    Should Be Equal    ${d}[settings][clockCities][1][name]    Tokyo
+    Should Be Equal    ${d}[settings][clockCities][1][timezone]    ${EMPTY}
+    Should Not Be Empty    ${d}[settings][clockCities][1][id]
+    Should Be Equal    ${d}[settings][clockActiveCityId]    a
+
+Merge With Defaults Clock Active Fallback / Слияние: коррекция активного города часов
+    ${d} =    Call Storage Function    mergeWithDefaults    {"settings":{"clockCities":[{"id":"a","name":"London"}],"clockActiveCityId":"zzz"}}
+    Should Be Equal    ${d}[settings][clockActiveCityId]    a
+    ${d} =    Call Storage Function    mergeWithDefaults    {"settings":{"clockCities":[]}}
+    Should Be Equal    ${d}[settings][clockActiveCityId]    ${None}

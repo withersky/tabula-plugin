@@ -38,7 +38,7 @@ export function renderQuickGoIcon() {
   if (!el) return;
   const state = getState();
   const se = state && state.settings && state.settings.searchEngine;
-  const maps = { google: "icons/se-google.svg", yandex: "icons/se-yandex.svg", bing: "icons/se-bing.svg" };
+  const maps = { google: "../icons/se-google.svg", yandex: "../icons/se-yandex.svg", bing: "../icons/se-bing.svg" };
   const src = maps[se] || maps.google;
   if (el.dataset.src === src) return;
   el.dataset.src = src;

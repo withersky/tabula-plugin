@@ -1,3 +1,20 @@
+# Tabula — spreadsheet-style new tab page browser extension.
+#
+# Copyright (C) 2026 withersky
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 *** Settings ***
 Documentation    Юнит-тесты src/lib/core.js (часть newtab): URL, фавиконки, бейджи,
 ...              ключи сетки, погодные описания, форматирование дат, агрегатор.
@@ -15,10 +32,37 @@ Normalize Url / Нормализация URL
     Core Function Should Equal    normalizeUrl    \#    ${None}
 
 Favicon Url / URL фавиконки
-    Core Function Should Equal    faviconUrl    https://www.google.com/s2/favicons?domain=github.com&sz=64    https://github.com/foo
-    Core Function Should Equal    faviconUrl    https://www.google.com/s2/favicons?domain=github.com&sz=64    github.com
+    Core Function Should Equal    faviconUrl    https://github.com/favicon.ico    https://github.com/foo
+    Core Function Should Equal    faviconUrl    https://github.com/favicon.ico    github.com
+    Core Function Should Equal    faviconUrl    http://example.com/favicon.ico    http://example.com/a
+    Core Function Should Equal    faviconUrl    https://github.com/favicon.ico    https://github.com:8443/foo
     Core Function Should Equal    faviconUrl    ${EMPTY}    ${EMPTY}
     Core Function Should Equal    faviconUrl    ${EMPTY}    not a url
+
+Favicon Host / Хост фавиконки
+    Core Function Should Equal    faviconHost    github.com    https://github.com/foo
+    Core Function Should Equal    faviconHost    github.com    github.com
+    Core Function Should Equal    faviconHost    example.com    http://example.com
+    Core Function Should Equal    faviconHost    sub.domain.co.uk    https://sub.domain.co.uk/x
+    Core Function Should Equal    faviconHost    ${EMPTY}    ${EMPTY}
+    Core Function Should Equal    faviconHost    ${EMPTY}    not a url
+
+Prune Favicon Cache Max Entries / Обрезка кэша: лимит записей
+    Core Function Should Equal    pruneFaviconCache    {"b":{"data":"bb","ts":200},"c":{"data":"cc","ts":300}}    {"a":{"data":"aa","ts":100},"b":{"data":"bb","ts":200},"c":{"data":"cc","ts":300}}    1000    {"maxEntries":2}
+
+Prune Favicon Cache Max Total / Обрезка кэша: суммарный размер
+    Core Function Should Equal    pruneFaviconCache    {"b":{"data":"bb","ts":200},"c":{"data":"cccc","ts":300}}    {"a":{"data":"aaaa","ts":100},"b":{"data":"bb","ts":200},"c":{"data":"cccc","ts":300}}    1000    {"maxTotal":6}
+
+Prune Favicon Cache Max Age / Обрезка кэша: возраст записей
+    Core Function Should Equal    pruneFaviconCache    {"b":{"data":"bb","ts":200}}    {"a":{"data":"aa","ts":100},"b":{"data":"bb","ts":200}}    1000    {"maxAge":850}
+    Core Function Should Equal    pruneFaviconCache    {}    {"a":{"data":"aa","ts":100},"b":{"data":"bb","ts":200}}    1000    {"maxAge":700}
+
+Prune Favicon Cache Edge Cases / Обрезка кэша: невалидные записи
+    Core Function Should Equal    pruneFaviconCache    {"d":{"data":"x","ts":0},"b":{"data":"","ts":5},"c":{"data":"","ts":7}}    {"a":null,"b":{"ts":5},"c":{"data":42,"ts":7},"d":{"data":"x","ts":"bad"}}    1000    {}
+
+Prune Favicon Cache Combined And Empty / Обрезка кэша: комбинированные лимиты и пустой кэш
+    Core Function Should Equal    pruneFaviconCache    {"b":{"data":"bbbb","ts":200}}    {"a":{"data":"aaaa","ts":100},"b":{"data":"bbbb","ts":200}}    1000    {"maxEntries":1,"maxTotal":100}
+    Core Function Should Equal    pruneFaviconCache    {}    {}    1000    {"maxEntries":1}
 
 Letter Char / Буква-заглушка
     Core Function Should Equal    letterChar    G    Google

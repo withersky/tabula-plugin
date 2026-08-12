@@ -22,11 +22,21 @@
 
 export const TAB_IDS = ["appearance", "widgets", "language", "data", "about"];
 
+// Живое превью имеет смысл только там, где меняется оформление страницы.
+const PREVIEW_TABS = ["appearance", "widgets"];
+
+function syncPreviewPane(id) {
+  document.querySelectorAll(".preview-pane").forEach(p => {
+    p.hidden = !PREVIEW_TABS.includes(id);
+  });
+}
+
 export function switchTab(tabId, opts) {
   const scroll = !opts || opts.scroll !== false;
   const id = TAB_IDS.indexOf(tabId) >= 0 ? tabId : "appearance";
   document.querySelectorAll(".tab").forEach(btn => btn.classList.toggle("active", btn.dataset.tab === id));
   document.querySelectorAll(".tab-panel").forEach(p => { p.hidden = p.dataset.tab !== id; });
+  syncPreviewPane(id);
   try { history.replaceState(null, "", "#tab=" + id); } catch (_) {}
   if (scroll) window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -39,4 +49,5 @@ export function wireTabs() {
   const initial = m && TAB_IDS.indexOf(m[1]) >= 0 ? m[1] : "appearance";
   document.querySelectorAll(".tab").forEach(btn => btn.classList.toggle("active", btn.dataset.tab === initial));
   document.querySelectorAll(".tab-panel").forEach(p => { p.hidden = p.dataset.tab !== initial; });
+  syncPreviewPane(initial);
 }

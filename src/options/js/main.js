@@ -37,7 +37,7 @@ import {
   updateBgTypeVisibility, updateUploadPreview, updateBingCopyright,
   updateAllPreviews, bindAppearanceEvents
 } from "./appearance.js";
-import { bindWidgetEvents } from "./widgets.js";
+import { bindWidgetEvents, renderCityLists } from "./widgets.js";
 import { bindDataEvents } from "./data.js";
 import { populateAbout } from "./about.js";
 import { flashSaved, $$ } from "./utils.js";
@@ -48,6 +48,7 @@ async function init() {
 
   applyI18nStatic();
   fillForm();
+  renderCityLists();
   wireEvents();
   wireTabs();
   wireSearch();
@@ -65,11 +66,13 @@ async function init() {
       sheets:        Array.isArray(next.sheets) ? next.sheets : prev.sheets,
       activeSheetId: next.activeSheetId || prev.activeSheetId,
       settings:      Object.assign({}, prev.settings, next.settings || {}),
-      bingCache:     next.bingCache !== undefined ? next.bingCache : prev.bingCache
+      bingCache:     next.bingCache !== undefined ? next.bingCache : prev.bingCache,
+      weatherCaches: next.weatherCaches !== undefined ? next.weatherCaches : prev.weatherCaches
     });
     setLang(getState().settings.language || "ru");
     if (langChanged) applyI18nStatic();
     fillForm();
+    renderCityLists();
     updateBgTypeVisibility();
     updateUploadPreview();
     updateBingCopyright();
@@ -89,9 +92,12 @@ function wireEvents() {
   const previewFrame = document.getElementById("previewFrame");
 
   // Автосохранение с дебаунсом + мгновенная отправка в iframe-превью.
+  // Контролы модалок (гео-поиск, выбор папки закладок) не относятся к настройкам
+  // оформления — ввод в них не должен обновлять превью и сохранять настройки.
   let t;
   const allControls = $$("input, select").filter(el =>
-    el !== uploadInput && el !== importFile && el !== searchInput);
+    el !== uploadInput && el !== importFile && el !== searchInput &&
+    !(el.closest && el.closest(".modal")));
   allControls.forEach((el) => {
     const handler = () => {
       sendPreview(collectSettings());

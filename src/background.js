@@ -28,8 +28,21 @@ try { importScripts("i18n/generated/symbols.js"); } catch (_) { /* ignore if not
 try { importScripts("lib/core.js"); } catch (_) { /* ignore if not in worker context */ }
 
 const METNO_USER_AGENT = "TabulaNewTab/1.0 (contact: extension-local)";
+const METNO_TTL_MS = 10 * 60 * 1000; // 10 минут: met.no обновляет прогнозы примерно раз в 10 минут
+const METNO_CACHE_MAX = 8;           // предел записей кэша, чтобы не раздувать память воркера
+const _metnoCache = new Map();       // "lat,lon,lang" → { at: Date.now(), data: результат }
+
+function metnoCacheKey(lat, lon, lang) {
+  // Округляем до 4 знаков (~11 м), чтобы координаты с шумом плавающей точки
+  // не плодили дубликаты записей кэша.
+  return Number(lat).toFixed(4) + "," + Number(lon).toFixed(4) + "," + (lang || "ru");
+}
 
 async function fetchWeather(lat, lon, lang) {
+  const cacheKey = metnoCacheKey(lat, lon, lang);
+  const cached = _metnoCache.get(cacheKey);
+  if (cached && Date.now() - cached.at < METNO_TTL_MS) return cached.data;
+
   const params = new URLSearchParams({
     lat: String(lat),
     lon: String(lon)
@@ -49,7 +62,7 @@ async function fetchWeather(lat, lon, lang) {
     (cur.data && cur.data.next_6_hours && cur.data.next_6_hours.summary && cur.data.next_6_hours.summary.symbol_code) ||
     null;
   const code = symbolToCode(symbol);
-  return {
+  const result = {
     ok: true,
     source: "met.no",
     code: code,
@@ -60,10 +73,23 @@ async function fetchWeather(lat, lon, lang) {
     windKmph: (data.wind_speed != null && isFinite(Number(data.wind_speed))) ? Number(data.wind_speed) * 3.6 : null,
     desc: symbol || (lang === "en" ? "Weather" : "Погода"),
     forecast: buildDailyForecast(ts, lang),
+    hourly: buildHourlyForecast(ts, lang, 24),
     lat: lat,
     lon: lon,
     fetchedAt: Date.now()
   };
+  // Обновляем кэш только после успешного ответа мет.no.
+  if (_metnoCache.size >= METNO_CACHE_MAX) {
+    // Простой LRU: вытесняем самую старую запись.
+    let oldestKey = null;
+    let oldestAt = Infinity;
+    for (const [k, v] of _metnoCache) {
+      if (v.at < oldestAt) { oldestAt = v.at; oldestKey = k; }
+    }
+    if (oldestKey) _metnoCache.delete(oldestKey);
+  }
+  _metnoCache.set(cacheKey, { at: Date.now(), data: result });
+  return result;
 }
 
 async function geocodeCity(name, lang) {
@@ -83,7 +109,8 @@ async function geocodeCity(name, lang) {
     country: r.country || "",
     admin1: r.admin1 || "",
     lat: Number(r.latitude),
-    lon: Number(r.longitude)
+    lon: Number(r.longitude),
+    timezone: r.timezone || ""
   }));
 }
 

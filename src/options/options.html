@@ -26,30 +26,33 @@
   <link rel="stylesheet" href="options.css" />
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">
-      <img class="brand-mark" src="../icons/icon128.png" alt="Tabula" width="28" height="28" />
-      <h1 data-i18n="settingsTitle">Tabula — Настройки</h1>
-    </div>
-    <div class="topbar-actions">
-      <div class="search-wrap" id="searchWrap">
-        <input type="search" id="settingsSearch" class="search-input"
-               data-i18n-placeholder="searchSettingsPlaceholder"
-               placeholder="Поиск по настройкам…" autocomplete="off" spellcheck="false" />
-        <div id="searchResults" class="search-results" role="listbox" hidden></div>
+  <!-- Шапка и вкладки — единый sticky-блок: один фон, без стыка между ними. -->
+  <div class="settings-head">
+    <header class="topbar">
+      <div class="brand">
+        <img class="brand-mark" src="../icons/icon128.png" alt="Tabula" width="28" height="28" />
+        <h1 data-i18n="settingsTitle">Tabula — Настройки</h1>
       </div>
-      <span id="autoSaveHint" class="autosave-pill" data-i18n="savedAuto">Автосохранение</span>
-      <a class="btn ghost" href="../newtab/newtab.html" target="_blank" data-i18n="backToGrid">Открыть новую вкладку</a>
-    </div>
-  </header>
+      <div class="topbar-actions">
+        <div class="search-wrap" id="searchWrap">
+          <input type="search" id="settingsSearch" class="search-input"
+                 data-i18n-placeholder="searchSettingsPlaceholder"
+                 placeholder="Поиск по настройкам…" autocomplete="off" spellcheck="false" />
+          <div id="searchResults" class="search-results" role="listbox" hidden></div>
+        </div>
+        <span id="autoSaveHint" class="autosave-pill" data-i18n="savedAuto">Автосохранение</span>
+        <a class="btn ghost" href="../newtab/newtab.html" target="_blank" data-i18n="backToGrid">Открыть новую вкладку</a>
+      </div>
+    </header>
 
-  <nav class="tabs-bar" id="tabsBar" aria-label="Settings">
-    <button type="button" class="tab" data-tab="appearance" data-i18n="navAppearance">Оформление</button>
-    <button type="button" class="tab" data-tab="widgets"     data-i18n="navWidgets">Виджеты</button>
-    <button type="button" class="tab" data-tab="language"    data-i18n="navLanguage">Язык</button>
-    <button type="button" class="tab" data-tab="data"        data-i18n="navData">Данные</button>
-    <button type="button" class="tab" data-tab="about"       data-i18n="navAbout">О расширении</button>
-  </nav>
+    <nav class="tabs-bar" id="tabsBar" aria-label="Settings">
+      <button type="button" class="tab" data-tab="appearance" data-i18n="navAppearance">Оформление</button>
+      <button type="button" class="tab" data-tab="widgets"     data-i18n="navWidgets">Виджеты</button>
+      <button type="button" class="tab" data-tab="language"    data-i18n="navLanguage">Язык</button>
+      <button type="button" class="tab" data-tab="data"        data-i18n="navData">Данные</button>
+      <button type="button" class="tab" data-tab="about"       data-i18n="navAbout">О расширении</button>
+    </nav>
+  </div>
 
   <div class="layout">
     <main>
@@ -171,6 +174,7 @@
           <label class="check"><input type="checkbox" name="showColLetters" /> <span data-i18n="optShowColLetters">Показывать буквы колонок</span></label>
           <label class="check"><input type="checkbox" name="showSheetTabs"  /> <span data-i18n="optShowSheetTabs">Показывать вкладки листов</span></label>
           <label class="check"><input type="checkbox" name="showFavicon"    /> <span data-i18n="optShowFavicon">Показывать иконки сайтов</span></label>
+          <label class="check"><input type="checkbox" name="touchGestures" /> <span data-i18n="optTouchGestures">Сенсорные жесты (свайпы и долгое нажатие)</span></label>
         </div>
         <div class="grid-2">
           <div class="radio-box">
@@ -247,7 +251,7 @@
             </span>
             <input type="text" name="fontFamily" placeholder='system-ui, sans-serif' />
           </label>
-          <label>
+          <label class="full">
             <span class="row">
               <span data-i18n="labelFontSize">Размер шрифта</span>
               <span class="hint" data-i18n="unitPx">пикс.</span>
@@ -299,7 +303,7 @@
           <div class="widget-subsection">
             <span class="widget-subsection-title" data-i18n="widgetSubsectionAppearance">Внешний вид</span>
             <div class="grid-2">
-              <label>
+              <label class="full">
                 <span class="row">
                   <span data-i18n="optClockSize">Размер часов</span>
                   <span class="hint" data-i18n="unitPx">пикс.</span>
@@ -307,6 +311,18 @@
                 </span>
                 <input type="range" name="clockSize" min="16" max="40" step="1" />
               </label>
+            </div>
+          </div>
+
+          <div class="widget-subsection">
+            <span class="widget-subsection-title" data-i18n="widgetSubsectionCities">Города</span>
+            <p class="hint" data-i18n="optClockCitiesHint">Время каждого города — по его часовому поясу. Активный город показывается в топбаре.</p>
+            <div id="clockCityList" class="city-list"></div>
+            <div class="city-list-actions">
+              <button type="button" id="clockAddCityBtn" class="btn">
+                <span class="btn-icon" aria-hidden="true">＋</span>
+                <span data-i18n="optClockAddCity">Добавить город</span>
+              </button>
             </div>
           </div>
         </div>
@@ -362,22 +378,14 @@
           </div>
 
           <div class="widget-subsection">
-            <span class="widget-subsection-title" data-i18n="widgetSubsectionLocation">Локация</span>
-            <div class="grid-2">
-              <label>
-                <span class="row"><span data-i18n="optWeatherLat">Широта</span></span>
-                <input type="number" step="0.0001" name="weatherLat" placeholder="55.7558" />
-              </label>
-              <label>
-                <span class="row"><span data-i18n="optWeatherLon">Долгота</span></span>
-                <input type="number" step="0.0001" name="weatherLon" placeholder="37.6173" />
-              </label>
-              <label class="full" style="margin-top:4px;">
-                <button type="button" id="weatherGeoBtn" class="btn">
-                  <span class="btn-icon" aria-hidden="true">🔍</span>
-                  <span data-i18n="optWeatherCityAuto">Получить координаты по городу</span>
-                </button>
-              </label>
+            <span class="widget-subsection-title" data-i18n="widgetSubsectionCities">Города</span>
+            <p class="hint" data-i18n="optWeatherCitiesHint">Добавьте города через поиск по названию — координаты подберутся автоматически.</p>
+            <div id="weatherCityList" class="city-list"></div>
+            <div class="city-list-actions">
+              <button type="button" id="weatherAddCityBtn" class="btn">
+                <span class="btn-icon" aria-hidden="true">＋</span>
+                <span data-i18n="optWeatherAddCity">Добавить город</span>
+              </button>
             </div>
           </div>
 

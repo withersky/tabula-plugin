@@ -25,29 +25,43 @@
  * остаются классическими скриптами — подключаются до этого модуля.
  */
 
-import { getState, setState, getLang, setLang } from "./state.js";
+import { getState, setState, getLang, setLang, activeSheet } from "./state.js";
 import { tx, applyI18nStatic, applyPageTitle } from "./i18n.js";
-import { startClock, clockWidget } from "./clock.js";
-import { startWeather, renderWeather, bindWeatherEvents, toggleWeatherPopup } from "./weather.js";
+import { startClock, bindClockEvents, clockWidget } from "./clock.js";
+import { startWeather, renderWeather, bindWeatherEvents, bindWeatherCityMenu, toggleWeatherPopup } from "./weather.js";
 import { weatherWidget } from "./weather.js";
-import { renderQuickGoIcon, hideSuggest, markSuggestActive, onQuickGo, suggestState, bindSearchEvents } from "./search.js";
-import { quickInput } from "./search.js";
+import { renderQuickGoIcon, bindSearchEvents } from "./search.js";
 import { applyBackground, applySelectionColor, maybeLoadBingBackground } from "./background.js";
-import { renderGrid, closeModal, hideCtx, hideCtxEmpty, hideSheetCtx, onSubmitBookmark, bindGridEvents } from "./grid.js";
-import { renderSheetBar, refreshSheetCtx, closeSheetModal, bindSheetEvents } from "./sheets.js";
+import { renderGrid, closeModal, onSubmitBookmark, bindGridEvents } from "./grid.js";
+import { renderSheetBar, updateSheetBarActive, refreshSheetCtx, bindSheetEvents, switchSheetBySwipe } from "./sheets.js";
+import { initFavicons, prefetchFavicons } from "./favicons.js";
+import { bindSearcherEvents } from "./searcher.js";
+import { bindShortcutEvents } from "./shortcuts.js";
+import { bindHotkeyEvents } from "./hotkeys.js";
 
 // Режим предпросмотра: newtab.html?preview=1 открывается в iframe настроек.
 // Применяет настройки из options по postMessage и ничего не пишет в storage.
 const PREVIEW_MODE = new URLSearchParams(location.search).get("preview") === "1";
 
 // Общие DOM-ссылки для слушателей (модули владеют своими ссылками отдельно).
-const modalEl     = document.getElementById("modal");
-const tabForm     = document.getElementById("tabForm");
-const sheetModal  = document.getElementById("sheetModal");
-const confirmModal= document.getElementById("confirmModal");
-const gridEl      = document.getElementById("grid");
-const quickGo     = document.getElementById("quickGo");
-const quickSuggestEl = document.getElementById("quickSuggest");
+// Ссылки модалок и подсказок живут в модулях, которые ими владеют
+// (grid.js/sheets.js/hotkeys.js), чтобы не дублировать выборки.
+const modalEl = document.getElementById("modal");
+const tabForm = document.getElementById("tabForm");
+const quickGo = document.getElementById("quickGo");
+
+// ---------- фавиконки ----------
+
+function collectVisibleUrls() {
+  const sheet = activeSheet();
+  if (!sheet || !sheet.cells) return [];
+  const urls = [];
+  for (const key of Object.keys(sheet.cells)) {
+    const bm = sheet.cells[key];
+    if (bm && typeof bm.url === "string" && bm.url) urls.push(bm.url);
+  }
+  return urls;
+}
 
 // ---------- применение настроек ----------
 
@@ -88,6 +102,8 @@ function applyLayoutFlags() {
   const s = state.settings;
   document.body.classList.toggle("no-quick-go", !s.showQuickGo);
   document.body.classList.toggle("no-sheet-bar", !s.showSheetTabs);
+  // Сенсорные жесты: долгое нажатие/перетаскивание (touch-action отдаётся сетке).
+  document.body.classList.toggle("touch-gestures", s.touchGestures !== false);
   document.body.classList.toggle("no-row-nums", !s.showRowNumbers);
   document.body.classList.toggle("no-col-letters", !s.showColLetters);
   document.body.classList.toggle("no-clock", !s.showClock);
@@ -139,6 +155,9 @@ function applySheetBarHeight() {
 
 async function init() {
   setState(await Storage.get());
+  // Кэш фавиконок читается до первого рендера, чтобы ячейки сразу получили
+  // data URL из storage (офлайн) вместо letter-бейджей.
+  await initFavicons();
   if (PREVIEW_MODE) {
     // Превью ничего не пишет в chrome.storage: все «сохранения» (погода, фон,
     // активный лист) мутируют state в памяти и исчезают при закрытии настроек.
@@ -159,6 +178,12 @@ async function init() {
   maybeLoadBingBackground();
   startClock();
   startWeather();
+
+  // Фоновая догрузка фавиконок новых хостов — только вне предпросмотра
+  // (в iframe настроек не дёргаем сеть при каждом движении ползунков).
+  if (!PREVIEW_MODE && getState() && getState().settings.showFavicon) {
+    prefetchFavicons(collectVisibleUrls());
+  }
 
   // Динамический отступ ячеек от топбара (часы могут менять высоту).
   const tb = document.querySelector(".topbar");
@@ -183,38 +208,73 @@ async function init() {
   Storage.onChanged((next) => {
     if (!next) return;
     const prev = getState();
-    const langChanged = (next.settings && next.settings.language) !== getLang();
-    const prevSettings = prev.settings || {};
-    const nextSettings = Object.assign({}, prevSettings, next.settings || {});
+    // Точечные диффы: какие именно части данных изменились. Логика вынесена
+    // в чистую функцию diffTabulaData (src/lib/core.js) — она покрыта
+    // юнит-тестами, и JSON.stringify-сравнения не дублируются здесь.
+    const d = diffTabulaData(prev, next, getLang());
+    const sheetsChanged   = d.sheetsChanged;
+    const activeChanged   = d.activeChanged;
+    const settingsChanged = d.settingsChanged;
+    const weatherChanged  = d.weatherChanged;
+    const bingChanged     = d.bingChanged;
+    const langChanged     = d.langChanged;
+    const prevSettings    = d.prevSettings;
+    const nextSettings    = d.nextSettings;
+
     setState({
       sheets:        Array.isArray(next.sheets) ? next.sheets : prev.sheets,
       activeSheetId: next.activeSheetId || prev.activeSheetId,
-      settings:      nextSettings,
+      settings:      d.nextSettings,
       bingCache:     next.bingCache !== undefined ? next.bingCache : prev.bingCache,
-      weatherCache:  next.weatherCache !== undefined ? next.weatherCache : prev.weatherCache
+      weatherCaches: next.weatherCaches !== undefined ? next.weatherCaches : prev.weatherCaches
     });
-    setLang(nextSettings.language || "ru");
-    applySettings();
-    applyLayoutFlags();
-    if (langChanged) applyI18nStatic();
-    else applyPageTitle();
-    renderGrid();
-    renderSheetBar();
-    refreshSheetCtx();
-    startClock();
-    // Рестартим погоду только при изменении значимых полей,
-    // иначе каждый апдейт weatherCache зацикливает себя.
-    const weatherSettingsChanged =
-      nextSettings.showWeather   !== prevSettings.showWeather   ||
-      nextSettings.weatherLat    !== prevSettings.weatherLat    ||
-      nextSettings.weatherLon    !== prevSettings.weatherLon    ||
-      nextSettings.weatherCity   !== prevSettings.weatherCity   ||
-      nextSettings.weatherRefreshMin !== prevSettings.weatherRefreshMin;
+    setLang(d.nextSettings.language || "ru");
+
+    if (settingsChanged) {
+      applySettings();
+      applyLayoutFlags();
+      if (langChanged) applyI18nStatic();
+      else applyPageTitle();
+    }
+
+    // Сетка и вкладки листов обновляются только при реальных изменениях,
+    // а не на каждый апдейт погоды/фона.
+    if (sheetsChanged || activeChanged || settingsChanged) {
+      renderGrid();
+      if (sheetsChanged) {
+        // Состав вкладок изменился — пересоздаём бар целиком.
+        renderSheetBar();
+      } else if (activeChanged) {
+        // Сменился только активный лист — передвигаем класс active без
+        // пересоздания DOM, иначе вкладки мигают анимацией входа.
+        updateSheetBarActive();
+      }
+      if (sheetsChanged || activeChanged) refreshSheetCtx();
+      // После изменения настроек/листов догружаем фавиконки активного листа.
+      if (getState() && getState().settings.showFavicon) {
+        prefetchFavicons(collectVisibleUrls());
+      }
+    }
+
+    // Часы: перезапуск только при изменении настроек.
+    if (settingsChanged) startClock();
+
+    // Погода: рестарт только при изменении значимых полей настроек,
+    // иначе каждый апдейт weatherCaches зацикливает себя.
+    const weatherSettingsChanged = settingsChanged && (
+      nextSettings.showWeather         !== prevSettings.showWeather         ||
+      nextSettings.weatherActiveCityId !== prevSettings.weatherActiveCityId ||
+      nextSettings.weatherRefreshMin   !== prevSettings.weatherRefreshMin   ||
+      JSON.stringify(nextSettings.weatherCities) !== JSON.stringify(prevSettings.weatherCities)
+    );
     if (weatherSettingsChanged) {
       startWeather();
-    } else {
+    } else if (weatherChanged) {
       renderWeather();
     }
+
+    // Фон Bing обновился — перекрашиваем фон, сетку не трогаем.
+    if (bingChanged) applyBackground();
   });
 }
 
@@ -271,6 +331,9 @@ function bindPreview() {
       toggleWeatherPopup();
     });
   }
+  // В превью нет bindWeatherEvents — привязываем меню городов отдельно,
+  // чтобы клик по городу в шапке попапа раскрывал список (а не закрывал попап).
+  bindWeatherCityMenu();
 }
 
 // ---------- общие слушатели ----------
@@ -288,46 +351,8 @@ function bindEvents() {
     if (e.target === modalEl) closeModal();
   });
 
-  document.addEventListener("keydown", (e) => {
-    if (!modalEl.hidden) { if (e.key === "Escape") closeModal(); return; }
-    if (sheetModal && !sheetModal.hidden) { if (e.key === "Escape") closeSheetModal(); return; }
-    if (confirmModal && !confirmModal.hidden) return; // закрывается внутри confirmDialog
-
-    const suggestOpen = quickSuggestEl && !quickSuggestEl.hidden;
-    const sst = suggestState();
-
-    if (e.key === "Escape") {
-      hideCtx(); hideCtxEmpty(); hideSheetCtx();
-      if (suggestOpen) {
-        hideSuggest();
-      } else if (document.activeElement === quickInput) {
-        quickInput.blur();
-      }
-      return;
-    }
-
-    if (document.activeElement === quickInput) {
-      if (suggestOpen && sst.items.length && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
-        e.preventDefault();
-        const next = (e.key === "ArrowDown")
-          ? (sst.index + 1) % sst.items.length
-          : (sst.index - 1 + sst.items.length) % sst.items.length;
-        sst.index = next;
-        markSuggestActive();
-        return;
-      }
-      if (suggestOpen && sst.items.length && e.key === "Enter" && sst.index >= 0) {
-        e.preventDefault();
-        onQuickGo(null, sst.items[sst.index]);
-        return;
-      }
-      return;
-    }
-
-    if (e.key === "/" && document.activeElement.tagName !== "INPUT") {
-      e.preventDefault(); quickInput.focus(); quickInput.select();
-    }
-  });
+  // Горячие клавиши вынесены в отдельный модуль: см. hotkeys.js.
+  bindHotkeyEvents();
 
   let resizeTimer;
   window.addEventListener("resize", () => {
@@ -338,8 +363,17 @@ function bindEvents() {
   // События модулей.
   bindSearchEvents();
   bindWeatherEvents();
+  bindClockEvents();
   bindGridEvents();
   bindSheetEvents();
+  bindSearcherEvents();
+  bindShortcutEvents();
+
+  // Свайп по сетке влево/вправо → переключение листов (см. grid.js).
+  window.addEventListener("tabula:sheet-swipe", (e) => {
+    const dir = e.detail && e.detail.dir;
+    if (dir) switchSheetBySwipe(dir);
+  });
 
   // applySheetBarHeight после ресайза лист-бара (вкладки переносятся на новую строку).
   window.addEventListener("tabula:sheetbar-resize", applySheetBarHeight);

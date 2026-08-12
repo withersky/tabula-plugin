@@ -39,6 +39,11 @@ let sheetDragId = null;
 let sheetDragPtr = null;        // активная pointer-сессия на вкладке листа
 let suppressSheetClick = false; // подавление click после перетаскивания вкладки
 let sheetDropLine = null;       // индикатор позиции вставки в лист-баре
+let sheetLongPressTimer = null; // таймер долгого нажатия (сенсорные жесты)
+let barScrollPtr = null;        // сессия ручного скролла лист-бара пальцем (touch)
+let autoScrollTimer = null;     // автоскролл при перетаскивании вкладки к краю
+
+const LONG_PRESS_MS = 500;      // порог долгого нажатия
 
 const _justAddedIds = new Set();
 
@@ -51,6 +56,18 @@ export function updateSheetScrollArrows() {
   const max = sheetTabsEl.scrollWidth - sheetTabsEl.clientWidth;
   sheetScrollLeft.disabled  = sheetTabsEl.scrollLeft <= 1;
   sheetScrollRight.disabled = sheetTabsEl.scrollLeft >= max - 1;
+}
+
+// Лёгкое обновление бара: передвигает только класс active и стрелки скролла.
+// Не пересоздаёт DOM — переключение листа не должно переигрывать анимацию
+// вкладок (при пересоздании каждая .sheet-tab заново проигрывала бы tabIn).
+export function updateSheetBarActive() {
+  if (!sheetTabsEl) return;
+  const activeId = getState().activeSheetId;
+  sheetTabsEl.querySelectorAll(".sheet-tab").forEach(el => {
+    el.classList.toggle("active", el.dataset.id === activeId);
+  });
+  updateSheetScrollArrows();
 }
 
 function clearSheetDragStyles() {
@@ -115,30 +132,131 @@ export function renderSheetBar() {
   updateSheetScrollArrows();
 }
 
+// ---------- сенсорные жесты: долгое нажатие на вкладке листа ----------
+// Открывает контекстное меню листа (переименовать/удалить/иконка) как при ПКМ.
+function armSheetLongPress(e) {
+  clearSheetLongPress();
+  if (getState().settings.touchGestures === false) return;
+  const tab = e.target.closest && e.target.closest(".sheet-tab");
+  const id = tab && tab.dataset.id;
+  if (!id) return;
+  const x = e.clientX;
+  const y = e.clientY;
+  sheetLongPressTimer = setTimeout(() => {
+    sheetLongPressTimer = null;
+    sheetDragPtr = null; // отменяем drag-сессию, чтобы не началось перетаскивание
+    suppressSheetClick = true;
+    setTimeout(() => { suppressSheetClick = false; }, 350);
+    sheetCtxTargetId = id;
+    refreshSheetCtx();
+    positionMenu(sheetCtx, x, y);
+    sheetCtx.hidden = false;
+  }, LONG_PRESS_MS);
+}
+
+function clearSheetLongPress() {
+  if (sheetLongPressTimer) { clearTimeout(sheetLongPressTimer); sheetLongPressTimer = null; }
+}
+
+// ---------- скролл лист-бара пальцем ----------
+// Вкладки используют touch-action: none (нужен drag), поэтому горизонтальный
+// скролл бара выполняется вручную: жест, начатый на пустой области бара, или
+// быстрый флик по вкладке прокручивает лист-бар.
+function beginBarScroll(e) {
+  if (e.pointerType !== "touch") return;
+  if (!sheetTabsEl) return;
+  const max = sheetTabsEl.scrollWidth - sheetTabsEl.clientWidth;
+  if (max <= 0) return; // нечего прокручивать
+  barScrollPtr = {
+    pointerId: e.pointerId,
+    startX: e.clientX,
+    startScrollLeft: sheetTabsEl.scrollLeft,
+    moved: false
+  };
+}
+function onBarScrollMove(e) {
+  const s = barScrollPtr;
+  if (!s || e.pointerId !== s.pointerId) return;
+  const dx = e.clientX - s.startX;
+  if (!s.moved && Math.abs(dx) < 5) return;
+  s.moved = true;
+  const max = sheetTabsEl.scrollWidth - sheetTabsEl.clientWidth;
+  sheetTabsEl.scrollLeft = Math.max(0, Math.min(max, s.startScrollLeft - dx));
+  updateSheetScrollArrows();
+}
+function endBarScroll(e) {
+  if (!barScrollPtr) return;
+  if (e && e.pointerId !== undefined && e.pointerId !== barScrollPtr.pointerId) return;
+  barScrollPtr = null;
+}
+
+// ---------- автоскролл бара при перетаскивании вкладки к краю ----------
+function stopSheetAutoScroll() {
+  if (autoScrollTimer) { clearInterval(autoScrollTimer); autoScrollTimer = null; }
+}
+function startSheetAutoScroll(dir) {
+  if (autoScrollTimer) return;
+  autoScrollTimer = setInterval(() => {
+    if (!sheetTabsEl) { stopSheetAutoScroll(); return; }
+    const max = sheetTabsEl.scrollWidth - sheetTabsEl.clientWidth;
+    const before = sheetTabsEl.scrollLeft;
+    sheetTabsEl.scrollLeft = Math.max(0, Math.min(max, before + dir * 4));
+    updateSheetScrollArrows();
+    if (sheetTabsEl.scrollLeft === before) stopSheetAutoScroll();
+  }, 16);
+}
+function updateSheetAutoScroll(e) {
+  if (!sheetTabsEl) return;
+  const r = sheetTabsEl.getBoundingClientRect();
+  const EDGE = 36;
+  if (e.clientX < r.left + EDGE) startSheetAutoScroll(-1);
+  else if (e.clientX > r.right - EDGE) startSheetAutoScroll(1);
+  else stopSheetAutoScroll();
+}
+
 // ---------- перетаскивание вкладок листов (pointer-события) ----------
 function onSheetBarPointerDown(e) {
   if (e.button !== 0) return;
   const tab = e.target.closest && e.target.closest(".sheet-tab");
-  if (!tab) return;
+  if (!tab) { beginBarScroll(e); return; }
   if (tab.querySelector("input.sheet-name-input") || tab.querySelector("input.sheet-icon-input")) return;
   sheetDragId = null;
   sheetDragPtr = {
     pointerId: e.pointerId,
     startX: e.clientX,
     startY: e.clientY,
+    startTime: e.timeStamp,
     tab,
     moved: false,
     targetId: null,
     before: true
   };
+  armSheetLongPress(e);
 }
 
 function onSheetBarPointerMove(e) {
+  if (barScrollPtr) { onBarScrollMove(e); return; }
   const d = sheetDragPtr;
   if (!d || e.pointerId !== d.pointerId) return;
   if (!d.moved) {
     if (Math.hypot(e.clientX - d.startX, e.clientY - d.startY) < 5) return;
+    // Быстрое горизонтальное движение пальцем без паузы — это скролл бара,
+    // а не перетаскивание вкладки (как флик в мобильных браузерах).
+    if (e.pointerType === "touch" && (e.timeStamp - d.startTime) <= 250 &&
+        sheetTabsEl && (sheetTabsEl.scrollWidth - sheetTabsEl.clientWidth) > 0) {
+      clearSheetLongPress();
+      sheetDragPtr = null;
+      barScrollPtr = {
+        pointerId: e.pointerId,
+        startX: d.startX,
+        startScrollLeft: sheetTabsEl.scrollLeft,
+        moved: false
+      };
+      onBarScrollMove(e);
+      return;
+    }
     d.moved = true;
+    clearSheetLongPress();
     sheetDragId = d.tab.dataset.id;
     d.tab.classList.add("sheet-dragging");
     d.tab.style.opacity = "0.4";
@@ -168,11 +286,16 @@ function onSheetBarPointerMove(e) {
   left += sheetTabsEl.scrollLeft;
   sheetDropLine.style.left = left + "px";
   sheetDropLine.hidden = false;
+  // Автоскролл бара, когда вкладку тащат к краю.
+  updateSheetAutoScroll(e);
 }
 
 function onSheetBarPointerUp(e) {
+  endBarScroll(e);
+  stopSheetAutoScroll();
   const d = sheetDragPtr;
   if (!d || e.pointerId !== d.pointerId) return;
+  clearSheetLongPress();
   sheetDragPtr = null;
   hideSheetDropLine();
   d.tab.classList.remove("sheet-dragging");
@@ -187,6 +310,9 @@ function onSheetBarPointerUp(e) {
 }
 
 function onSheetBarPointerCancel() {
+  endBarScroll(null);
+  stopSheetAutoScroll();
+  clearSheetLongPress();
   const d = sheetDragPtr;
   if (!d) return;
   sheetDragPtr = null;
@@ -202,7 +328,8 @@ function hideSheetDropLine() {
 
 // Перемещает лист на новую позицию и сохраняет порядок.
 async function persistSheetOrder(fromId, targetId, before) {
-  await Storage.update((d) => {
+  // Storage.update возвращает мутированные данные — не читаем storage повторно.
+  const data = await Storage.update((d) => {
     const fromIdx = d.sheets.findIndex(s => s.id === fromId);
     if (fromIdx < 0) return;
     const [moved] = d.sheets.splice(fromIdx, 1);
@@ -216,22 +343,34 @@ async function persistSheetOrder(fromId, targetId, before) {
     }
     d.sheets.splice(toIdx, 0, moved);
   });
-  setState(await Storage.get());
+  setState(data);
   renderSheetBar();
   renderGrid();
   updateSheetScrollArrows();
 }
 
-async function switchSheet(id) {
-  await Storage.update((d) => { d.activeSheetId = id; });
-  setState(await Storage.get());
-  renderSheetBar();
+export async function switchSheet(id) {
+  // Storage.update возвращает данные — одно чтение storage вместо двух.
+  const data = await Storage.update((d) => { d.activeSheetId = id; });
+  setState(data);
+  updateSheetBarActive();
   renderGrid();
   if (sheetTabsEl) {
     const tabEl = sheetTabsEl.querySelector('.sheet-tab[data-id="' + id + '"]');
     if (tabEl && tabEl.scrollIntoView) tabEl.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
   }
   updateSheetScrollArrows();
+}
+
+// Переключение листа свайпом: dir = 1 (влево → следующий), -1 (вправо → предыдущий).
+export function switchSheetBySwipe(dir) {
+  const state = getState();
+  if (!state.sheets || state.sheets.length < 2) return;
+  const idx = state.sheets.findIndex(s => s.id === state.activeSheetId);
+  if (idx < 0) return;
+  const next = (idx + (dir || 1) + state.sheets.length) % state.sheets.length;
+  if (next === idx) return;
+  switchSheet(state.sheets[next].id);
 }
 
 async function addSheetPrompt() {

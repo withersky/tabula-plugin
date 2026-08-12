@@ -29,9 +29,14 @@
   <div id="bg"></div>
 
   <header class="topbar">
-    <div id="clockWidget" class="clock-widget" aria-label="Clock">
+    <div id="clockWidget" class="clock-widget" aria-label="Clock" tabindex="0" role="button">
       <div id="clockTime" class="clock-time">--:--</div>
       <div id="clockDate" class="clock-date">—</div>
+      <div id="clockCity" class="clock-city"></div>
+      <div id="clockPopup" class="clock-popup" hidden>
+        <div class="clock-popup-title" data-i18n="clockCitiesTitle">Города</div>
+        <div id="clockPopupList" class="clock-popup-list"></div>
+      </div>
     </div>
 <form id="quickGo" class="quick-go" autocomplete="off">
 <span id="quickGoIcon" class="quick-go-icon" aria-hidden="true"></span>
@@ -53,7 +58,11 @@ spellcheck="false" />
 <div id="weatherPopup" class="weather-popup" hidden>
 <div class="weather-popup-head">
 <span class="weather-popup-title" data-i18n="weatherForecastTitle">Прогноз погоды</span>
-<span id="weatherPopupCity" class="weather-popup-city"></span>
+<button type="button" id="weatherPopupCity" class="weather-popup-city"></button>
+</div>
+<div id="weatherPopupHourlyWrap" class="weather-popup-hourly-wrap" hidden>
+<div class="weather-popup-hourly-title" data-i18n="hourlyForecastTitle">По часам</div>
+<div id="weatherPopupHourly" class="weather-popup-hourly"></div>
 </div>
 <div id="weatherPopupDays" class="weather-popup-days"></div>
 <button type="button" id="weatherPopupOpenBtn" class="weather-popup-open" data-i18n="weatherOpenForecast">Открыть прогноз</button>
@@ -138,6 +147,37 @@ data-i18n-placeholder="promptSheetName" placeholder="Название листа
     <li data-act="icon"><span class="ctx-icon" data-i18n="iconIcon">😀</span><span data-i18n="sheetIcon">Иконка листа</span></li>
     <li data-act="delete" class="danger"><span class="ctx-icon" data-i18n="iconDelete">🗑</span><span data-i18n="deleteSheet">Удалить лист</span></li>
   </ul>
+
+  <!-- Палитра поиска: поиск закладок по всем листам (Ctrl+F) -->
+  <div id="searcher" class="searcher" hidden>
+    <div class="searcher-card">
+      <div class="searcher-input-wrap">
+        <span class="searcher-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+        <input id="searcherInput" type="text"
+          data-i18n-placeholder="searcherPlaceholder"
+          placeholder="Поиск по всем листам…"
+          spellcheck="false" autocomplete="off" />
+      </div>
+      <div id="searcherResults" class="searcher-results"></div>
+      <div class="searcher-footer" data-i18n="searcherHint">↑↓ — выбор · Enter — открыть · Esc — закрыть</div>
+    </div>
+  </div>
+
+  <!-- Справка по горячим клавишам (F1 / ?) -->
+  <div id="shortcutModal" class="modal" hidden>
+    <div class="modal-card shortcut-modal-card">
+      <h2 data-i18n="shortcutsTitle">Горячие клавиши</h2>
+      <div id="shortcutList" class="shortcut-list"></div>
+      <div class="shortcut-modal-actions">
+        <button type="button" id="shortcutCloseBtn" class="btn" data-i18n="close">Закрыть</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Выпадающее меню городов погоды живёт на уровне body, а не внутри попапа:
+       position:fixed в нём иначе ломается backdrop-filter'ом .weather-popup
+       (blur создаёт containing block, и меню уезжает за пределы экрана). -->
+  <div id="weatherPopupCities" class="weather-popup-cities" hidden></div>
 
   <div id="toast" class="toast" hidden></div>
 

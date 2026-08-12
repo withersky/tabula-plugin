@@ -166,6 +166,7 @@ function defaultData() {
       backgroundImage: "",
       bingMkt: "ru-RU",
       showFavicon: true,
+      touchGestures: true,
       openInNewTab: false,
       showRowNumbers: false,
       showColLetters: false,
@@ -177,9 +178,13 @@ function defaultData() {
       showClock: true,
       clockSize: 28,
       showWeather: true,
-      weatherCity: "Нижний Новгород",
-      weatherLat: 56.3286,
-      weatherLon: 44.0020,
+      weatherCity: "",
+      weatherLat: null,
+      weatherLon: null,
+      weatherCities: [],
+      weatherActiveCityId: null,
+      clockCities: [],
+      clockActiveCityId: null,
       weatherSize: 13,
       weatherRefreshMin: 90,
       weatherForecastDays: 5,
@@ -187,7 +192,8 @@ function defaultData() {
       language: "ru"
     },
     bingCache: null,
-    weatherCache: null
+    weatherCache: null,
+    weatherCaches: {}
   };
 }
 
@@ -246,7 +252,10 @@ function migrate(oldData) {
       activeSheetId: active,
       settings: cleanedSettings,
       bingCache: oldData.bingCache || null,
-      weatherCache: oldData.weatherCache || null
+      weatherCache: oldData.weatherCache || null,
+      weatherCaches: (oldData.weatherCaches && typeof oldData.weatherCaches === "object")
+        ? oldData.weatherCaches
+        : {}
     };
   }
 
@@ -277,7 +286,8 @@ function migrate(oldData) {
       activeSheetId: sheets[0].id,
       settings: cleanedSettings,
       bingCache: null,
-      weatherCache: null
+      weatherCache: null,
+      weatherCaches: {}
     };
   }
 
@@ -298,13 +308,66 @@ function mergeWithDefaults(data) {
     if (!out.sheets.find(s => s.id === out.activeSheetId)) out.activeSheetId = out.sheets[0].id;
   }
   if (data && data.bingCache) out.bingCache = data.bingCache;
-  if (data && data.weatherCache) out.weatherCache = data.weatherCache;
+  if (data && data.weatherCaches && typeof data.weatherCaches === "object") {
+    out.weatherCaches = Object.assign({}, data.weatherCaches);
+  }
   if (data && data.settings && typeof data.settings === "object") {
     out.settings = Object.assign({}, out.settings, data.settings);
     out.settings.defaultColumns = clampCols(out.settings.defaultColumns);
     // cellSelectedMode: "custom" (ручной цвет) | "autoColor" (автоцвет из фона).
     if (!["custom", "autoColor"].includes(out.settings.cellSelectedMode)) {
       out.settings.cellSelectedMode = "custom";
+    }
+    // Нормализация городов погоды: приводим записи к единому виду, при
+    // отсутствии списка создаём город из легаси weatherLat/weatherLon/weatherCity.
+    let weatherCities = Array.isArray(out.settings.weatherCities)
+      ? out.settings.weatherCities
+      : [];
+    weatherCities = weatherCities
+      .map(c => ({
+        id: String((c && c.id) || cryptoId()),
+        name: String((c && c.name) || ""),
+        country: String((c && c.country) || ""),
+        lat: Number(c && c.lat),
+        lon: Number(c && c.lon)
+      }))
+      .filter(c => c.name && isFinite(c.lat) && isFinite(c.lon));
+    if (weatherCities.length === 0 &&
+        out.settings.weatherCity && out.settings.weatherLat != null && out.settings.weatherLon != null) {
+      weatherCities = [{
+        id: cryptoId(),
+        name: String(out.settings.weatherCity),
+        country: "",
+        lat: Number(out.settings.weatherLat),
+        lon: Number(out.settings.weatherLon)
+      }];
+    }
+    if (weatherCities.length === 0) {
+      weatherCities = out.settings.weatherCities;
+    }
+    if (!weatherCities.find(c => c.id === out.settings.weatherActiveCityId)) {
+      out.settings.weatherActiveCityId = weatherCities.length > 0 ? weatherCities[0].id : null;
+    }
+    out.settings.weatherCities = weatherCities;
+    // Нормализация городов часов (timezone "" — локальное время устройства).
+    let clockCities = Array.isArray(out.settings.clockCities)
+      ? out.settings.clockCities
+      : [];
+    clockCities = clockCities
+      .map(c => ({
+        id: String((c && c.id) || cryptoId()),
+        name: String((c && c.name) || ""),
+        timezone: String((c && c.timezone) || "")
+      }))
+      .filter(c => c.name);
+    out.settings.clockCities = clockCities;
+    if (!clockCities.find(c => c.id === out.settings.clockActiveCityId)) {
+      out.settings.clockActiveCityId = clockCities.length > 0 ? clockCities[0].id : null;
+    }
+    // Перенос legacy-кэша погоды на активный город (старый единственный город).
+    if (data && data.weatherCache && out.settings.weatherActiveCityId &&
+        !out.weatherCaches[out.settings.weatherActiveCityId]) {
+      out.weatherCaches[out.settings.weatherActiveCityId] = data.weatherCache;
     }
     delete out.settings.cellBg;
     delete out.settings.cellBgHover;

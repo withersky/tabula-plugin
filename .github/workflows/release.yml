@@ -173,6 +173,13 @@ jobs:
           echo "--- dist/firefox ---"
           ls -la dist/firefox
 
+      - name: Check Sync
+        if: steps.meta.outputs.skip != 'true'
+        shell: bash
+        run: |
+          chmod +x scripts/check-sync.sh
+          ./scripts/check-sync.sh
+
       - name: Package archives
         if: steps.meta.outputs.skip != 'true'
         shell: bash

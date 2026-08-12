@@ -46,20 +46,23 @@ html, body {
 a { color: inherit; text-decoration: none; }
 button { font: inherit; }
 
-/* ---------- topbar ---------- */
-.topbar {
+/* ---------- settings head: шапка + вкладки одним sticky-блоком ---------- */
+.settings-head {
   position: sticky;
   top: 0;
   z-index: 30;
+  background: rgba(26,26,36,0.6);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* ---------- topbar ---------- */
+.topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   padding: 12px 22px;
-  border-bottom: 1px solid var(--border);
-  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
 }
 .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .brand-mark {
@@ -195,16 +198,10 @@ button { font: inherit; }
 
 /* ---------- tabs bar ---------- */
 .tabs-bar {
-  position: sticky;
-  top: var(--topbar-h);
-  z-index: 20;
   display: flex;
   gap: 4px;
   padding: 8px 22px;
   border-bottom: 1px solid var(--border);
-  background: rgba(26,26,36,0.55);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
 }
 .tab {
   appearance: none;
@@ -574,6 +571,80 @@ select { cursor: pointer; }
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--muted);
+}
+.city-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.city-list-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.02);
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+.city-list-row:hover { background: rgba(255,255,255,0.04); }
+.city-list-row:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.city-list-row.active {
+  border-color: var(--primary);
+  background: rgba(120,140,255,0.1);
+}
+.city-list-active-badge {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1;
+}
+.city-list-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.city-list-meta {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.city-list-delete {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+.city-list-delete:hover { background: rgba(255,80,80,0.15); color: #ff8080; }
+.city-list-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 2px;
 }
 
 /* ---------- checks ---------- */
@@ -1119,3 +1190,17 @@ select { cursor: pointer; }
   .btn.ghost { padding: 6px 10px; font-size: 12px; }
   .autosave-pill { padding: 3px 8px; font-size: 11px; }
 }
+
+/* ---------- скроллбары: как в попапах new tab (тонкие, полупрозрачные) ---------- */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.28) transparent;
+}
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.28);
+  border-radius: 4px;
+}
+*::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.45); }
+*::-webkit-scrollbar-corner { background: transparent; }

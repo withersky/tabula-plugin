@@ -30,6 +30,18 @@ export function cssEscape(v) { return String(v).replace(/"/g, '\\"'); }
 
 export function cssAttr(v) { return String(v).replace(/"/g, '\\"'); }
 
+/**
+ * Раскладочно-независимый код клавиши для хоткеев.
+ * Буквы и «/» определяются по физической позиции (e.code), поэтому сочетания
+ * вроде Ctrl+D работают и на русской раскладке, где e.key = «в», а «/» даёт «.».
+ * Для остальных клавиш (Enter, F1, Home, стрелки…) возвращается e.key — они от
+ * раскладки не зависят.
+ */
+export function keyCode(e) {
+  if (e && e.code && (/^Key[A-Z]$/.test(e.code) || e.code === "Slash")) return e.code;
+  return e ? e.key : "";
+}
+
 export function pad2(n) { n = String(n); return n.length < 2 ? "0" + n : n; }
 
 let toastTimer;

@@ -150,15 +150,59 @@
     return s;
   }
 
-  function faviconUrl(u) {
+  // Хост сайта — ключ кэша фавиконок (github.com, mail.google.com).
+  function faviconHost(u) {
     try {
-      const url = normalizeUrl(u);
-      const host = new URL(url).hostname;
-      if (!host) return "";
-      return "https://www.google.com/s2/favicons?domain=" + encodeURIComponent(host) + "&sz=64";
+      const host = new URL(normalizeUrl(u)).hostname;
+      return host || "";
     } catch (_) {
       return "";
     }
+  }
+
+  // Прямой URL фавиконки сайта — без внешних сервисов (приватность):
+  // иконка грузится с самого сайта и кэшируется в storage (offline).
+  function faviconUrl(u) {
+    try {
+      const parsed = new URL(normalizeUrl(u));
+      const host = parsed.hostname;
+      if (!host) return "";
+      const proto = parsed.protocol === "http:" ? "http:" : "https:";
+      return proto + "//" + host + "/favicon.ico";
+    } catch (_) {
+      return "";
+    }
+  }
+
+  // LRU-обрезка кэша фавиконок. Сначала удаляет записи старше maxAge,
+  // затем вытесняет самые старые по ts, пока кэш не влезет в maxEntries
+  // (число записей) и maxTotal (суммарная длина data в байтах).
+  // Чистая функция: используется модулем newtab/js/favicons.js и тестами.
+  function pruneFaviconCache(cache, now, opts) {
+    opts = opts || {};
+    const maxAge = opts.maxAge;
+    const maxEntries = opts.maxEntries;
+    const maxTotal = opts.maxTotal;
+    const entries = [];
+    for (const host of Object.keys(cache || {})) {
+      const v = cache[host];
+      if (!v || typeof v !== "object") continue;
+      const data = (typeof v.data === "string") ? v.data : "";
+      const ts = Number.isFinite(v.ts) ? v.ts : 0;
+      if (maxAge != null && now - ts > maxAge) continue;
+      entries.push({ host, data, ts });
+    }
+    entries.sort((a, b) => a.ts - b.ts); // старые первыми
+    let total = 0;
+    for (const e of entries) total += e.data.length;
+    while (entries.length > 0 &&
+           ((maxEntries != null && entries.length > maxEntries) ||
+            (maxTotal != null && total > maxTotal))) {
+      total -= entries.shift().data.length;
+    }
+    const out = {};
+    for (const e of entries) out[e.host] = { data: e.data, ts: e.ts };
+    return out;
   }
 
   // Первая буква названия для бейджа ячейки (когда фавиконка скрыта).
@@ -316,6 +360,81 @@
     }));
   }
 
+  // Сворачивает почасовой timeseries met.no в почасовой прогноз.
+  // Час и дата берутся из ISO-строки («2026-03-05T12:00:00+03:00» → 12:00
+  // локального времени точки), температура — из instant.details.air_temperature,
+  // символ — из next_1_hours/next_6_hours. maxHours ограничивает число точек
+  // (по умолчанию 24, максимум 48).
+  function buildHourlyForecast(timeseries, lang, maxHours) {
+    const limit = Math.max(1, Math.min(48, Number(maxHours) || 24));
+    const hours = [];
+    if (!Array.isArray(timeseries)) return hours;
+    for (const item of timeseries) {
+      if (hours.length >= limit) break;
+      const d = new Date(item.time);
+      if (isNaN(d.getTime())) continue;
+      const iso = typeof item.time === "string" ? /^(\d{4}-\d{2}-\d{2})T(\d{2}):/.exec(item.time) : null;
+      const date = iso ? iso[1] : (d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"));
+      const hour = iso ? Number(iso[2]) : d.getHours();
+      const inst = item.data && item.data.instant && item.data.instant.details;
+      const t = inst && Number(inst.air_temperature);
+      if (!isFinite(t)) continue;
+      const sym = (item.data && item.data.next_1_hours && item.data.next_1_hours.summary && item.data.next_1_hours.summary.symbol_code) ||
+        (item.data && item.data.next_6_hours && item.data.next_6_hours.summary && item.data.next_6_hours.summary.symbol_code) ||
+        null;
+      hours.push({
+        date: date,
+        hour: hour,
+        tempC: Math.round(t),
+        symbol: sym,
+        code: symbolToCode(sym),
+        desc: sym || (lang === "en" ? "Weather" : "Погода")
+      });
+    }
+    return hours;
+  }
+
+  // ---------- точечные диффы данных (для onChanged) ----------
+
+  // Сравнивает prev (текущее состояние страницы) с next (новое значение из
+  // chrome.storage.onChanged) и возвращает, какие именно части данных
+  // изменились. Фоновые обновления (погода пишет weatherCaches, Bing —
+  // bingCache) не должны перерисовывать всю сетку, поэтому диффы точечные,
+  // а не по JSON.stringify всего объекта.
+  //
+  // Чистая функция: без DOM и API браузера, покрыта юнит-тестами
+  // (tests/suites/test_diff.robot).
+  //
+  // Возвращает { sheetsChanged, activeChanged, settingsChanged, weatherChanged,
+  // bingChanged, langChanged, nextSettings, prevSettings }.
+  function diffTabulaData(prev, next, currentLang) {
+    const prevData = (prev && typeof prev === "object") ? prev : {};
+    const nextData = (next && typeof next === "object") ? next : {};
+    const prevSettings = prevData.settings || {};
+    const nextSettings = Object.assign({}, prevSettings, nextData.settings || {});
+    // Частичные next (например, только activeSheetId) не должны давать ложных
+    // диффов: отсутствующее поле считаем неизменным.
+    const nextSheets = Array.isArray(nextData.sheets) ? nextData.sheets : prevData.sheets;
+    const nextWeatherCaches = nextData.weatherCaches !== undefined ? nextData.weatherCaches : prevData.weatherCaches;
+    const nextBingCache = nextData.bingCache !== undefined ? nextData.bingCache : prevData.bingCache;
+    const sheetsChanged = JSON.stringify(prevData.sheets) !== JSON.stringify(nextSheets);
+    const activeChanged = !!nextData.activeSheetId && nextData.activeSheetId !== prevData.activeSheetId;
+    const settingsChanged = JSON.stringify(prevSettings) !== JSON.stringify(nextSettings);
+    const weatherChanged = JSON.stringify(nextWeatherCaches) !== JSON.stringify(prevData.weatherCaches);
+    const bingChanged = JSON.stringify(nextBingCache) !== JSON.stringify(prevData.bingCache);
+    const langChanged = (nextSettings.language || "ru") !== (currentLang || "ru");
+    return {
+      sheetsChanged,
+      activeChanged,
+      settingsChanged,
+      weatherChanged,
+      bingChanged,
+      langChanged,
+      nextSettings,
+      prevSettings
+    };
+  }
+
   return {
     WEATHER_ICON_EMOJI,
     SYMBOL_DESC,
@@ -326,13 +445,17 @@
     dayLabel,
     formatDateFmt,
     normalizeUrl,
+    faviconHost,
     faviconUrl,
+    pruneFaviconCache,
     letterChar,
     keyParts,
     rangeKeys,
     nextEmptyAfter,
     symbolToCode,
     num,
-    buildDailyForecast
+    buildDailyForecast,
+    buildHourlyForecast,
+    diffTabulaData
   };
 });

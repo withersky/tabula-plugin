@@ -22,7 +22,8 @@
 
 import { getState, setState, activeSheet } from "./state.js";
 import { tx } from "./i18n.js";
-import { toast, cssEscape, cssAttr } from "./utils.js";
+import { toast, cssEscape, cssAttr, keyCode } from "./utils.js";
+import { cachedSrc, onFaviconLoaded } from "./favicons.js";
 
 const gridEl     = document.getElementById("grid");
 const modalEl    = document.getElementById("modal");
@@ -42,6 +43,16 @@ let selAnchorKey = null;   // якорная ячейка текущего вы�
 let selRange = [];         // ключи ячеек в выделении (в т.ч. диапазон)
 let pointerState = null;   // активная pointer-сессия на сетке
 let moveDrag = null;       // данные переноса выделенного блока
+let moveGhost = null;      // плавающая копия закладки во время drag
+let moveDropSheetId = null;// id листа, на вкладку которого наведён drag
+let longPressTimer = null; // таймер долгого нажатия (сенсорные жесты)
+let swipePtr = null;       // свайп-сессия по пустой области сетки (touch)
+let cellEls = new Map();   // key → DOM-элемент ячейки активного листа (индекс)
+
+const LONG_PRESS_MS = 800; // порог долгого нажатия (800 мс — запас, чтобы успеть начать перетаскивание)
+const SWIPE_X = 70;        // порог горизонтального свайпа (переключение листа)
+const SWIPE_RATIO = 1.2;   // доминирование горизонтали над вертикалью
+const SWIPE_MAX_MS = 500;  // свайп — это быстрое движение, не перетаскивание
 
 // ---------- рендер ----------
 
@@ -51,10 +62,14 @@ export function renderGrid() {
   selRange = [];
   pointerState = null;
   moveDrag = null;
-  gridEl.innerHTML = "";
+  cellEls.clear();
   const state = getState();
   const sh = activeSheet();
   if (!sh) return;
+
+  // Собираем сетку во фрагменте и вставляем одним вызовом — один reflow
+  // вместо N appendChild (важно для больших листов).
+  const frag = document.createDocumentFragment();
 
   const cols = clampCols(state.settings.defaultColumns);
   const rows = computeFillRows(sh);
@@ -83,7 +98,7 @@ export function renderGrid() {
       letter.textContent = colLetter(c);
       headerRow.appendChild(letter);
     }
-    gridEl.appendChild(headerRow);
+    frag.appendChild(headerRow);
   }
 
   for (let r = 0; r < rows; r++) {
@@ -99,10 +114,13 @@ export function renderGrid() {
     for (let c = 0; c < cols; c++) {
       const key = r + "," + c;
       const bm = sh.cells[key];
-      rowEl.appendChild(createCellEl(key, bm));
+      const cellEl = createCellEl(key, bm);
+      cellEls.set(key, cellEl);
+      rowEl.appendChild(cellEl);
     }
-    gridEl.appendChild(rowEl);
+    frag.appendChild(rowEl);
   }
+  gridEl.replaceChildren(frag);
 }
 
 export function clampGridRows() {
@@ -144,13 +162,15 @@ function createCellEl(key, bm) {
     const fav = document.createElement("span");
     fav.className = "favicon";
     if (state.settings.showFavicon) {
-      const img = document.createElement("img");
-      img.alt = "";
-      img.draggable = false;
-      img.loading = "lazy";
-      img.referrerPolicy = "no-referrer";
-      const src = faviconUrl(bm.url);
+      const host = faviconHost(bm.url);
+      if (host) cell.dataset.host = host;
+      const src = cachedSrc(bm.url);
       if (src) {
+        const img = document.createElement("img");
+        img.alt = "";
+        img.draggable = false;
+        img.loading = "lazy";
+        img.referrerPolicy = "no-referrer";
         img.src = src;
         img.onerror = () => { fav.replaceChildren(letterBadge(bm.title)); };
         fav.appendChild(img);
@@ -168,14 +188,40 @@ function createCellEl(key, bm) {
   return cell;
 }
 
+// ---------- фавиконки: дозагрузка ячеек из кэша ----------
+
+function updateFaviconCells(host) {
+  if (!host) return;
+  for (const cell of cellEls.values()) {
+    if (!cell.classList.contains("filled") || cell.dataset.host !== host) continue;
+    const fav = cell.querySelector(".favicon");
+    if (!fav || fav.querySelector("img")) continue;
+    const sheet = activeSheet();
+    const bm = sheet && sheet.cells ? sheet.cells[cell.dataset.key] : null;
+    if (!bm) continue;
+    const src = cachedSrc(bm.url);
+    if (!src) continue;
+    const img = document.createElement("img");
+    img.alt = "";
+    img.draggable = false;
+    img.loading = "lazy";
+    img.referrerPolicy = "no-referrer";
+    img.src = src;
+    img.onerror = () => { fav.replaceChildren(letterBadge(bm.title)); };
+    fav.replaceChildren(img);
+  }
+}
+
+onFaviconLoaded(host => { updateFaviconCells(host); });
+
 // ---------- выделение ----------
 
 function clearCellSelection() {
-  gridEl.querySelectorAll(".cell.selected").forEach(el => el.classList.remove("selected", "active"));
+  for (const el of cellEls.values()) el.classList.remove("selected", "active");
 }
 
 function cellElByKey(key) {
-  return gridEl.querySelector('.cell[data-key="' + cssAttr(key) + '"]');
+  return cellEls.get(key) || null;
 }
 
 function applySelection(anchorKey, keys) {
@@ -350,11 +396,115 @@ function cellAtPoint(x, y) {
 }
 
 function clearMoveTargets() {
-  gridEl.querySelectorAll(".cell.drop-target").forEach(el => el.classList.remove("drop-target"));
+  for (const el of cellEls.values()) el.classList.remove("drop-target");
+}
+
+function clearSheetDropTargets() {
+  document.querySelectorAll(".sheet-tab.sheet-drop-target").forEach(el => el.classList.remove("sheet-drop-target"));
 }
 
 function clearDraggingCells() {
-  gridEl.querySelectorAll(".cell.dragging").forEach(el => el.classList.remove("dragging"));
+  for (const el of cellEls.values()) el.classList.remove("dragging");
+}
+
+// Вкладка листа под указателем (для переноса закладки на другой лист).
+function sheetTabAtPoint(x, y) {
+  const el = document.elementFromPoint(x, y);
+  return el ? el.closest(".sheet-tab") : null;
+}
+
+// ---------- ghost: плавающая копия закладки, следующая за курсором ----------
+function createDragGhost(md) {
+  const ghost = document.createElement("div");
+  ghost.className = "cell-drag-ghost";
+  ghost.textContent = md.cells.length === 1
+    ? (md.cells[0].bm.title || md.cells[0].bm.url || "")
+    : (md.cells.length + " · " + (tx("moved") || ""));
+  document.body.appendChild(ghost);
+  return ghost;
+}
+function updateDragGhost(x, y) {
+  if (!moveGhost) return;
+  moveGhost.style.left = (x + 14) + "px";
+  moveGhost.style.top  = (y + 14) + "px";
+}
+function removeDragGhost() {
+  if (moveGhost) { moveGhost.remove(); moveGhost = null; }
+}
+
+// ---------- сенсорные жесты: долгое нажатие на ячейке ----------
+// Долгое нажатие открывает то же контекстное меню, что и правый клик.
+// Работает только при включённой настройке touchGestures (body.touch-gestures).
+function armCellLongPress(e) {
+  clearCellLongPress();
+  if (getState().settings.touchGestures === false) return;
+  const x = e.clientX;
+  const y = e.clientY;
+  longPressTimer = setTimeout(() => {
+    longPressTimer = null;
+    // Отменяем pointer-сессию: отпускание пальца не должно открыть закладку.
+    pointerState = null;
+    suppressClick = true;
+    setTimeout(() => { suppressClick = false; }, 350);
+    const cell = cellAtPoint(x, y);
+    if (!cell) return;
+    onCellContextMenu({
+      target: cell,
+      clientX: x,
+      clientY: y,
+      preventDefault() {},
+      stopPropagation() {}
+    });
+  }, LONG_PRESS_MS);
+}
+
+function clearCellLongPress() {
+  if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+}
+
+// ---------- сенсорные жесты: свайп для переключения листов ----------
+// Свайп влево/вправо по сетке (по ячейке или пустой области) переключает
+// листы. Срабатывает только для touch и при включённой настройке
+// touchGestures. Быстрое горизонтальное движение побеждает перетаскивание.
+function fireSheetSwipe(dir) {
+  if (typeof CustomEvent === "undefined") return;
+  window.dispatchEvent(new CustomEvent("tabula:sheet-swipe", { detail: { dir } }));
+}
+
+function isSwipeGesture(e, startX, startY, startTime) {
+  if (e.pointerType !== "touch") return 0;
+  if (getState().settings.touchGestures === false) return 0;
+  const dx = e.clientX - startX;
+  const dy = e.clientY - startY;
+  if (Math.abs(dx) < SWIPE_X || Math.abs(dx) <= Math.abs(dy) * SWIPE_RATIO) return 0;
+  if (startTime != null && (e.timeStamp - startTime) > SWIPE_MAX_MS) return 0;
+  return dx < 0 ? 1 : -1;
+}
+
+function onGridSwipeDown(e) {
+  if (e.pointerType !== "touch") return;
+  if (e.target.closest(".cell")) return; // ячейки обрабатывает onGridPointerDown
+  swipePtr = { pointerId: e.pointerId, startX: e.clientX, startY: e.clientY, startTime: e.timeStamp };
+}
+
+function onGridSwipeMove(e) {
+  const s = swipePtr;
+  if (!s || e.pointerId !== s.pointerId) return;
+  const dir = isSwipeGesture(e, s.startX, s.startY, s.startTime);
+  if (!dir) return;
+  swipePtr = null;
+  suppressClick = true;
+  setTimeout(() => { suppressClick = false; }, 350);
+  fireSheetSwipe(dir);
+}
+
+function onGridSwipeUp(e) {
+  if (!swipePtr || e.pointerId !== swipePtr.pointerId) return;
+  swipePtr = null;
+}
+
+function cancelSwipeSession() {
+  swipePtr = null;
 }
 
 function onGridPointerDown(e) {
@@ -377,41 +527,98 @@ function onGridPointerDown(e) {
     anchorKey: key,
     startX: e.clientX,
     startY: e.clientY,
+    startTime: e.timeStamp,
     lastKey: key,
     moved: false
   };
+  armCellLongPress(e);
 }
 
 function onGridPointerMove(e) {
   if (!pointerState) return;
+  // Свайп влево/вправо → переключение листов (только touch).
+  // При захвате закладки (mode "move") свайп отключён: жест всегда
+  // трактуется как перетаскивание, чтобы drag не превращался в слайд.
+  const swipeDir = pointerState.mode === "move"
+    ? 0
+    : isSwipeGesture(e, pointerState.startX, pointerState.startY, pointerState.startTime);
+  if (swipeDir) {
+    pointerState = null;
+    moveDrag = null;
+    removeDragGhost();
+    clearCellLongPress();
+    clearMoveTargets();
+    clearSheetDropTargets();
+    clearDraggingCells();
+    moveDropSheetId = null;
+    suppressClick = true;
+    setTimeout(() => { suppressClick = false; }, 350);
+    fireSheetSwipe(swipeDir);
+    return;
+  }
   const dx = e.clientX - pointerState.startX;
   const dy = e.clientY - pointerState.startY;
   if (!pointerState.moved && (Math.abs(dx) > 4 || Math.abs(dy) > 4)) {
     pointerState.moved = true;
+    clearCellLongPress();
     if (pointerState.mode === "move") {
       moveDrag = { cells: selectionFilledCells(), anchorKey: pointerState.anchorKey };
-      gridEl.querySelectorAll(".cell.selected").forEach(el => el.classList.add("dragging"));
+      moveGhost = createDragGhost(moveDrag);
+      for (const el of cellEls.values()) {
+        if (el.classList.contains("selected")) el.classList.add("dragging");
+      }
     }
   }
   if (!pointerState.moved) return;
   e.preventDefault(); // запрещаем выделение текста/нативный drag во время перетаскивания
+  updateDragGhost(e.clientX, e.clientY);
   const cell = cellAtPoint(e.clientX, e.clientY);
   const key = cell ? cell.dataset.key : null;
+
+  if (pointerState.mode === "select") {
+    if (!key || key === pointerState.lastKey) return;
+    pointerState.lastKey = key;
+    selectRange(pointerState.anchorKey, key);
+    return;
+  }
+
+  // Режим переноса: вкладка листа под курсором → подсвечиваем как drop-цель.
+  const sheetTab = sheetTabAtPoint(e.clientX, e.clientY);
+  const sheetId = sheetTab && sheetTab.dataset.id;
+  const curSheetId = activeSheet() && activeSheet().id;
+  if (sheetId && sheetId !== curSheetId) {
+    if (moveDropSheetId !== sheetId) {
+      moveDropSheetId = sheetId;
+      clearMoveTargets();
+      clearSheetDropTargets();
+      sheetTab.classList.add("sheet-drop-target");
+    }
+    pointerState.lastKey = key || pointerState.lastKey;
+    return;
+  }
+  if (moveDropSheetId) {
+    moveDropSheetId = null;
+    clearSheetDropTargets();
+  }
   if (!key || key === pointerState.lastKey) return;
   pointerState.lastKey = key;
-  if (pointerState.mode === "select") {
-    selectRange(pointerState.anchorKey, key);
-  } else {
-    clearMoveTargets();
-    if (key !== pointerState.anchorKey) {
-      const t = cellElByKey(key);
-      if (t) t.classList.add("drop-target");
+  clearMoveTargets();
+  if (key !== pointerState.anchorKey) {
+    const t = cellElByKey(key);
+    if (t) {
+      // Одиночную закладку можно поменять местами с занятой ячейкой.
+      if (moveDrag && moveDrag.cells.length === 1 && t.classList.contains("filled")) {
+        t.classList.add("drop-swap");
+      } else {
+        t.classList.add("drop-target");
+      }
     }
   }
 }
 
 async function onGridPointerUp(e) {
   if (!pointerState || e.button !== 0) return;
+  clearCellLongPress();
   const st = pointerState;
   pointerState = null;
   const cell = cellAtPoint(e.clientX, e.clientY);
@@ -420,10 +627,22 @@ async function onGridPointerUp(e) {
   if (st.mode === "move" && st.moved && moveDrag) {
     const md = moveDrag;
     moveDrag = null;
+    removeDragGhost();
     clearMoveTargets();
     clearDraggingCells();
-    if (targetKey && targetKey !== md.anchorKey) {
-      await moveSelectionBlock(md, targetKey);
+    const dropSheetId = moveDropSheetId;
+    moveDropSheetId = null;
+    clearSheetDropTargets();
+    if (dropSheetId) {
+      // Сброс на вкладку другого листа → перенос блока на этот лист.
+      await moveBlockToSheet(md, dropSheetId);
+    } else if (targetKey && targetKey !== md.anchorKey) {
+      // Одиночная закладка на занятую ячейку → обмен местами.
+      if (md.cells.length === 1 && currentBookmarkAt(targetKey)) {
+        await swapBookmarks(md.anchorKey, targetKey);
+      } else {
+        await moveSelectionBlock(md, targetKey);
+      }
     } else {
       renderGrid();
     }
@@ -433,8 +652,11 @@ async function onGridPointerUp(e) {
   }
 
   // Обычный клик без перетаскивания: выделить и открыть закладку, если есть.
+  removeDragGhost();
   clearMoveTargets();
   clearDraggingCells();
+  moveDropSheetId = null;
+  clearSheetDropTargets();
   if (!st.moved) {
     suppressClick = true;
     setTimeout(() => { suppressClick = false; }, 50);
@@ -448,21 +670,236 @@ async function onGridPointerUp(e) {
 }
 
 function onCellPointerCancel() {
+  clearCellLongPress();
   pointerState = null;
   moveDrag = null;
+  removeDragGhost();
+  moveDropSheetId = null;
   clearMoveTargets();
+  clearSheetDropTargets();
   clearDraggingCells();
   suppressClick = true;
   setTimeout(() => { suppressClick = false; }, 50);
 }
 
-function openBookmarkAt(key) {
+export function openBookmarkAt(key) {
   const bm = currentBookmarkAt(key);
   if (!bm) return;
   const state = getState();
   const target = normalizeUrl(bm.url);
   if (state.settings.openInNewTab) window.open(target, "_blank", "noopener");
   else window.location.href = target;
+}
+
+// ---------- клавиатурная навигация ----------
+// Excel-подобные хоткеи: стрелки двигают выделение, Enter/пробел открывают
+// закладку, F2 редактирует. Работают при фокусе на странице (не в полях ввода).
+
+/** Ключ выбранной ячейки (для хоткеев из других модулей). */
+export function selectedKey() { return selectedCellKey; }
+
+/** Открывает закладку в выбранной ячейке (Enter/пробел). */
+export function openSelected() {
+  if (selectedCellKey) openBookmarkAt(selectedCellKey);
+}
+
+/** Открывает редактирование закладки в выбранной ячейке (F2). */
+export function editSelected() {
+  if (!selectedCellKey) return;
+  const bm = currentBookmarkAt(selectedCellKey);
+  if (bm) openEditModal(bm, selectedCellKey);
+}
+
+/** Открывает закладку выбранной ячейки в новой вкладке (Ctrl+Enter / Shift+Enter). */
+export function openSelectedInNewTab() {
+  if (!selectedCellKey) return;
+  const bm = currentBookmarkAt(selectedCellKey);
+  if (!bm) return;
+  window.open(normalizeUrl(bm.url), "_blank", "noopener");
+}
+
+/** Удаляет закладку в выбранной ячейке (Delete/Backspace). */
+export async function deleteSelected() {
+  if (!selectedCellKey) return;
+  const sh = activeSheet();
+  if (!sh || !sh.cells || !sh.cells[selectedCellKey]) return;
+  const key = selectedCellKey;
+  await Storage.update((d) => {
+    const cur = d.sheets.find(s => s.id === d.activeSheetId);
+    if (cur) delete cur.cells[key];
+  });
+  setState(await Storage.get()); renderGrid();
+  toast(tx("deleted"));
+}
+
+/** Дублирует закладку выбранной ячейки в первую свободную (Ctrl+D). */
+export async function duplicateSelected() {
+  if (!selectedCellKey) return;
+  const sh = activeSheet();
+  if (!sh || !sh.cells || !sh.cells[selectedCellKey]) return;
+  const state = getState();
+  const newKey = nextEmptyAfter(sh, selectedCellKey, clampCols(state.settings.defaultColumns));
+  if (!newKey) return;
+  const bm = sh.cells[selectedCellKey];
+  const dupTitle = bm.title + " (" + tx("duplicate").toLowerCase() + ")";
+  await Storage.update((d) => {
+    const cur = d.sheets.find(s => s.id === d.activeSheetId);
+    if (cur) cur.cells[newKey] = { id: cryptoId(), title: dupTitle, url: bm.url };
+  });
+  setState(await Storage.get()); renderGrid();
+  toast(tx("duplicated"));
+}
+
+/** Добавляет закладку в выбранную ячейку, а без выделения — в первую свободную (Insert). */
+export function addSelected() {
+  if (selectedCellKey) openAddModal(selectedCellKey);
+  else onAddBookmarkTop();
+}
+
+/** Показывает контекстное меню выбранной ячейки (Shift+F10 / ContextMenu). */
+export function openCellContextMenu() {
+  if (!selectedCellKey) return;
+  hideCtx(); hideCtxEmpty();
+  const key = selectedCellKey;
+  const bm = currentBookmarkAt(key);
+  ctxCellKey = key;
+  if (bm) {
+    ctxBookmarkId = bm.id;
+    positionMenu(ctxMenu, window.innerWidth / 2, window.innerHeight / 2);
+    ctxMenu.hidden = false;
+  } else {
+    ctxBookmarkId = null;
+    positionMenu(ctxEmpty, window.innerWidth / 2, window.innerHeight / 2);
+    ctxEmpty.hidden = false;
+  }
+}
+
+/** Ключ последней заполненной ячейки активного листа (для Ctrl+End). */
+function lastFilledKey() {
+  const sh = activeSheet();
+  if (!sh || !sh.cells) return null;
+  let best = null;
+  for (const key of Object.keys(sh.cells)) {
+    if (!best) { best = key; continue; }
+    const a = keyParts(best);
+    const b = keyParts(key);
+    if (b[0] > a[0] || (b[0] === a[0] && b[1] > a[1])) best = key;
+  }
+  return best;
+}
+
+/** Выбирает ячейку и подкручивает к ней скролл (Ctrl+Home / Ctrl+End). */
+function selectCellAndScroll(key) {
+  selectCell(key);
+  const el = cellElByKey(key);
+  if (el && el.scrollIntoView) el.scrollIntoView({ block: "nearest", inline: "nearest" });
+}
+
+/** Перемещает выделение на dr/dc ячеек (стрелки). */
+export function moveSelection(dr, dc) {
+  const sh = activeSheet();
+  if (!sh) return;
+  const state = getState();
+  const cols = clampCols(state.settings.defaultColumns);
+  let r = 0, c = 0;
+  if (selectedCellKey) {
+    const p = keyParts(selectedCellKey);
+    r = p[0]; c = p[1];
+  }
+  const rows = Math.max(computeFillRows(sh), r + 1);
+  const nr = Math.max(0, Math.min(rows - 1, r + dr));
+  const nc = Math.max(0, Math.min(cols - 1, c + dc));
+  const key = nr + "," + nc;
+  selectCell(key);
+  const el = cellElByKey(key);
+  if (el && el.scrollIntoView) el.scrollIntoView({ block: "nearest", inline: "nearest" });
+}
+
+function onGridKeyDown(e) {
+  // Не вмешиваемся, когда фокус на интерактивном элементе (поля ввода, кнопки,
+  // ссылки, селекты) или открыты палитра поиска/модалки/меню.
+  const ae = document.activeElement;
+  if (ae) {
+    const tag = ae.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "BUTTON" || tag === "A" || tag === "SELECT") return;
+  }
+  const modalOpen = !modalEl.hidden || !document.getElementById("sheetModal").hidden || !document.getElementById("confirmModal").hidden || !document.getElementById("shortcutModal").hidden;
+  if (modalOpen) return;
+  const searcherOpen = document.getElementById("searcher") && !document.getElementById("searcher").hidden;
+  if (searcherOpen) return;
+  if (!ctxMenu.hidden || !ctxEmpty.hidden || !sheetCtx.hidden) return;
+  const k = e.key;
+  const code = keyCode(e);
+
+  // Ctrl+Enter / Shift+Enter — открыть в новой вкладке (независимо от настройки openInNewTab).
+  if ((e.ctrlKey || e.metaKey || e.shiftKey) && k === "Enter") {
+    e.preventDefault();
+    openSelectedInNewTab();
+    return;
+  }
+
+  // Ctrl-комбинации: Home — первая ячейка, End — последняя заполненная,
+  // D — дублировать (KeyD — физическая клавиша, работает на любой раскладке).
+  if (e.ctrlKey || e.metaKey) {
+    switch (code) {
+      case "Home":
+        e.preventDefault();
+        selectCellAndScroll("0,0");
+        break;
+      case "End": {
+        e.preventDefault();
+        const last = lastFilledKey();
+        selectCellAndScroll(last || "0,0");
+        break;
+      }
+      case "KeyD":
+        e.preventDefault();
+        duplicateSelected();
+        break;
+      default:
+        break;
+    }
+    return;
+  }
+
+  switch (k) {
+    case "ArrowUp": case "ArrowDown": case "ArrowLeft": case "ArrowRight":
+      e.preventDefault();
+      moveSelection(k === "ArrowUp" ? -1 : k === "ArrowDown" ? 1 : 0,
+                    k === "ArrowLeft" ? -1 : k === "ArrowRight" ? 1 : 0);
+      break;
+    case "Home":
+      e.preventDefault();
+      moveSelection(0, -1000); // начало строки
+      break;
+    case "End":
+      e.preventDefault();
+      moveSelection(0, 1000); // конец строки
+      break;
+    case "Enter": case " ":
+      e.preventDefault();
+      openSelected();
+      break;
+    case "F2":
+      e.preventDefault();
+      editSelected();
+      break;
+    case "Delete": case "Backspace":
+      e.preventDefault();
+      deleteSelected();
+      break;
+    case "Insert":
+      e.preventDefault();
+      addSelected();
+      break;
+    case "F10":
+      if (e.shiftKey) { e.preventDefault(); openCellContextMenu(); }
+      break;
+    case "ContextMenu":
+      e.preventDefault();
+      openCellContextMenu();
+      break;
+  }
 }
 
 // Переносит выделенный блок так, чтобы захваченная ячейка оказалась под курсором.
@@ -502,6 +939,57 @@ async function moveSelectionBlock(md, targetKey) {
   setState(await Storage.get());
   renderGrid();
   toast(tx("moved"));
+}
+
+// Переносит выделенный блок закладок на другой лист (первая свободная ячейка).
+async function moveBlockToSheet(md, sheetId) {
+  const curSheetId = activeSheet() && activeSheet().id;
+  if (!sheetId || sheetId === curSheetId || md.cells.length === 0) { renderGrid(); return; }
+  const state = getState();
+  const cols = clampCols(state.settings.defaultColumns);
+  let blocked = false;
+  let targetKeys = [];
+  await Storage.update((d) => {
+    const target = d.sheets.find(s => s.id === sheetId);
+    const source = d.sheets.find(s => s.id === d.activeSheetId);
+    if (!target || !source) return;
+    // Ищем свободные ячейки на целевом листе под все закладки блока.
+    let k = findFirstEmptyCell(target, computeFillRows(target), cols);
+    for (let i = 0; i < md.cells.length; i++) {
+      if (!k) { blocked = true; return; }
+      targetKeys.push(k);
+      k = nextEmptyAfter(target, k, cols);
+    }
+    for (const c of md.cells) {
+      const bm = source.cells[c.from];
+      if (bm && bm.id === c.bm.id) delete source.cells[c.from];
+    }
+    md.cells.forEach((c, i) => { target.cells[targetKeys[i]] = c.bm; });
+  });
+
+  if (blocked) {
+    toast(tx("cellOccupied"), true);
+    return;
+  }
+  setState(await Storage.get());
+  renderGrid();
+  toast(tx("moved"));
+}
+
+// Меняет местами две одиночные закладки на активном листе.
+async function swapBookmarks(aKey, bKey) {
+  await Storage.update((d) => {
+    const cur = d.sheets.find(s => s.id === d.activeSheetId);
+    if (!cur) return;
+    const a = cur.cells[aKey];
+    const b = cur.cells[bKey];
+    if (!a || !b) return;
+    cur.cells[aKey] = b;
+    cur.cells[bKey] = a;
+  });
+  setState(await Storage.get());
+  renderGrid();
+  toast(tx("swapped"));
 }
 
 // ---------- модалка закладки ----------
@@ -588,6 +1076,15 @@ export function bindGridEvents() {
   document.addEventListener("pointermove", onGridPointerMove);
   document.addEventListener("pointerup", onGridPointerUp);
   document.addEventListener("pointercancel", onCellPointerCancel);
+
+  // Клавиатурная навигация: стрелки, Enter/пробел, F2.
+  document.addEventListener("keydown", onGridKeyDown);
+
+  // Свайп по пустой области сетки (не по ячейке) → переключение листов.
+  gridEl.addEventListener("pointerdown", onGridSwipeDown);
+  document.addEventListener("pointermove", onGridSwipeMove);
+  document.addEventListener("pointerup", onGridSwipeUp);
+  document.addEventListener("pointercancel", cancelSwipeSession);
 
   ctxMenu.addEventListener("click", onCtxAction);
   ctxEmpty.addEventListener("click", onCtxEmptyAction);

@@ -16,13 +16,14 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Виджет погоды: текущая погода, геокодирование города, обновление по таймеру
- * и всплывающее окно прогноза на N дней.
+ * Виджет погоды: текущая погода, несколько городов (settings.weatherCities +
+ * weatherActiveCityId), кэш на город (state.weatherCaches), обновление по
+ * таймеру и всплывающее окно с почасовым и дневным прогнозом.
  */
 
 import { getState, setState, getLang } from "./state.js";
 import { tx } from "./i18n.js";
-import { toast } from "./utils.js";
+import { toast, pad2 } from "./utils.js";
 
 const weatherWidget = document.getElementById("weatherWidget");
 const weatherIconEl = document.getElementById("weatherIcon");
@@ -34,6 +35,9 @@ const weatherCityEl = document.getElementById("weatherCity");
 const weatherPopupEl = document.getElementById("weatherPopup");
 const weatherPopupDaysEl = document.getElementById("weatherPopupDays");
 const weatherPopupCityEl = document.getElementById("weatherPopupCity");
+const weatherPopupCitiesEl = document.getElementById("weatherPopupCities");
+const weatherPopupHourlyWrapEl = document.getElementById("weatherPopupHourlyWrap");
+const weatherPopupHourlyEl = document.getElementById("weatherPopupHourly");
 const weatherPopupOpenBtn = document.getElementById("weatherPopupOpenBtn");
 
 let weatherTimer = null;
@@ -51,6 +55,22 @@ function setWeatherText(icon, temp, desc, city) {
   if (weatherCityEl) weatherCityEl.textContent = city;
 }
 
+/** Активный город погоды (или первый из списка). Легаси-поля — fallback. */
+function activeWeatherCity(s) {
+  const list = Array.isArray(s && s.weatherCities) ? s.weatherCities : [];
+  const activeId = s && s.weatherActiveCityId;
+  return list.find(c => c && c.id === activeId) || list[0] || null;
+}
+
+/** Кэш считается свежим только если у него валидный ok. */
+function weatherCacheFresh(cache, ms) {
+  return !!(cache && cache.ok && cache.fetchedAt && (Date.now() - cache.fetchedAt) <= ms);
+}
+
+function weatherCacheFor(state, city) {
+  return (city && state && state.weatherCaches && state.weatherCaches[city.id]) || null;
+}
+
 export function renderWeather() {
   if (!weatherWidget) return;
   const state = getState();
@@ -60,20 +80,27 @@ export function renderWeather() {
     return;
   }
   weatherIconEl.className = "weather-icon";
-  const cache = state.weatherCache || null;
+  const city = activeWeatherCity(s);
+  // Городов нет и нет легаси-имени — нейтральное состояние без загрузки/ошибок.
+  if (!city && !((s && s.weatherCity || "").trim())) {
+    _weatherHasError = false;
+    setWeatherText("", "—", "", "");
+    return;
+  }
+  const cache = weatherCacheFor(state, city);
   if (cache && cache.ok) {
     _weatherHasError = false;
     weatherIconEl.textContent = weatherIconFor(cache.code);
     const temp = (cache.tempC != null) ? (Math.round(cache.tempC) + "°") : "—";
     const desc = describeSymbol(cache.symbol, getLang()) || cache.desc || "";
-    const city = cache.city
+    const cityLabel = cache.city
       ? (cache.city + (cache.country ? ", " + cache.country : ""))
-      : (s.weatherCity || "");
-    setWeatherText(weatherIconEl.textContent, temp, desc, city);
+      : ((city && city.name) || (s && s.weatherCity) || "");
+    setWeatherText(weatherIconEl.textContent, temp, desc, cityLabel);
     return;
   }
   // Нет валидного кэша — показываем либо загрузку, либо ошибку.
-  const cityFallback = s.weatherCity || "";
+  const cityFallback = (city && city.name) || (s && s.weatherCity) || "";
   if (_weatherHasError) {
     setWeatherText("⚠️", "—", tx("weatherLoadFailed"), cityFallback);
   } else {
@@ -81,6 +108,7 @@ export function renderWeather() {
   }
 }
 
+/** Геокодирует город и добавляет его в weatherCities (становится активным). */
 async function geocodeAndSave(city) {
   if (_weatherGeoInFlight) return false;
   _weatherGeoInFlight = true;
@@ -92,11 +120,21 @@ async function geocodeAndSave(city) {
     const list = (resp && resp.results) || [];
     const r = list[0];
     if (!resp || resp.error || !resp.ok || !r) return false;
+    const newCity = {
+      id: cryptoId(),
+      name: r.name || city,
+      country: r.country || "",
+      lat: Number(r.lat),
+      lon: Number(r.lon),
+      timezone: r.timezone || ""
+    };
     await Storage.update((d) => {
-      d.settings.weatherLat = r.lat;
-      d.settings.weatherLon = r.lon;
-      d.settings.weatherCity = r.name || city;
-      d.weatherCache = null;
+      const cities = Array.isArray(d.settings.weatherCities) ? d.settings.weatherCities.slice() : [];
+      cities.push(newCity);
+      d.settings.weatherCities = cities;
+      d.settings.weatherActiveCityId = newCity.id;
+      if (!d.weatherCaches || typeof d.weatherCaches !== "object") d.weatherCaches = {};
+      d.weatherCaches[newCity.id] = null;
     });
     setState(await Storage.get());
     return true;
@@ -117,12 +155,11 @@ export async function refreshWeather() {
   renderWeather();
   try {
     let s = getState() && getState().settings;
-    let lat = Number(s && s.weatherLat);
-    let lon = Number(s && s.weatherLon);
-    if (!isFinite(lat) || !isFinite(lon)) {
-      const city = (s && s.weatherCity || "").trim();
-      if (city) {
-        const ok = await geocodeAndSave(city);
+    let city = activeWeatherCity(s);
+    if (!city) {
+      const legacyName = (s && s.weatherCity || "").trim();
+      if (legacyName) {
+        const ok = await geocodeAndSave(legacyName);
         if (myGen !== _weatherGen) return;
         if (!ok) {
           _weatherHasError = true;
@@ -131,15 +168,14 @@ export async function refreshWeather() {
           return;
         }
         s = getState() && getState().settings;
-        lat = Number(s && s.weatherLat);
-        lon = Number(s && s.weatherLon);
+        city = activeWeatherCity(s);
       } else {
-        _weatherHasError = true;
-        renderWeather();
-        toast(tx("weatherNoLocation"), true);
+        // Городов нет — тихий выход: виджет уже в нейтральном состоянии.
         return;
       }
     }
+    const lat = Number(city && city.lat);
+    const lon = Number(city && city.lon);
     if (!isFinite(lat) || !isFinite(lon)) {
       _weatherHasError = true;
       renderWeather();
@@ -154,8 +190,14 @@ export async function refreshWeather() {
     const humanDesc = describeSymbol(resp.symbol, getLang());
     if (humanDesc) resp.desc = humanDesc;
     const s2 = getState() && getState().settings;
-    resp.city = (s2 && s2.weatherCity) || resp.city || "";
-    await Storage.update((d) => { d.weatherCache = resp; });
+    const c2 = activeWeatherCity(s2) || city;
+    resp.city = (c2 && c2.name) || resp.city || "";
+    resp.country = (c2 && c2.country) || "";
+    const cityId = c2 && c2.id;
+    await Storage.update((d) => {
+      if (!d.weatherCaches || typeof d.weatherCaches !== "object") d.weatherCaches = {};
+      if (cityId) d.weatherCaches[cityId] = resp;
+    });
     setState(await Storage.get());
     _weatherHasError = false;
   } catch (err) {
@@ -173,23 +215,26 @@ export async function refreshWeather() {
 
 export function startWeather() {
   if (weatherTimer) clearInterval(weatherTimer);
+  weatherTimer = null;
   // Инвалидируем все текущие запросы — старые ответы не должны затирать новые настройки.
   _weatherGen++;
   _weatherInFlight = false;
   _weatherHasError = false;
-  renderWeather();
   const state = getState();
+  const city = activeWeatherCity(state && state.settings);
+  if (!city) {
+    // Городов нет — таймер не запускаем: onChanged перезапустит startWeather
+    // при добавлении города (меняются weatherCities/weatherActiveCityId).
+    renderWeather();
+    return;
+  }
+  renderWeather();
   const minutes = Math.max(5, Number((state && state.settings && state.settings.weatherRefreshMin) || 30));
   const ms = minutes * 60 * 1000;
   weatherTimer = setInterval(refreshWeather, ms);
-  // Кэш считается свежим только если у него валидный ok.
+  const cache = weatherCacheFor(state, city);
   // Иначе виджет зависает в «⏳ Загружаем погоду» до перезапуска.
-  const cache = state && state.weatherCache;
-  const cacheFresh =
-    cache && cache.ok &&
-    cache.fetchedAt &&
-    (Date.now() - cache.fetchedAt) <= ms;
-  if (!cacheFresh) {
+  if (!weatherCacheFresh(cache, ms)) {
     refreshWeather();
   }
 }
@@ -197,12 +242,19 @@ export function startWeather() {
 function openWeatherAggregator() {
   const state = getState();
   const s = state && state.settings;
-  const url = aggregatorUrl(s && s.weatherLat, s && s.weatherLon, (s && s.weatherCity) || "", getLang());
+  const city = activeWeatherCity(s);
+  const lat = (city && city.lat != null) ? city.lat : (s && s.weatherLat);
+  const lon = (city && city.lon != null) ? city.lon : (s && s.weatherLon);
+  // Города нет — нечего открывать.
+  if (lat == null || lon == null) return;
+  const name = (city && city.name) || (s && s.weatherCity) || "";
+  const url = aggregatorUrl(lat, lon, name, getLang());
   window.open(url, "_blank", "noopener,noreferrer");
 }
 
 function closeWeatherPopup() {
   if (!weatherPopupEl || weatherPopupEl.hidden) return;
+  closeWeatherCityMenu();
   _weatherPopupClosing = true;
   weatherPopupEl.classList.add("closing");
   clearTimeout(_weatherPopupTimer);
@@ -215,6 +267,10 @@ function closeWeatherPopup() {
 
 export function toggleWeatherPopup() {
   if (!weatherPopupEl) return;
+  const state = getState();
+  const s = state && state.settings;
+  // Городов нет — попап не открываем (как у часов с пустым списком).
+  if (!activeWeatherCity(s) && !((s && s.weatherCity || "").trim())) return;
   if (!weatherPopupEl.hidden) {
     closeWeatherPopup();
     return;
@@ -226,17 +282,134 @@ export function toggleWeatherPopup() {
   weatherPopupEl.hidden = false;
 }
 
+/** Список городов погоды из настроек (если есть). */
+function weatherCitiesList(s) {
+  return Array.isArray(s && s.weatherCities) ? s.weatherCities : [];
+}
+
+/** Открыто ли выпадающее меню городов. */
+function weatherCityMenuOpen() {
+  return !!(weatherPopupCitiesEl && !weatherPopupCitiesEl.hidden);
+}
+
+/** Закрыть выпадающее меню городов. */
+function closeWeatherCityMenu() {
+  if (weatherCityMenuOpen()) weatherPopupCitiesEl.hidden = true;
+}
+
+/** Показать меню городов под кнопкой активного города (fixed-позиционирование). */
+function openWeatherCityMenu() {
+  if (!weatherPopupCitiesEl || !weatherPopupCityEl) return;
+  const r = weatherPopupCityEl.getBoundingClientRect();
+  // Меню не должно выходить за правый край вьюпорта (min-width меню ~200px).
+  const left = Math.max(8, Math.min(r.left, window.innerWidth - 208));
+  weatherPopupCitiesEl.style.left = left + "px";
+  weatherPopupCitiesEl.style.top = (r.bottom + 4) + "px";
+  weatherPopupCitiesEl.hidden = false;
+}
+
+function toggleWeatherCityMenu() {
+  if (weatherCityMenuOpen()) closeWeatherCityMenu();
+  else openWeatherCityMenu();
+}
+
+/** Рендер выпадающего меню городов в шапке попапа погоды. */
+function renderWeatherPopupCities(s, city) {
+  if (!weatherPopupCitiesEl || !weatherPopupCityEl) return;
+  const list = weatherCitiesList(s);
+  const cityBtn = weatherPopupCityEl;
+  closeWeatherCityMenu();
+  weatherPopupCitiesEl.textContent = "";
+  if (list.length <= 1) {
+    cityBtn.classList.add("single");
+    cityBtn.classList.remove("has-menu");
+    return;
+  }
+  cityBtn.classList.remove("single");
+  cityBtn.classList.add("has-menu");
+  list.forEach(c => {
+    const item = document.createElement("button");
+    item.type = "button";
+    item.className = "weather-popup-chip" + (c.id === (city && city.id) ? " active" : "");
+    item.textContent = c.name;
+    item.title = c.name + (c.country ? ", " + c.country : "");
+    item.addEventListener("click", async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      closeWeatherCityMenu();
+      if (c.id === (city && city.id)) return;
+      await Storage.update((d) => { d.settings.weatherActiveCityId = c.id; });
+      setState(await Storage.get());
+      const minutes = Math.max(5, Number((getState() && getState().settings && getState().settings.weatherRefreshMin) || 30));
+      const ms = minutes * 60 * 1000;
+      if (!weatherCacheFresh(weatherCacheFor(getState(), c), ms)) {
+        refreshWeather();
+      } else {
+        renderWeather();
+        renderWeatherPopup();
+      }
+    });
+    weatherPopupCitiesEl.appendChild(item);
+  });
+}
+
+/** Горизонтальная лента почасового прогноза. */
+function renderWeatherPopupHourly(cache) {
+  if (!weatherPopupHourlyEl || !weatherPopupHourlyWrapEl) return;
+  const list = (cache && Array.isArray(cache.hourly)) ? cache.hourly : [];
+  if (!list.length) {
+    weatherPopupHourlyWrapEl.hidden = true;
+    return;
+  }
+  weatherPopupHourlyWrapEl.hidden = false;
+  weatherPopupHourlyEl.textContent = "";
+  const now = new Date();
+  const todayKey = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0");
+  // Шахматный порядок дней: чётные дни — обычный фон, нечётные — alt.
+  let dayParity = 0;
+  let prevDate = null;
+  list.forEach((h, idx) => {
+    const cell = document.createElement("div");
+    cell.className = "weather-popup-hour";
+    const day = h.date || "";
+    if (prevDate !== null && day !== prevDate) {
+      dayParity ^= 1;
+      cell.classList.add("day-start");
+    }
+    prevDate = day;
+    if (dayParity === 1) cell.classList.add("alt");
+    if (idx === 0 || h.date === todayKey) cell.classList.add("today");
+    const time = document.createElement("span");
+    time.className = "weather-popup-hour-time";
+    time.textContent = pad2(h.hour) + ":00";
+    const icon = document.createElement("span");
+    icon.className = "weather-popup-hour-icon";
+    icon.textContent = weatherIconFor(h.code);
+    const temp = document.createElement("span");
+    temp.className = "weather-popup-hour-temp";
+    temp.textContent = (h.tempC != null) ? Math.round(h.tempC) + "°" : "—";
+    cell.appendChild(time);
+    cell.appendChild(icon);
+    cell.appendChild(temp);
+    weatherPopupHourlyEl.appendChild(cell);
+  });
+}
+
 function renderWeatherPopup() {
   if (!weatherPopupEl || !weatherPopupDaysEl) return;
+  closeWeatherCityMenu();
   const state = getState();
   const s = state && state.settings;
-  const cache = state && state.weatherCache;
+  const city = activeWeatherCity(s);
+  const cache = weatherCacheFor(state, city);
   const list = (cache && Array.isArray(cache.forecast)) ? cache.forecast : [];
   const maxDays = Math.max(1, Math.min(14, Number((s && s.weatherForecastDays) || 5)));
   if (weatherPopupCityEl) {
     weatherPopupCityEl.textContent = (cache && cache.city) ||
-      ((s && s.weatherCity) || "");
+      ((city && city.name) || (s && s.weatherCity) || "");
   }
+  renderWeatherPopupCities(s, city);
+  renderWeatherPopupHourly(cache);
   weatherPopupDaysEl.textContent = "";
   if (!list.length) {
     const empty = document.createElement("div");
@@ -282,6 +455,36 @@ function renderWeatherPopup() {
   });
 }
 
+/**
+ * Слушает кнопку города в шапке попапа: клик раскрывает/закрывает меню
+ * городов, клик внутри попапа вне меню и скролл попапа — закрывают меню.
+ * Вызывается и в основном режиме (bindWeatherEvents), и в превью настроек,
+ * где bindWeatherEvents целиком не запускается.
+ */
+export function bindWeatherCityMenu() {
+  // Город в шапке попапа: клик раскрывает/закрывает меню городов.
+  if (weatherPopupCityEl) {
+    weatherPopupCityEl.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (weatherPopupCityEl.classList.contains("has-menu")) toggleWeatherCityMenu();
+    });
+  }
+  // Клик внутри попапа, но вне кнопки города и вне меню — закрывает меню.
+  if (weatherPopupEl) {
+    weatherPopupEl.addEventListener("mousedown", (e) => {
+      if (!weatherCityMenuOpen()) return;
+      if (weatherPopupCityEl && weatherPopupCityEl.contains(e.target)) return;
+      if (weatherPopupCitiesEl && weatherPopupCitiesEl.contains(e.target)) return;
+      closeWeatherCityMenu();
+    });
+  }
+  // Скролл попапа (колесо/тач/скроллбар) закрывает открытое меню городов.
+  if (weatherPopupEl) {
+    weatherPopupEl.addEventListener("scroll", () => closeWeatherCityMenu(), { passive: true });
+  }
+}
+
 /** Слушает клики по виджету и кнопке «открыть агрегатор». */
 export function bindWeatherEvents() {
   if (weatherWidget) {
@@ -306,8 +509,46 @@ export function bindWeatherEvents() {
       openWeatherAggregator();
     });
   }
+  // Клики внутри попапа не должны всплывать до weatherWidget и переключать
+  // попап (toggleWeatherPopup). Иначе клик/короткий drag по ленте почасового
+  // прогноза (или по дням/городам) закрывал бы попап в момент отпускания кнопки.
+  if (weatherPopupEl) {
+    weatherPopupEl.addEventListener("click", (e) => e.stopPropagation());
+  }
+  // Город в шапке попапа: меню городов (то же, что и в превью настроек).
+  bindWeatherCityMenu();
+  // Лента почасового прогноза: скролл перетаскиванием мышью (drag-to-scroll,
+  // как слайд). ЛКМ и ПКМ скроллят одинаково, колесо мыши остаётся дефолтным,
+  // тач скроллится нативно.
+  if (weatherPopupHourlyEl) {
+    let tapeDrag = null;
+    weatherPopupHourlyEl.addEventListener("pointerdown", (e) => {
+      if (e.pointerType !== "mouse" || (e.button !== 0 && e.button !== 2)) return;
+      tapeDrag = { startX: e.clientX, startLeft: weatherPopupHourlyEl.scrollLeft, moved: false };
+      weatherPopupHourlyEl.classList.add("dragging");
+      try { weatherPopupHourlyEl.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
+    });
+    // Меню браузера на ленте не нужно — ПКМ здесь скроллит ленту, а не открывает контекстное меню.
+    weatherPopupHourlyEl.addEventListener("contextmenu", (e) => e.preventDefault());
+    weatherPopupHourlyEl.addEventListener("pointermove", (e) => {
+      if (!tapeDrag) return;
+      const dx = e.clientX - tapeDrag.startX;
+      if (!tapeDrag.moved && Math.abs(dx) > 4) tapeDrag.moved = true;
+      weatherPopupHourlyEl.scrollLeft = tapeDrag.startLeft - dx;
+    });
+    const endTapeDrag = () => {
+      tapeDrag = null;
+      weatherPopupHourlyEl.classList.remove("dragging");
+    };
+    weatherPopupHourlyEl.addEventListener("pointerup", endTapeDrag);
+    weatherPopupHourlyEl.addEventListener("pointercancel", endTapeDrag);
+  }
   document.addEventListener("mousedown", (e) => {
-    if (weatherPopupEl && !weatherPopupEl.hidden && !weatherWidget.contains(e.target) && !weatherPopupOpenBtn.contains(e.target)) {
+    // Меню городов вынесено из попапа на уровень body, поэтому исключаем и его:
+    // клик по чипу не должен закрывать попап (закрытие происходит уже в самом
+    // обработчике чипа после смены активного города).
+    if (weatherPopupEl && !weatherPopupEl.hidden && !weatherWidget.contains(e.target) && !weatherPopupOpenBtn.contains(e.target) &&
+        !(weatherPopupCitiesEl && weatherPopupCitiesEl.contains(e.target))) {
       closeWeatherPopup();
     }
   });

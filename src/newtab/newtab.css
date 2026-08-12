@@ -80,6 +80,7 @@ body.ui-frost .ctx-menu,
 body.ui-frost .modal-card,
 body.ui-frost .toast,
 body.ui-frost .quick-suggest,
+body.ui-frost .searcher-card,
 body.ui-frost .weather-popup {
   backdrop-filter: blur(calc(var(--ui-bg-opacity, 0.9) * 14px));
   -webkit-backdrop-filter: blur(calc(var(--ui-bg-opacity, 0.9) * 14px));
@@ -159,9 +160,9 @@ body.no-clock.no-quick-go.no-weather .topbar { display: none; }
   line-height: 1.1;
   user-select: none;
   animation: fadeIn 240ms ease;
-  /* Вписываемся в высоту топбара и не вылезаем за его границы. */
+  /* Вписываемся в высоту топбара, но попап с городами выходит вниз. */
   max-height: var(--topbar-height, 84px);
-  overflow: hidden;
+  overflow: visible;
   transition: background 160ms ease, border-color 160ms ease;
 }
 .clock-widget:hover { background: var(--panel-bg-hover); border-color: var(--input-border); }
@@ -182,6 +183,94 @@ body.no-clock.no-quick-go.no-weather .topbar { display: none; }
   text-transform: lowercase;
   font-weight: 400;
   letter-spacing: 0.01em;
+}
+.clock-city {
+  font-size: calc(11px * var(--ui-scale));
+  line-height: 1;
+  opacity: 0.55;
+  max-width: calc(180px * var(--ui-scale));
+  margin-top: calc(1px * var(--ui-scale));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.clock-popup {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 60;
+  width: max-content;
+  min-width: 180px;
+  max-width: min(70vw, 320px);
+  max-height: 70vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.28) transparent;
+  padding: calc(8px * var(--ui-scale)) calc(10px * var(--ui-scale)) calc(10px * var(--ui-scale));
+  background: var(--dropdown-bg);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: calc(12px * var(--ui-scale));
+  box-shadow: 0 12px 32px rgba(0,0,0,0.45);
+  animation: fadeIn 160ms ease;
+  font-size: calc(13px * var(--ui-scale));
+  line-height: 1.3;
+  user-select: none;
+  cursor: default;
+}
+.clock-popup.closing {
+  animation: suggestOut 150ms ease forwards;
+}
+.clock-popup::-webkit-scrollbar { width: 8px; }
+.clock-popup::-webkit-scrollbar-track { background: transparent; }
+.clock-popup::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.28); border-radius: 4px; }
+.clock-popup-title {
+  font-weight: 600;
+  font-size: calc(13px * var(--ui-scale));
+  padding: calc(2px * var(--ui-scale)) calc(2px * var(--ui-scale)) calc(6px * var(--ui-scale));
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+  margin-bottom: calc(6px * var(--ui-scale));
+}
+.clock-popup-list {
+  display: flex;
+  flex-direction: column;
+  gap: calc(2px * var(--ui-scale));
+}
+.clock-popup-city {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(12px * var(--ui-scale));
+  padding: calc(6px * var(--ui-scale)) calc(8px * var(--ui-scale));
+  border: 0;
+  border-radius: calc(8px * var(--ui-scale));
+  background: transparent;
+  color: var(--text-color);
+  font: inherit;
+  font-size: calc(13px * var(--ui-scale));
+  cursor: pointer;
+  text-align: left;
+  transition: background 120ms ease;
+}
+.clock-popup-city:hover { background: rgba(255,255,255,0.06); }
+.clock-popup-city.active { background: rgba(140,160,255,0.18); }
+.clock-popup-city-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.clock-popup-city-time {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  white-space: nowrap;
+  opacity: 0.85;
+}
+.clock-popup-empty {
+  text-align: center;
+  opacity: 0.6;
+  padding: calc(10px * var(--ui-scale)) 0;
+  font-size: calc(12px * var(--ui-scale));
 }
 
 .weather-widget {
@@ -254,7 +343,7 @@ body.no-clock.no-quick-go.no-weather .topbar { display: none; }
 .weather-popup::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.28); border-radius: 4px; }
 .weather-popup-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: calc(10px * var(--ui-scale));
   padding: calc(2px * var(--ui-scale)) calc(2px * var(--ui-scale)) calc(6px * var(--ui-scale));
@@ -267,13 +356,41 @@ body.no-clock.no-quick-go.no-weather .topbar { display: none; }
   white-space: nowrap;
 }
 .weather-popup-city {
-  opacity: 0.6;
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-color);
+  font: inherit;
   font-size: calc(12px * var(--ui-scale));
+  display: inline-flex;
+  align-items: center;
+  gap: calc(5px * var(--ui-scale));
   min-width: 0;
+  max-width: calc(200px * var(--ui-scale));
+  padding: calc(3px * var(--ui-scale)) calc(8px * var(--ui-scale));
+  border-radius: calc(8px * var(--ui-scale));
+  opacity: 0.8;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  cursor: default;
+  transition: background 120ms ease, border-color 120ms ease, opacity 120ms ease;
 }
+.weather-popup-city::after {
+  content: "▾";
+  font-size: calc(10px * var(--ui-scale));
+  line-height: 1;
+  opacity: 0.7;
+  flex: 0 0 auto;
+}
+.weather-popup-city.has-menu { cursor: pointer; }
+.weather-popup-city.has-menu:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.16);
+  opacity: 1;
+}
+.weather-popup-city.single::after { content: ""; }
+.weather-popup-city[hidden] { display: none; }
 .weather-popup-days {
   display: flex;
   flex-direction: column;
@@ -321,6 +438,114 @@ body.no-clock.no-quick-go.no-weather .topbar { display: none; }
   white-space: nowrap;
 }
 .weather-popup-day-range .min { opacity: 0.55; font-weight: 400; }
+.weather-popup-cities {
+  position: fixed;
+  z-index: 62;
+  display: flex;
+  flex-direction: column;
+  gap: calc(2px * var(--ui-scale));
+  min-width: calc(200px * var(--ui-scale));
+  max-width: min(60vw, 320px);
+  max-height: calc(260px * var(--ui-scale));
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: calc(5px * var(--ui-scale));
+  background: var(--dropdown-bg);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: calc(10px * var(--ui-scale));
+  box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+  animation: fadeIn 130ms ease;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.28) transparent;
+}
+.weather-popup-cities[hidden] { display: none; }
+.weather-popup-chip {
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-color);
+  font: inherit;
+  font-size: calc(12px * var(--ui-scale));
+  line-height: 1.3;
+  text-align: left;
+  padding: calc(6px * var(--ui-scale)) calc(10px * var(--ui-scale));
+  border-radius: calc(7px * var(--ui-scale));
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background 120ms ease;
+}
+.weather-popup-chip:hover { background: rgba(255,255,255,0.08); }
+.weather-popup-chip.active {
+  background: rgba(140,160,255,0.22);
+  color: rgba(255,255,255,0.95);
+}
+.weather-popup-chip.active::before {
+  content: "✓";
+  margin-right: calc(8px * var(--ui-scale));
+}
+.weather-popup-hourly-wrap {
+  padding: calc(4px * var(--ui-scale)) calc(2px * var(--ui-scale)) calc(8px * var(--ui-scale));
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+  margin-bottom: calc(6px * var(--ui-scale));
+}
+.weather-popup-hourly-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.6;
+  margin-bottom: calc(6px * var(--ui-scale));
+}
+.weather-popup-hourly {
+  display: flex;
+  gap: calc(4px * var(--ui-scale));
+  overflow-x: auto;
+  padding-bottom: calc(4px * var(--ui-scale));
+  scrollbar-width: thin;
+  cursor: grab;
+  overscroll-behavior-x: contain;
+}
+.weather-popup-hourly.dragging {
+  cursor: grabbing;
+  user-select: none;
+}
+.weather-popup-hour {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(4px * var(--ui-scale));
+  min-width: calc(52px * var(--ui-scale));
+  padding: calc(6px * var(--ui-scale)) calc(4px * var(--ui-scale));
+  border-radius: calc(8px * var(--ui-scale));
+  background: rgba(255,255,255,0.03);
+  transition: background 120ms ease;
+}
+.weather-popup-hour:hover { background: rgba(255,255,255,0.08); }
+.weather-popup-hour.today { background: rgba(140,160,255,0.12); }
+.weather-popup-hour.alt { background: rgba(255,255,255,0.07); }
+.weather-popup-hour.alt:hover { background: rgba(255,255,255,0.13); }
+.weather-popup-hour.alt.today { background: rgba(140,160,255,0.18); }
+.weather-popup-hour.day-start { border-left: 1px dashed rgba(255,255,255,0.22); }
+.weather-popup-hour-time {
+  font-size: calc(11px * var(--ui-scale));
+  font-variant-numeric: tabular-nums;
+  opacity: 0.65;
+  white-space: nowrap;
+}
+.weather-popup-hour.today .weather-popup-hour-time { color: rgba(140,160,255,0.95); opacity: 1; }
+.weather-popup-hour-icon {
+  font-size: calc(18px * var(--ui-scale));
+  line-height: 1;
+}
+.weather-popup-hour-temp {
+  font-size: calc(13px * var(--ui-scale));
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 .weather-popup-open {
   display: block;
   width: 100%;
@@ -683,14 +908,18 @@ body.cell-align-right  .cell.filled .title-text {
 /* Длинные названия переносятся на несколько строк (overflow-wrap: anywhere) —
    иначе текст ужимается ровно до ширины ячейки, свободного места не остаётся,
    и группа не выравнивается (а в row-reverse иконка уезжает к правому краю).
-   text-align НЕ используем: при длинном названии он двигал бы только текст,
-   «отклеивая» иконку. */
+   Группу «иконка + текст» двигает flex (justify-content / align-items), а
+   text-align выравнивает строки ВНУТРИ перенесённого блока .title-text. Он не
+   «отклеивает» иконку: блок сжат (flex: 0 1 auto), иконка всегда рядом с ним. */
 body.cell-align-left  .cell.filled .title-text,
 body.cell-align-center .cell.filled .title-text,
 body.cell-align-right  .cell.filled .title-text {
   white-space: normal;
   overflow-wrap: anywhere;
 }
+body.cell-align-left   .cell.filled .title-text { text-align: left; }
+body.cell-align-center .cell.filled .title-text { text-align: center; }
+body.cell-align-right  .cell.filled .title-text { text-align: right; }
 /* В колонке текст не должен тянуться по вертикали — только по ширине. */
 body.favicon-pos-top .cell.filled .title-text,
 body.favicon-pos-bottom .cell.filled .title-text {
@@ -722,6 +951,27 @@ body.favicon-pos-bottom .cell.filled .title-text {
   outline: 2px dashed rgba(255,200,80,0.95);
   outline-offset: -2px;
   z-index: 5;
+}
+
+/* Плавающая копия закладки, следующая за курсором при перетаскивании. */
+.cell-drag-ghost {
+  position: fixed;
+  left: 0; top: 0;
+  z-index: 99999;
+  max-width: 280px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--cell-selected-color, #788cff) 18%, #101018);
+  border: 1px solid color-mix(in srgb, var(--cell-selected-color, #788cff) 55%, transparent);
+  color: var(--text-color);
+  font-size: 13px;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  user-select: none;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
 }
 
 /* ---------- sheet bar with scroll arrows ---------- */
@@ -801,12 +1051,16 @@ body.no-sheet-bar .sheet-bar { display: none; }
   min-width: 0;
   position: relative;
   top: 1px;
-  animation: tabIn 200ms ease-out;
 }
 @keyframes tabIn {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+/* Анимация появления — только у свежедобавленных листов (класс .newly-added
+   вешается в sheets.js). Обычные перерисовки бара (переключение листа, смена
+   порядка) пересоздают DOM — без этого правила каждая вкладка мигала бы
+   анимацией входа при любом действии. */
+.sheet-tab.newly-added { animation: tabIn 200ms ease-out; }
 .sheet-tab .sheet-icon {
   font-size: calc(14px * var(--ui-scale));
   line-height: 1;
@@ -826,6 +1080,15 @@ body.no-sheet-bar .sheet-bar { display: none; }
   box-shadow: inset 0 0 0 2px rgba(120,140,255,0.9);
 }
 .sheet-tab.sheet-dragging { opacity: 0.4; }
+
+/* Сенсорные жесты (настройка touchGestures): ячейки, сетка и лист-бар отдаются
+   pointer-событиям (перетаскивание, свайпы для смены листа, перетаскивание
+   вкладок). Горизонтальный скролл лист-бара выполняется вручную в sheets.js:
+   жест на пустой области бара или быстрый флик по вкладке. */
+body.touch-gestures .cell,
+body.touch-gestures #grid,
+body.touch-gestures .sheet-tabs,
+body.touch-gestures .sheet-tab { touch-action: none; }
 .sheet-drop-line {
   position: absolute;
   top: 4px;
@@ -1030,4 +1293,206 @@ kbd {
   padding: 2px 6px;
   font: inherit;
   font-size: 12px;
+}
+
+/* ---------- searcher: поиск по всем листам ---------- */
+.searcher {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: clamp(60px, 16vh, 160px);
+  background: rgba(0,0,0,0.45);
+  animation: backdropIn 160ms ease-out;
+}
+.searcher[hidden] { display: none; }
+.searcher-card {
+  width: min(620px, 92vw);
+  background: var(--dropdown-bg);
+  border: 1px solid var(--modal-border);
+  border-radius: calc(16px * var(--ui-scale));
+  box-shadow: 0 24px 70px rgba(0,0,0,0.55);
+  overflow: hidden;
+  animation: modalIn 180ms cubic-bezier(.2,.7,.3,1.1);
+}
+.searcher-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: calc(10px * var(--ui-scale));
+  padding: calc(14px * var(--ui-scale)) calc(16px * var(--ui-scale));
+  border-bottom: 1px solid rgba(255,255,255,0.10);
+}
+.searcher-icon {
+  flex: 0 0 auto;
+  font-size: calc(16px * var(--ui-scale));
+  line-height: 1;
+  opacity: 0.6;
+}
+.searcher-input-wrap input {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-color);
+  font: inherit;
+  font-size: calc(17px * var(--ui-scale));
+  caret-color: var(--cell-selected-color);
+}
+.searcher-input-wrap input::placeholder { color: rgba(255,255,255,0.4); }
+.searcher-results {
+  max-height: calc(380px * var(--ui-scale));
+  overflow-y: auto;
+  padding: calc(6px * var(--ui-scale));
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.28) transparent;
+}
+.searcher-results::-webkit-scrollbar { width: 8px; }
+.searcher-results::-webkit-scrollbar-track { background: transparent; }
+.searcher-results::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.22);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.searcher-item {
+  display: flex;
+  align-items: center;
+  gap: calc(10px * var(--ui-scale));
+  padding: calc(8px * var(--ui-scale)) calc(10px * var(--ui-scale));
+  border-radius: calc(10px * var(--ui-scale));
+  cursor: pointer;
+  transition: background 100ms ease;
+}
+.searcher-item:hover,
+.searcher-item.active { background: rgba(120,140,255,0.20); }
+.searcher-item .searcher-fav {
+  flex: 0 0 auto;
+  width: calc(22px * var(--ui-scale));
+  height: calc(22px * var(--ui-scale));
+  border-radius: calc(6px * var(--ui-scale));
+  background: var(--input-bg);
+  display: grid;
+  place-items: center;
+  font-size: calc(13px * var(--ui-scale));
+  overflow: hidden;
+}
+.searcher-item .searcher-fav img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.searcher-item .searcher-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.searcher-item .searcher-title {
+  font-size: calc(14px * var(--ui-scale));
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.searcher-item .searcher-url {
+  font-size: calc(12px * var(--ui-scale));
+  line-height: 1.35;
+  color: rgba(255,255,255,0.5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.searcher-item .searcher-meta {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: calc(6px * var(--ui-scale));
+  font-size: calc(12px * var(--ui-scale));
+  color: rgba(255,255,255,0.55);
+}
+.searcher-item .searcher-meta .searcher-sheet {
+  padding: 2px calc(8px * var(--ui-scale));
+  border-radius: 999px;
+  background: rgba(255,255,255,0.10);
+  white-space: nowrap;
+}
+.searcher-item .searcher-meta .searcher-pos {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  opacity: 0.8;
+}
+.searcher-empty {
+  padding: calc(22px * var(--ui-scale)) calc(16px * var(--ui-scale));
+  text-align: center;
+  font-size: calc(13px * var(--ui-scale));
+  color: rgba(255,255,255,0.55);
+}
+.searcher-footer {
+  padding: calc(9px * var(--ui-scale)) calc(16px * var(--ui-scale));
+  border-top: 1px solid rgba(255,255,255,0.10);
+  font-size: calc(12px * var(--ui-scale));
+  color: rgba(255,255,255,0.5);
+  text-align: center;
+}
+
+/* ---------- справка по горячим клавишам (F1 / ?) ---------- */
+.shortcut-modal-card {
+  width: min(580px, 92vw);
+}
+.shortcut-list {
+  max-height: calc(60vh);
+  overflow-y: auto;
+  padding: 4px 2px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.28) transparent;
+}
+.shortcut-list::-webkit-scrollbar { width: 8px; }
+.shortcut-list::-webkit-scrollbar-track { background: transparent; }
+.shortcut-list::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.22);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.shortcut-group { margin-bottom: calc(14px * var(--ui-scale)); }
+.shortcut-group:last-child { margin-bottom: 0; }
+.shortcut-group-title {
+  font-size: calc(11px * var(--ui-scale));
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255,255,255,0.45);
+  padding: 0 4px calc(6px * var(--ui-scale));
+}
+.shortcut-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: calc(5px * var(--ui-scale)) calc(6px * var(--ui-scale));
+  border-radius: 8px;
+}
+.shortcut-row:hover { background: rgba(120,140,255,0.10); }
+.shortcut-keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+.shortcut-keys kbd { white-space: nowrap; }
+.shortcut-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: right;
+  font-size: calc(13px * var(--ui-scale));
+  color: var(--text-color);
+  opacity: 0.9;
+}
+.shortcut-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: calc(14px * var(--ui-scale));
+  margin-top: 4px;
+  border-top: 1px solid rgba(255,255,255,0.10);
 }
