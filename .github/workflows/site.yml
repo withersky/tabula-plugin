@@ -1,0 +1,67 @@
+# Tabula — spreadsheet-style new tab page browser extension.
+#
+# Copyright (C) 2026 withersky
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+name: site
+
+# Деплой сайта-визитки (папка `site/`) на GitHub Pages.
+#
+# Триггерится вручную (workflow_dispatch) и программно из других воркфлоу
+# (release.yml, firefox-finalize.yml) через `gh workflow run site.yml`.
+# Авто-триггер по path filter site/** не используем намеренно: пуш от
+# GITHUB_TOKEN в соседнем workflow НЕ запускает другие workflow (защита
+# GitHub от рекурсии), поэтому site/ обновляется только явным вызовом.
+#
+# Требования к репозиторию:
+#   - В Settings → Pages → Build and deployment источник должен быть
+#     «GitHub Actions» (а не ветка), иначе деплой не сработает.
+#   - Права Pages и id-token выдаются через `permissions` ниже, отдельные
+#     секреты не нужны.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Build and deploy site to GitHub Pages
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
