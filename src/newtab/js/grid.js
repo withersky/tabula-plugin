@@ -22,7 +22,7 @@
 
 import { getState, setState, activeSheet } from "./state.js";
 import { tx } from "./i18n.js";
-import { toast, cssEscape, cssAttr, keyCode } from "./utils.js";
+import { toast, cssEscape, keyCode } from "./utils.js";
 import { cachedSrc, onFaviconLoaded } from "./favicons.js";
 
 const gridEl     = document.getElementById("grid");

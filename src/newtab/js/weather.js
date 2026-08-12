@@ -554,4 +554,12 @@ export function bindWeatherEvents() {
   });
 }
 
+/** Закрывает попап погоды при клике/тапе вне его (для режима превью). */
+export function closeWeatherPopupOutside(e) {
+  if (weatherPopupEl && !weatherPopupEl.hidden && !weatherWidget.contains(e.target) && !weatherPopupOpenBtn.contains(e.target) &&
+      !(weatherPopupCitiesEl && weatherPopupCitiesEl.contains(e.target))) {
+    closeWeatherPopup();
+  }
+}
+
 export { weatherWidget };

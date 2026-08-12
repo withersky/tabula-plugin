@@ -22,8 +22,9 @@
  */
 
 import { getLang, getState, setState, tx } from "./state.js";
-import { fillForm } from "./form.js";
+import { fillForm, collectSettings } from "./form.js";
 import { flash, flashSaved } from "./utils.js";
+import { sendPreview } from "./preview.js";
 
 const weatherCityList = document.getElementById("weatherCityList");
 const clockCityList   = document.getElementById("clockCityList");
@@ -229,6 +230,7 @@ async function setActiveCity(kind, id) {
   setState(await Storage.get());
   renderCityLists();
   flashSaved();
+  sendPreview(collectSettings());
 }
 
 async function deleteCity(kind, id) {

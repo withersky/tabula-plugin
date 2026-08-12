@@ -23,7 +23,7 @@
 
 import { getState, setState, tx } from "./state.js";
 import { fillForm, persistSettings } from "./form.js";
-import { flash, flashSaved } from "./utils.js";
+import { flash, flashSaved, cssEscape } from "./utils.js";
 import { updateFontSelectCustomVisibility } from "./i18n.js";
 
 const bgTypeSelect = document.getElementById("bgTypeSelect");
@@ -43,7 +43,6 @@ const fontFamilyCustomWrap = document.getElementById("fontFamilyCustomWrap");
 const $  = (sel, root) => (root || document).querySelector(sel);
 const $$ = (sel, root) => Array.from((root || document).querySelectorAll(sel));
 
-function cssEscape(v) { return String(v).replace(/"/g, '\\"'); }
 
 // ---------- background type visibility ----------
 export function updateBgTypeVisibility() {

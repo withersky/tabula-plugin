@@ -176,6 +176,7 @@ function renderClockPopup() {
       setState(await Storage.get());
       updateClock();
       renderClockPopup();
+      closeClockPopup();
     });
     clockPopupListEl.appendChild(row);
   });
@@ -218,6 +219,13 @@ export function bindClockEvents() {
       closeClockPopup();
     }
   });
+}
+
+/** Закрывает попап часов при клике/тапе вне его (для режима превью). */
+export function closeClockPopupOutside(e) {
+  if (clockPopupEl && !clockPopupEl.hidden && !clockWidget.contains(e.target)) {
+    closeClockPopup();
+  }
 }
 
 export { clockWidget };

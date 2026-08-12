@@ -28,8 +28,6 @@ const toastEl         = document.getElementById("toast");
 
 export function cssEscape(v) { return String(v).replace(/"/g, '\\"'); }
 
-export function cssAttr(v) { return String(v).replace(/"/g, '\\"'); }
-
 /**
  * Раскладочно-независимый код клавиши для хоткеев.
  * Буквы и «/» определяются по физической позиции (e.code), поэтому сочетания

@@ -27,8 +27,8 @@
 
 import { getState, setState, getLang, setLang, activeSheet } from "./state.js";
 import { tx, applyI18nStatic, applyPageTitle } from "./i18n.js";
-import { startClock, bindClockEvents, clockWidget } from "./clock.js";
-import { startWeather, renderWeather, bindWeatherEvents, bindWeatherCityMenu, toggleWeatherPopup } from "./weather.js";
+import { startClock, bindClockEvents, toggleClockPopup, closeClockPopupOutside, clockWidget } from "./clock.js";
+import { startWeather, renderWeather, bindWeatherEvents, bindWeatherCityMenu, toggleWeatherPopup, closeWeatherPopupOutside } from "./weather.js";
 import { weatherWidget } from "./weather.js";
 import { renderQuickGoIcon, bindSearchEvents } from "./search.js";
 import { applyBackground, applySelectionColor, maybeLoadBingBackground } from "./background.js";
@@ -312,11 +312,11 @@ function onPreviewMessage(e) {
 
 function bindPreview() {
   // Превью неинтерактивно: не открываем закладки, листы и меню,
-  // но оставляем hover-состояния и всплывающее окно погоды.
+  // но оставляем hover-состояния и всплывающие окна погоды/часов.
   document.addEventListener("click", (e) => {
     const t = e.target;
     if (t && t.closest &&
-        t.closest(".cell, .sheet-tab, .sheet-add, .sheet-scroll, .quick-go, .icon-btn, .opts-fab, .clock-widget")) {
+        t.closest(".cell, .sheet-tab, .sheet-add, .sheet-scroll, .quick-go, .icon-btn, .opts-fab")) {
       e.preventDefault();
       e.stopPropagation();
     }
@@ -335,6 +335,45 @@ function bindPreview() {
   // В превью нет bindWeatherEvents — привязываем меню городов отдельно,
   // чтобы клик по городу в шапке попапа раскрывал список (а не закрывал попап).
   bindWeatherCityMenu();
+  if (clockWidget) {
+    clockWidget.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      // В превью нет bindClockEvents — вешаем локальный обработчик попапа.
+      toggleClockPopup();
+    });
+  }
+  // В превью нет bindClockEvents/bindWeatherEvents, поэтому навешиваем
+  // закрытие попапов по клику/тапу вне них отдельно (как в реальной вкладке).
+  document.addEventListener("mousedown", (e) => {
+    closeWeatherPopupOutside(e);
+    closeClockPopupOutside(e);
+  });
+  // Превью должно реагировать на изменения storage, сделанные в другой
+  // вкладке (например, смена активного города в попапе часов/погоды на
+  // реальной новой вкладке). Перечитываем storage и применяем актуальные
+  // настройки локально, без записи в storage (как в onPreviewMessage).
+  Storage.onChanged(async (next) => {
+    if (!next || !next.settings) return;
+    const s = await Storage.get();
+    if (!s || !s.settings) return;
+    const prev = getState().settings || {};
+    const merged = Object.assign({}, prev, s.settings);
+    const langChanged = (merged.language || "ru") !== "ru";
+    const state = getState();
+    state.settings = merged;
+    setLang(merged.language || "ru");
+    applySettings();
+    applyLayoutFlags();
+    if (langChanged) applyI18nStatic();
+    else applyPageTitle();
+    renderGrid();
+    renderSheetBar();
+    refreshSheetCtx();
+    startClock();
+    startWeather();
+    requestAnimationFrame(() => { applyTopbarHeight(); applySheetBarHeight(); });
+  });
 }
 
 // ---------- общие слушатели ----------
