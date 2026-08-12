@@ -49,6 +49,8 @@ jobs:
   release:
     name: Build & publish release
     runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
