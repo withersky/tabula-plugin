@@ -82,23 +82,45 @@ jobs:
 
           echo "Looking for $SIGNED_XPI in release $TAG ..."
 
-          if ! gh release view "$TAG" >/dev/null 2>&1; then
-            echo "::error::Release $TAG does not exist. Run release.yml first."
+          # gh release view ищет по тегу, но если релиз создан через веб-UI
+          # (draft/prerelease) или тег резолвится неоднозначно, он может
+          # вернуть "does not exist". Используем прямой API-вызов по тегу —
+          # он видит и опубликованные, и черновики, и pre-release.
+          if ! gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}" \
+               --jq '.tag_name' >/dev/null 2>&1; then
+            echo "::error::Release for tag $TAG not found via API."
+            echo "::error::Check that the release 'Tabula ${TAG#v}' exists and is attached to tag $TAG."
+            echo "--- gh release list ---"
+            gh release list || true
+            echo "------------------------"
             exit 1
           fi
 
-          if gh release download "$TAG" --pattern "${SIGNED_XPI}" --clobber 2>/dev/null; then
-            if [[ -f "$SIGNED_XPI" ]]; then
-              UPDATE_HASH="$(sha256sum "${SIGNED_XPI}" | cut -d' ' -f1)"
-              echo "Signed xpi found: ${SIGNED_XPI} (sha256:${UPDATE_HASH})"
-              echo "update_hash=sha256:${UPDATE_HASH}" >> "$GITHUB_OUTPUT"
-            else
-              echo "::error::Pattern matched but file $SIGNED_XPI not downloaded."
+          if gh release download "$TAG" --pattern "${SIGNED_XPI}" --clobber 2>/dev/null && [[ -f "$SIGNED_XPI" ]]; then
+            echo "Signed xpi downloaded via gh release download."
+          else
+            # Фоллбэк: релиз может быть draft/prerelease, где gh release
+            # download не находит ассет по тегу. Берём ассет напрямую через
+            # API по имени файла (работает и для черновиков).
+            echo "gh release download failed — trying API asset lookup..."
+            ASSET_ID="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}" \
+              --jq ".assets[] | select(.name == \"${SIGNED_XPI}\") | .id" 2>/dev/null | head -n1)"
+            if [[ -z "$ASSET_ID" ]]; then
+              echo "::error::Signed xpi '$SIGNED_XPI' not found in release $TAG."
+              echo "::error::Upload the AMO-signed file there first, then re-run this workflow."
               exit 1
             fi
+            gh api "repos/${GITHUB_REPOSITORY}/releases/assets/${ASSET_ID}" \
+              --header "Accept: application/octet-stream" > "$SIGNED_XPI"
+            echo "Signed xpi downloaded via API asset (id=$ASSET_ID)."
+          fi
+
+          if [[ -f "$SIGNED_XPI" ]]; then
+            UPDATE_HASH="$(sha256sum "${SIGNED_XPI}" | cut -d' ' -f1)"
+            echo "Signed xpi found: ${SIGNED_XPI} (sha256:${UPDATE_HASH})"
+            echo "update_hash=sha256:${UPDATE_HASH}" >> "$GITHUB_OUTPUT"
           else
-            echo "::error::Signed xpi '$SIGNED_XPI' not found in release $TAG."
-            echo "::error::Upload the AMO-signed file there first, then re-run this workflow."
+            echo "::error::File $SIGNED_XPI not present after download."
             exit 1
           fi
 
@@ -115,19 +137,19 @@ jobs:
           if ! grep -q '"update_hash"' site/updates.json; then
             # Дописываем update_hash к записи релиза. Формат совпадает с тем,
             # что пишет release.yml (без hash). Если записи нет — создаём.
-            python3 - "$VERSION" "$TAG" "$ADDON_ID" "$SIGNED_XPI" "$HASH" <<'PY'
-          import json, sys
-          version, tag, addon_id, signed_xpi, h = sys.argv[1:6]
-          path = "site/updates.json"
-          with open(path, encoding="utf-8") as f:
-              data = json.load(f)
-          updates = data["addons"][addon_id]["updates"]
-          target = next((u for u in updates if u.get("version") == version), None)
-          if target is None:
-              target = {"version": version}
-              updates.append(target)
-          target["update_link"] = f"https://github.com/{addon_id}/releases/download/{tag}/{signed_xpi}"
-          target["update_hash"] = h
+            python3 - "$VERSION" "$TAG" "$ADDON_ID" "$SIGNED_XPI" "$HASH" "$GITHUB_REPOSITORY" <<'PY'
+           import json, sys
+           version, tag, addon_id, signed_xpi, h, repo = sys.argv[1:7]
+           path = "site/updates.json"
+           with open(path, encoding="utf-8") as f:
+               data = json.load(f)
+           updates = data["addons"][addon_id]["updates"]
+           target = next((u for u in updates if u.get("version") == version), None)
+           if target is None:
+               target = {"version": version}
+               updates.append(target)
+           target["update_link"] = f"https://github.com/{repo}/releases/download/{tag}/{signed_xpi}"
+           target["update_hash"] = h
           with open(path, "w", encoding="utf-8") as f:
               json.dump(data, f, indent=2, ensure_ascii=False)
               f.write("\n")

@@ -205,11 +205,12 @@ node scripts/gen-i18n.mjs   # требуется Node.js; повторяйте �
   ```
 
 3. `git push origin main`. Через ~30 секунд в разделе **Releases** появятся
-  `v1.2.3` и два архива — `tabula-chrome-v1.2.3-unsign.zip` (Chrome) и
-  `tabula-firefox-v1.2.3-unsign.xpi` (Firefox, неподписанный). Workflow также
-  запишет [`site/latest.json`](site/latest.json:1) и [`site/updates.json`](site/updates.json:1)
-  (без `update_hash`) и закоммитит их — сайт пересоберётся автоматически
-  (см. раздел «Сайт-визитка»), чтобы кнопки скачивания указывали на новый релиз.
+   релиз с заголовком `Tabula v1.2.3` (git-тег при этом — просто `v1.2.3`) и два
+   архива — `tabula-chrome-v1.2.3-unsign.zip` (Chrome) и
+   `tabula-firefox-v1.2.3-unsign.xpi` (Firefox, неподписанный). Workflow также
+   запишет [`site/latest.json`](site/latest.json:1) и [`site/updates.json`](site/updates.json:1)
+   (без `update_hash`) и закоммитит их — сайт пересоберётся автоматически
+   (см. раздел «Сайт-визитка»), чтобы кнопки скачивания указывали на новый релиз.
 
 **Автообновление Firefox (update_url):**
 
