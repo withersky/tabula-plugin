@@ -244,6 +244,9 @@ export async function refreshWeather() {
   } catch (err) {
     if (myGen !== _weatherGen) return;
     _weatherHasError = true;
+    // Логируем реальную причину рядом с «не удалось получить прогноз»,
+    // чтобы в консоли браузера было видно, что именно упало (сеть / таймзона).
+    console.error("[Tabula] weather load failed:", err && (err.stack || err.message || err));
     toast(tx("weatherLoadFailed"), true);
   } finally {
     if (myGen === _weatherGen) {
@@ -449,7 +452,10 @@ function renderWeatherPopupHourly(cache, tz) {
   if (renderTz) {
     try {
       todayKey = partsInTz(new Date(), renderTz, { date: true }).date;
-    } catch (_) { todayKey = null; }
+    } catch (e) {
+      console.error("[Tabula] partsInTz failed (hourly) for tz=" + renderTz, e);
+      todayKey = null;
+    }
   } else if (list[0] && list[0].date) {
     // Прогноз в UTC, а у города timezone — чтобы не было рассинхрона,
     // «сегодня» = дата первого (текущего) часа в кэше.
@@ -511,7 +517,10 @@ function renderWeatherPopup() {
   if (cityTz) {
     try {
       today = partsInTz(new Date(), cityTz, { date: true }).date;
-    } catch (_) { today = null; }
+    } catch (e) {
+      console.error("[Tabula] partsInTz failed (popup) for tz=" + cityTz, e);
+      today = null;
+    }
   }
   if (!today && list[0] && list[0].date) {
     today = list[0].date; // UTC-кэш + город с таймзоной: «сегодня» = первая дата прогноза

@@ -136,3 +136,20 @@ Build Hourly Forecast Gecko Eastern Tz / Firefox: почасовой восто�
     ...                почасовой ленты на Firefox. Якорь now=2026-08-13T12:00Z.
     ${ts} =    Set Variable    [{"time":"2026-08-13T12:00:00Z","data":{"instant":{"details":{"air_temperature":25}},"next_1_hours":{"summary":{"symbol_code":"clearsky_day"}}}},{"time":"2026-08-13T13:00:00Z","data":{"instant":{"details":{"air_temperature":25}},"next_1_hours":{"summary":{"symbol_code":"clearsky_day"}}}},{"time":"2026-08-14T02:00:00Z","data":{"instant":{"details":{"air_temperature":25}},"next_1_hours":{"summary":{"symbol_code":"clearsky_day"}}}}]
     Core Function Should Equal    buildHourlyForecast    [{"date":"2026-08-14","hour":2,"tempC":25,"symbol":"clearsky_day","code":113,"desc":"clearsky_day"}]    ${ts}    ru    1    Pacific/Kiritimati    {"$date":"2026-08-13T12:00:00Z","$gecko":true}
+
+
+Firefox Manifest Background Loads Timezone / Манифест Firefox подключает timezone.js
+    [Documentation]    ФИКС БАГА (Firefox): корень проблемы «не удалось получить
+    ...                прогноз» для городов со следующим днём. В манифесте Firefox
+    ...                background — это обычные скрипты (не service_worker), поэтому
+    ...                importScripts в background.js не поддерживается и при
+    ...                отсутствии lib/timezone.js в списке скриптов глобальная
+    ...                функция resolveTimezoneByName оказывается не определена ->
+    ...                ReferenceError в фоне Firefox -> прогноз не загружается.
+    ...                Тест гарантирует, что lib/timezone.js подключён, а
+    ...                background.js идёт последним (порядок инициализации).
+    ${scripts} =    Manifest Firefox Background Scripts
+    Should Contain    ${scripts}    lib/timezone.js
+    Should Contain    ${scripts}    background.js
+    ${last} =    Set Variable    ${scripts}[-1]
+    Should Be Equal    ${last}    background.js

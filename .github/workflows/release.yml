@@ -35,6 +35,11 @@ on:
     branches:
       - main
       - master
+    # Коммиты, сделанные самим ботом (например, «release: update site
+    # snapshot» в шаге ниже), меняют только site/** — они не должны
+    # запускать сборку релиза повторно (защита от рекурсивных запусков CI).
+    paths-ignore:
+      - 'site/**'
   workflow_dispatch:
     inputs:
       version:
@@ -103,6 +108,17 @@ jobs:
 
           # Полное сообщение коммита — это и есть будущие release notes.
           COMMIT_MSG="$(git log -1 --pretty=%B)"
+
+          # Защита от рекурсии: коммиты, сделанные самим ботом
+          # (например, «release: update site snapshot» или «firefox: add
+          # update_hash»), не должны запускать сборку релиза повторно.
+          AUTHOR="$(git log -1 --pretty=%an)"
+          echo "Commit author: $AUTHOR"
+          if [[ "$AUTHOR" == "github-actions[bot]" ]]; then
+            echo "::notice::Commit by github-actions[bot] — skipping to avoid CI recursion."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
 
           # Первая непустая строка.
           FIRST_LINE="$(printf '%s\n' "$COMMIT_MSG" | awk 'NF{print; exit}')"

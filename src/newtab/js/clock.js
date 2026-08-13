@@ -53,9 +53,27 @@ function activeClockCity(s) {
 
 /** Числовые части текущего времени в таймзоне города (или локальные). */
 function datePartsFor(city) {
+  const tz = (city && city.timezone) || "";
   const days = tx("clockDays");
   const weekdayNames = Array.isArray(days) ? days : null;
-  return partsInTz(new Date(), (city && city.timezone) || "", { date: true, weekdayNames });
+  try {
+    return partsInTz(new Date(), tz, { date: true, weekdayNames });
+  } catch (e) {
+    // Битый IANA-пояс города не должен ронять весь виджет часов (setInterval
+    // updateClock). Логируем и откатываемся на локальное время устройства.
+    console.error("[Tabula] partsInTz failed (clock) for tz=" + tz, e);
+    const now = new Date();
+    return {
+      hour: now.getHours(),
+      minute: now.getMinutes(),
+      year: now.getFullYear(),
+      month: now.getMonth() + 1,
+      day: now.getDate(),
+      weekday: now.getDay(),
+      date: now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0"),
+      weekdayNames
+    };
+  }
 }
 
 export function updateClock() {

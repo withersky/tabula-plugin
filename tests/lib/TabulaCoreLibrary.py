@@ -181,5 +181,25 @@ class TabulaCoreLibrary:
         return value
 
 
+
+    # ------------------------------------------------------------------
+    # Ключевые слова: манифесты сборки
+    # ------------------------------------------------------------------
+
+    def manifest_firefox_background_scripts(self):
+        """Возвращает список фоновых скриптов из src/manifest.firefox.json.
+
+        Используется чтобы гарантировать, что все модули (в т.ч. lib/timezone.js)
+        корректно подключены в фоновом контексте Firefox. Без lib/timezone.js
+        в background.scripts вызов resolveTimezoneByName в фоне Firefox падает
+        с ReferenceError, и погода для городов без сохранённого пояса
+        (часто восточные «города со следующим днём») не загружается.
+        """
+        path = os.path.join(ROOT, "src", "manifest.firefox.json")
+        with open(path, "r", encoding="utf-8") as fh:
+            manifest = json.load(fh)
+        scripts = manifest.get("background", {}).get("scripts", [])
+        return list(scripts)
+
 def _fmt_args(args):
     return ", ".join(repr(a) for a in args)

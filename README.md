@@ -136,10 +136,20 @@ tabula-plugin/
 
 ### Запуск в режиме разработки
 
-Сборка не нужна: отредактируйте файлы и обновите расширение из `chrome://extensions`
-(в Firefox — перезагрузите дополнение в `about:debugging`). Все обращения к API
-расширения идут через тонкую обёртку [`src/lib/browser.js`](src/lib/browser.js:1), поэтому
-Chrome и Firefox используют одну и ту же кодовую базу.
+Сборка не нужна **для правки JS/CSS/HTML**: отредактируйте файлы в `src/` и обновите
+расширение из `chrome://extensions` (в Firefox — перезагрузите дополнение в `about:debugging`).
+Все обращения к API расширения идут через тонкую обёртку [`src/lib/browser.js`](src/lib/browser.js:1),
+поэтому Chrome и Firefox используют одну и ту же кодовую базу.
+
+**Исключение — файлы манифеста.** Правки [`src/manifest.json`](src/manifest.json:1) или
+[`src/manifest.firefox.json`](src/manifest.firefox.json:1) влияют только на *собранную*
+папку `dist/`. При загрузке unpacked из `src/` браузер читает именно манифест из `src/`,
+поэтому для dev-режима правки видны сразу; а для установленной/упакованной сборки —
+после `./build.sh firefox` (или `all`) и повторной загрузки `dist/firefox`.
+Например, добавление `lib/timezone.js` в `background.scripts` манифеста Firefox без
+пересборки оставит расширение без функции геокодинга таймзоны (`resolveTimezoneByName`
+будет не определён в фоне). Синхронность `dist/` с `src/` проверяется скриптом
+`./scripts/check-sync.sh`.
 
 Перед первой загрузкой `src/` как unpacked сгенерируйте браузерные i18n-скрипты —
 в репозитории их нет (это производный артефакт):
@@ -174,6 +184,24 @@ node scripts/gen-i18n.mjs   # требуется Node.js; повторяйте �
 Юнит-тесты чистой логики ([`src/lib/core.js`](src/lib/core.js:1), [`src/lib/storage.js`](src/lib/storage.js:1),
 [`src/lib/timezone.js`](src/lib/timezone.js:1)) на Robot Framework — подробности в
 [`tests/README.md`](tests/README.md:1).
+
+Тесты покрывают и браузерозависимое поведение детерминированно (маркеры `$gecko`/`$noLeadingZeroHour`
+воспроизводят особенности Firefox, например баг прогноза погоды для восточных поясов и
+рендеринга дат без ведущего нуля; регресс-тест манифеста проверяет, что `lib/timezone.js`
+подключён к фону в Firefox).
+
+### Диагностика
+
+Расширение пишет в консоль браузера (DevTools → Console) только сообщения об ошибках и
+провалах сети — в счастливом пути логов нет, поэтому они не влияют на производительность.
+Ключевые места с логированием:
+- фоновый скрипт [`src/background.js`](../src/background.js:1) — провал `importScripts`
+  (например, если `lib/timezone.js` не подключён в манифесте Firefox) и ошибки сетевых
+  обработчиков (Bing-картинка, подсказки поиска, met.no: геокодинг, реверс-геокодинг, прогноз);
+- [`src/newtab/js/clock.js`](../src/newtab/js/clock.js:1) — провал `partsInTz` (падение часов
+  с некорректной IANA-таймзоной, с откатом на локальное время);
+- [`src/newtab/js/weather.js`](../src/newtab/js/weather.js:1) — провал загрузки прогноза
+  и `partsInTz` в попапе.
 
 ```bash
 ./tests/run_tests.sh            # прогнать все тесты

@@ -21,7 +21,8 @@ tests/
 │   └── core_runner.js        мост: читает JSON-запрос из stdin, исполняет в Node,
 │                             пишет JSON-ответ в stdout
 └── suites/
-    ├── test_background.robot  src/lib/core.js: символы met.no → коды WWO, num(), свёртка прогноза по дням
+    ├── test_background.robot  src/lib/core.js: символы met.no → коды WWO, num(), свёртка прогноза по дням;
+    │                            регресс-тест манифеста Firefox (что lib/timezone.js подключён к фону)
     ├── test_newtab.robot      src/lib/core.js: URL, фавиконки, бейджи, ключи сетки, погода, даты, агрегатор
     ├── test_storage.robot     src/lib/storage.js: буквы столбцов, листы, i18n, миграции, дефолты
     └── test_timezone.robot    src/lib/timezone.js: partsInTz (коррекция часового пояса), resolveTimezoneByName
@@ -67,6 +68,7 @@ python3 -m pip install --user --break-system-packages robotframework
 | `Timezone Function Should Equal` | то же для `src/lib/timezone.js` (таймзоны, геокодинг) |
 | `Call Core Function` / `Call Storage Function` / `Call Timezone Function` | вызвать и вернуть результат для дальнейших проверок |
 | `Core Function Should Error` / `Storage Function Should Error` / `Timezone Function Should Error` | вызвать и ожидать исключение, вернуть текст ошибки |
+| `Manifest Firefox Background Scripts` | вернуть список фоновых скриптов из [`src/manifest.firefox.json`](../src/manifest.firefox.json:1) (регресс-тест: что `lib/timezone.js` подключён и `background.js` — последний). Не исполняет код, только парсит JSON-манифест. |
 
 Имя функции может быть и **константой** экспорта (`I18N`, `DEFAULT_DATA`, `FONT_FAMILIES`, `WEATHER_ICON_EMOJI`…).
 

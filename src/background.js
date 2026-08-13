@@ -17,20 +17,32 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-// Service worker: proxies Bing daily image + met.no weather (CORS workaround for extension pages).
-// met.no требует заголовок User-Agent (с валидным контактом), поэтому запрос делается здесь.
+// Service worker / background: proxies Bing daily image + met.no weather (CORS workaround for extension pages).
+// Запрос к met.no идёт отсюда (а не со страницы newtab), потому что страница не имеет
+// host_permissions. ВАЖНО: не ставим кастомный User-Agent — это forbidden-заголовок, и в
+// фоне Firefox он делает запрос non-safelisted → preflight, который met.no не пропускает.
 
 // Load cross-browser API shim. Works in Chromium service workers and Firefox background scripts.
-try { importScripts("lib/browser.js"); } catch (_) { /* ignore if not in worker context */ }
+// НЕ глушим ошибки importScripts молча: именно глухой catch скрыл баг, когда
+// lib/timezone.js отсутствовал в background.scripts Firefox — фон падал с
+// ReferenceError только в рантайме, а не при загрузке. Логируем провал, чтобы
+// следующий такой косяк был виден сразу.
+function _importOrLog(path) {
+  try {
+    importScripts(path);
+  } catch (e) {
+    console.error("[Tabula] background failed to import " + path + ": " + (e && (e.message || e)));
+  }
+}
+_importOrLog("lib/browser.js");
 // i18n data (JSON → generated script) before lib/core.js, which reads the global.
-try { importScripts("i18n/generated/symbols.js"); } catch (_) { /* ignore if not in worker context */ }
+_importOrLog("i18n/generated/symbols.js");
 // Pure helpers (weather symbol mapping, forecast folding) live in lib/core.js.
-try { importScripts("lib/core.js"); } catch (_) { /* ignore if not in worker context */ }
+_importOrLog("lib/core.js");
 // Единый модуль работы с таймзонами (partsInTz, resolveTimezoneByName,
 // ensureCityTimezone) — используется и здесь, и в newtab/options виджетах.
-try { importScripts("lib/timezone.js"); } catch (_) { /* ignore if not in worker context */ }
+_importOrLog("lib/timezone.js");
 
-const METNO_USER_AGENT = "TabulaNewTab/1.0 (contact: extension-local)";
 const METNO_TTL_MS = 10 * 60 * 1000; // 10 минут: met.no обновляет прогнозы примерно раз в 10 минут
 const METNO_CACHE_MAX = 8;           // предел записей кэша, чтобы не раздувать память воркера
 const _metnoCache = new Map();       // "lat,lon,lang,tz" → { at: Date.now(), data: результат }
@@ -77,8 +89,13 @@ async function fetchWeather(lat, lon, lang, tz, cityName) {
     lon: String(lon)
   });
   const url = "https://api.met.no/weatherapi/locationforecast/2.0/complete?" + params.toString();
+  // НЕ ставим кастомный User-Agent: это forbidden-заголовок. В Chrome SW он
+  // молча игнорируется (подставляется штатный UA), но в фоне Firefox помечает
+  // запрос как non-safelisted → требуется preflight, который met.no не
+  // пропускает (OPTIONS 204 без ACAO) → блок CORS. Штатный UA браузера met.no
+  // принимает (проверено через curl).
   const resp = await fetch(url, {
-    headers: { "User-Agent": METNO_USER_AGENT, "Accept": "application/json" }
+    headers: { "Accept": "application/json" }
   });
   if (!resp.ok) throw new Error("met.no http " + resp.status);
   const j = await resp.json();
@@ -91,6 +108,19 @@ async function fetchWeather(lat, lon, lang, tz, cityName) {
     (cur.data && cur.data.next_6_hours && cur.data.next_6_hours.summary && cur.data.next_6_hours.summary.symbol_code) ||
     null;
   const code = symbolToCode(symbol);
+  // Построение прогноза (buildDailyForecast/buildHourlyForecast) считает день/час
+  // в поясе города через Intl.DateTimeFormat. Если для экзотического пояса
+  // движок браузера бросает (или логика ломается), НЕ глушим исключение —
+  // логируем с деталями, чтобы ошибка была видна в консоли браузера рядом с
+  // «не удалось получить прогноз».
+  let forecast, hourly;
+  try {
+    forecast = buildDailyForecast(ts, lang, tz);
+    hourly = buildHourlyForecast(ts, lang, 24, tz);
+  } catch (e) {
+    console.error("[Tabula] buildForecast failed for tz=" + tz + " lat=" + lat + " lon=" + lon, e);
+    throw e;
+  }
   const result = {
     ok: true,
     source: "met.no",
@@ -101,8 +131,8 @@ async function fetchWeather(lat, lon, lang, tz, cityName) {
     windMs: num(data.wind_speed),
     windKmph: (data.wind_speed != null && isFinite(Number(data.wind_speed))) ? Number(data.wind_speed) * 3.6 : null,
     desc: symbol || (lang === "en" ? "Weather" : "Погода"),
-    forecast: buildDailyForecast(ts, lang, tz),
-    hourly: buildHourlyForecast(ts, lang, 24, tz),
+    forecast: forecast,
+    hourly: hourly,
     tz: tz || "",
     lat: lat,
     lon: lon,
@@ -173,6 +203,15 @@ async function fetchSuggestions(engine, q) {
   return [];
 }
 
+// Единый лог ошибок фоновых сетевых хендлеров. Без него сбой геокодинга/
+// Bing/подсказок/погоды уходил в sendResponse({error}) и реальная причина (CORS,
+// 5xx, таймаут) терялась — виден лишь тост с общим текстом. Возвращает объект
+// ошибки для sendResponse, чтобы не дублировать форматирование.
+function bgError(ctx, err) {
+  console.error("[Tabula] " + ctx + " failed:", err && (err.stack || err.message || err));
+  return { error: String(err && err.message || err) };
+}
+
 ext.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg && msg.type === "bingDaily") {
     const mkt = (msg.mkt || "ru-RU").replace(/[^a-zA-Z0-9_-]/g, "");
@@ -191,7 +230,7 @@ ext.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         }
         sendResponse({ url: fullUrl, copyright: img.copyright || "" });
       })
-      .catch(err => sendResponse({ error: String(err && err.message || err) }));
+      .catch(err => sendResponse(bgError("bingDaily", err)));
     return true;
   }
 
@@ -201,7 +240,7 @@ ext.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (!q) { sendResponse({ ok: true, items: [] }); return true; }
     fetchSuggestions(engine, q)
       .then(items => sendResponse({ ok: true, items: items }))
-      .catch(err => sendResponse({ error: String(err && err.message || err) }));
+      .catch(err => sendResponse(bgError("suggest", err)));
     return true;
   }
 
@@ -210,7 +249,7 @@ ext.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (!name) { sendResponse({ error: "no-city" }); return true; }
     geocodeCity(name, msg.lang)
       .then(list => sendResponse({ ok: true, results: list }))
-      .catch(err => sendResponse({ error: String(err && err.message || err) }));
+      .catch(err => sendResponse(bgError("weatherGeocode", err)));
     return true;
   }
 
@@ -222,7 +261,7 @@ ext.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     // странам (feature_code = "PCLI") вернёт "" — timezone там нет.
     resolveTimezoneByName(name, { fetchImpl: fetch, lang: msg.lang })
       .then(tz => sendResponse({ ok: true, timezone: tz }))
-      .catch(err => sendResponse({ error: String(err && err.message || err) }));
+      .catch(err => sendResponse(bgError("weatherReverseGeocode", err)));
     return true;
   }
 
@@ -238,7 +277,7 @@ ext.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     // fetchWeather сам догеокодирует по имени через lib/timezone.js.
     fetchWeather(lat, lon, msg.lang, msg.tz, msg.cityName)
       .then(r => sendResponse(r))
-      .catch(err => sendResponse({ error: String(err && err.message || err) }));
+      .catch(err => sendResponse(bgError("weather", err)));
     return true;
   }
 
