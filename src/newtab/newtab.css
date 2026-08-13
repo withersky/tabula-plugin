@@ -125,6 +125,16 @@ html, body {
 .ctx-menu { z-index: 200; }
 .toast    { z-index: 300; }
 
+/* Режим превью (iframe в настройках): в Firefox position:absolute с top:100%
+   внутри iframe привязывается не к виджету, а «уезжает» за нижнюю границу
+   вьюпорта. Принудительно фиксируем попапы на position:fixed — координаты им
+   задаёт JS (positionPopupInIframe / toggleClockPopup) через getBoundingClientRect. */
+body.preview .weather-popup,
+body.preview .clock-popup {
+  position: fixed !important;
+  top: auto; left: auto; right: auto; bottom: auto;
+}
+
 /* ---------- topbar ---------- */
 .topbar {
   display: grid;

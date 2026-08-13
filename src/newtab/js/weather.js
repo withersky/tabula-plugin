@@ -93,9 +93,15 @@ export function renderWeather() {
     weatherIconEl.textContent = weatherIconFor(cache.code);
     const temp = (cache.tempC != null) ? (Math.round(cache.tempC) + "°") : "—";
     const desc = describeSymbol(cache.symbol, getLang()) || cache.desc || "";
-    const cityLabel = cache.city
-      ? (cache.city + (cache.country ? ", " + cache.country : ""))
-      : ((city && city.name) || (s && s.weatherCity) || "");
+    // Надпись города берём из АКТИВНОГО города (city.name), а не из
+    // cache.city. Кэш погоды может временно отставать (гонка генераций
+    // _weatherGen при быстрой смене городов, либо несвежий кэш), поэтому
+    // опираться на cache.city значило бы показывать имя предыдущего города
+    // до завершения загрузки. cache.city — лишь fallback, если города нет
+    // в списке, но кэш уже есть (легаси-сценарий).
+    const cityLabel = (city && city.name)
+      ? ((city.name) + (city.country ? ", " + city.country : ""))
+      : (cache.city ? (cache.city + (cache.country ? ", " + cache.country : "")) : ((s && s.weatherCity) || ""));
     setWeatherText(weatherIconEl.textContent, temp, desc, cityLabel);
     return;
   }
@@ -280,11 +286,45 @@ export function toggleWeatherPopup() {
   weatherPopupEl.classList.remove("closing");
   _weatherPopupClosing = false;
   weatherPopupEl.hidden = false;
+  // В режиме превью (iframe) position:absolute/top:100% работает в Firefox
+  // иначе, чем в Chrome: попап уезжает за пределы вьюпорта. Позиционируем
+  // явно через position:fixed и координаты виджета из getBoundingClientRect().
+  if (window.TabulaPreview && weatherWidget) {
+    positionPopupInIframe(weatherPopupEl, weatherWidget, "right");
+  }
 }
 
 /** Список городов погоды из настроек (если есть). */
 function weatherCitiesList(s) {
   return Array.isArray(s && s.weatherCities) ? s.weatherCities : [];
+}
+
+/**
+ * Позиционирует попап внутри iframe-превью (режим Firefox-совместимости).
+ * При position:absolute + top:100% внутри <iframe> Firefox привязывает
+ * top:100% к другому containing block, и попап «уезжает» за нижнюю границу
+ * вьюпорта. Решение — position:fixed + явные координаты из
+ * getBoundingClientRect() виджета (внутри iframe clientRect уже в координатах
+ * вьюпорта, поэтому fixed работает одинаково в Chrome и Firefox).
+ * align: "right" — прижать правый край попапа к правому краю виджета
+ * (для виджета погоды справа в топбаре), иначе — по левому краю.
+ */
+function positionPopupInIframe(popup, anchor, align) {
+  if (!popup || !anchor) return;
+  const r = anchor.getBoundingClientRect();
+  popup.style.position = "fixed";
+  popup.style.top = (r.bottom + 6) + "px";
+  const pw = popup.offsetWidth || 240;
+  if (align === "right") {
+    popup.style.left = "auto";
+    popup.style.right = Math.max(8, window.innerWidth - r.right) + "px";
+  } else {
+    popup.style.right = "auto";
+    popup.style.left = Math.max(8, r.left) + "px";
+  }
+  // Не выпускаем попап за нижний край вьюпорта (прокрутка внутри попапа).
+  const maxH = Math.max(120, window.innerHeight - r.bottom - 12);
+  popup.style.maxHeight = maxH + "px";
 }
 
 /** Открыто ли выпадающее меню городов. */
@@ -405,8 +445,11 @@ function renderWeatherPopup() {
   const list = (cache && Array.isArray(cache.forecast)) ? cache.forecast : [];
   const maxDays = Math.max(1, Math.min(14, Number((s && s.weatherForecastDays) || 5)));
   if (weatherPopupCityEl) {
-    weatherPopupCityEl.textContent = (cache && cache.city) ||
-      ((city && city.name) || (s && s.weatherCity) || "");
+    // Приоритет — имя активного города, cache.city — только fallback (см.
+    // обоснование в renderWeather).
+    weatherPopupCityEl.textContent = (city && city.name)
+      ? (city.name + (city.country ? ", " + city.country : ""))
+      : ((cache && cache.city) || (s && s.weatherCity) || "");
   }
   renderWeatherPopupCities(s, city);
   renderWeatherPopupHourly(cache);

@@ -163,6 +163,12 @@ async function init() {
     // Превью ничего не пишет в chrome.storage: все «сохранения» (погода, фон,
     // активный лист) мутируют state в памяти и исчезают при закрытии настроек.
     Storage.update = async (mutator) => { mutator(getState()); };
+    // Метка режима превью на body + глобальный флаг, чтобы виджеты
+    // (weather.js/clock.js) могли позиционировать попапы через position:fixed
+    // с явными координатами. Внутри iframe absolute/top:100% ведёт себя в
+    // Firefox иначе, чем в Chrome — попапы «уезжают» за пределы вьюпорта.
+    document.body.classList.add("preview");
+    window.TabulaPreview = true;
   }
   setLang(getState().settings.language || "ru");
   applySettings();

@@ -196,6 +196,17 @@ export function toggleClockPopup() {
   clockPopupEl.classList.remove("closing");
   _clockPopupClosing = false;
   clockPopupEl.hidden = false;
+  // В режиме превью (iframe) позиционируем явно через fixed+координаты,
+  // как в toggleWeatherPopup (см. positionPopupInIframe в weather.js).
+  if (window.TabulaPreview && clockWidget) {
+    const r = clockWidget.getBoundingClientRect();
+    clockPopupEl.style.position = "fixed";
+    clockPopupEl.style.top = (r.bottom + 6) + "px";
+    clockPopupEl.style.right = "auto";
+    clockPopupEl.style.left = Math.max(8, r.left) + "px";
+    const maxH = Math.max(120, window.innerHeight - r.bottom - 12);
+    clockPopupEl.style.maxHeight = maxH + "px";
+  }
 }
 
 /** Слушает клики по виджету часов. */
