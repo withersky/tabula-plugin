@@ -117,6 +117,7 @@
   "geoSearching": "Searching…",
   "geoNotFound": "Nothing found. Try a different query.",
   "geoError": "Search failed. Check your connection.",
+  "geoNoCityTimezone": "That is a country, not a city — pick a specific place so the forecast uses local time.",
   "geoPickHint": "Click to select",
 
   "optShowGrid": "Show grid lines",

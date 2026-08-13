@@ -327,7 +327,8 @@ function mergeWithDefaults(data) {
         name: String((c && c.name) || ""),
         country: String((c && c.country) || ""),
         lat: Number(c && c.lat),
-        lon: Number(c && c.lon)
+        lon: Number(c && c.lon),
+        timezone: String((c && c.timezone) || "")
       }))
       .filter(c => c.name && isFinite(c.lat) && isFinite(c.lon));
     if (weatherCities.length === 0 &&
@@ -337,7 +338,8 @@ function mergeWithDefaults(data) {
         name: String(out.settings.weatherCity),
         country: "",
         lat: Number(out.settings.weatherLat),
-        lon: Number(out.settings.weatherLon)
+        lon: Number(out.settings.weatherLon),
+        timezone: String(out.settings.weatherTimezone || "")
       }];
     }
     if (weatherCities.length === 0) {

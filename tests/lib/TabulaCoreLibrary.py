@@ -60,6 +60,10 @@ class TabulaCoreLibrary:
         """Вызывает функцию из src/lib/storage.js и возвращает результат."""
         return self._call("storage", fn_name, args)
 
+    def call_timezone_function(self, fn_name, *args):
+        """Вызывает функцию из src/lib/timezone.js и возвращает результат."""
+        return self._call("timezone", fn_name, args)
+
     # ------------------------------------------------------------------
     # Ключевые слова: вызов + сравнение с ожидаемым значением
     # ------------------------------------------------------------------
@@ -74,6 +78,16 @@ class TabulaCoreLibrary:
         actual = self._call("storage", fn_name, args)
         self._assert_equal(fn_name, args, expected, actual)
 
+    def timezone_function(self, fn_name, *args):
+        """Вызывает функцию из src/lib/timezone.js и возвращает результат
+        без сравнения (для вычисления эталонного значения внутри теста)."""
+        return self._call("timezone", fn_name, args)
+
+    def timezone_function_should_equal(self, fn_name, expected, *args):
+        """Вызывает функцию из src/lib/timezone.js и сравнивает результат с expected."""
+        actual = self._call("timezone", fn_name, args)
+        self._assert_equal(fn_name, args, expected, actual)
+
     # ------------------------------------------------------------------
     # Ключевые слова: ожидаемая ошибка
     # ------------------------------------------------------------------
@@ -84,6 +98,13 @@ class TabulaCoreLibrary:
         Возвращает текст ошибки для дальнейших проверок.
         """
         return self._call_expect_error("core", fn_name, args)
+
+    def timezone_function_should_error(self, fn_name, *args):
+        """Вызывает функцию из src/lib/timezone.js и ожидает исключение.
+
+        Возвращает текст ошибки для дальнейших проверок.
+        """
+        return self._call_expect_error("timezone", fn_name, args)
 
     def storage_function_should_error(self, fn_name, *args):
         """Вызывает функцию из src/lib/storage.js и ожидает исключение.

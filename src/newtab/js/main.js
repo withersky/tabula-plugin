@@ -133,8 +133,12 @@ function applyTopbarHeight() {
   const state = getState();
   const s = state && state.settings;
   const hidden = s && (s.showClock === false && s.showWeather === false && s.showQuickGo === false);
-  const h = hidden ? 0 : tb.getBoundingClientRect().height;
-  document.documentElement.style.setProperty("--topbar-height", Math.ceil(h) + "px");
+  const value = Math.ceil(hidden ? 0 : tb.getBoundingClientRect().height) + "px";
+  const root = document.documentElement.style;
+  // Повторная запись того же значения бессмысленна и лишний раз не будит
+  // ResizeObserver (не даёт раскрутиться циклу пересчёта).
+  if (root.getPropertyValue("--topbar-height") === value) return;
+  root.setProperty("--topbar-height", value);
 }
 
 // Обновляет --sheet-bar-height по реальной высоте sheet-bar.
@@ -144,12 +148,12 @@ function applySheetBarHeight() {
   if (!bar) return;
   const state = getState();
   const s = state && state.settings;
-  if (!s || s.showSheetTabs === false) {
-    document.documentElement.style.setProperty("--sheet-bar-height", "0px");
-    return;
-  }
-  const h = bar.getBoundingClientRect().height;
-  document.documentElement.style.setProperty("--sheet-bar-height", Math.ceil(h) + "px");
+  const value = (!s || s.showSheetTabs === false)
+    ? "0px"
+    : Math.ceil(bar.getBoundingClientRect().height) + "px";
+  const root = document.documentElement.style;
+  if (root.getPropertyValue("--sheet-bar-height") === value) return;
+  root.setProperty("--sheet-bar-height", value);
 }
 
 // ---------- инициализация ----------
@@ -192,17 +196,31 @@ async function init() {
     prefetchFavicons(collectVisibleUrls());
   }
 
+  // Запись CSS-переменных откладывается в rAF: ResizeObserver доставляется до
+  // отрисовки, и синхронная запись свойств на <html> внутри колбэка снова
+  // меняет раскладку, порождая «ResizeObserver loop completed with undelivered
+  // notifications». Запись вне шага доставки наблюдателя разрывает цикл.
+  let _heightRaf = 0;
+  const scheduleHeightApply = () => {
+    if (_heightRaf) return;
+    _heightRaf = requestAnimationFrame(() => {
+      _heightRaf = 0;
+      applyTopbarHeight();
+      applySheetBarHeight();
+    });
+  };
+
   // Динамический отступ ячеек от топбара (часы могут менять высоту).
   const tb = document.querySelector(".topbar");
   if (tb && typeof ResizeObserver !== "undefined") {
-    const ro = new ResizeObserver(() => applyTopbarHeight());
+    const ro = new ResizeObserver(() => scheduleHeightApply());
     ro.observe(tb);
   } else {
     window.addEventListener("resize", applyTopbarHeight);
   }
   const sb = document.querySelector(".sheet-bar");
   if (sb && typeof ResizeObserver !== "undefined") {
-    const ro2 = new ResizeObserver(() => applySheetBarHeight());
+    const ro2 = new ResizeObserver(() => scheduleHeightApply());
     ro2.observe(sb);
   }
   requestAnimationFrame(() => { applyTopbarHeight(); applySheetBarHeight(); });
@@ -365,7 +383,7 @@ function bindPreview() {
     if (!s || !s.settings) return;
     const prev = getState().settings || {};
     const merged = Object.assign({}, prev, s.settings);
-    const langChanged = (merged.language || "ru") !== "ru";
+    const langChanged = (merged.language || "ru") !== getLang();
     const state = getState();
     state.settings = merged;
     setLang(merged.language || "ru");

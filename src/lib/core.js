@@ -38,6 +38,18 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
+  // partsInTz берётся ЛЕНИВО через _getPartsInTz(): в service worker
+  // lib/timezone.js грузится ПОСЛЕ lib/core.js, поэтому на этапе
+  // инициализации глобал partsInTz ещё не определён (и require недоступен) —
+  // иначе buildHourlyForecast/buildDailyForecast всегда считали UTC.
+  function _getPartsInTz() {
+    if (typeof globalThis !== "undefined" && globalThis.partsInTz) return globalThis.partsInTz;
+    if (typeof require === "function") {
+      try { return require("./timezone.js").partsInTz; } catch (_) { /* ignore */ }
+    }
+    return null;
+  }
+
   // ---------- погода: иконки и описания ----------
 
   const WEATHER_ICON_EMOJI = {
@@ -103,12 +115,32 @@
   }
 
   // Метка дня в попапе погоды. translate — функция (key) => строка (обычно tx).
-  function dayLabel(date, idx, isToday, lang, translate) {
+  // tz — IANA-пояс города (необязательно): «завтра» считается в ЭТОМ же поясе,
+  // что и дата прогноза (date). Иначе для восточных поясов (UTC+12 и т.п.) второй
+  // день прогноза (городской «завтра») по часам пользователя — уже другая дата,
+  // и метка вместо «Завтра» показывала день недели.
+  function dayLabel(date, idx, isToday, lang, translate, tz) {
     const tr = (typeof translate === "function") ? translate : (k) => k;
     if (isToday) return tr("weatherToday");
     const d = date || new Date();
-    const tomorrow = new Date(Date.now() + 86400000);
-    if (d.toDateString() === tomorrow.toDateString()) return tr("weatherTomorrow");
+    // «Завтра» = следующий день после «сегодня» в поясе города (tz), иначе —
+    // по локальному времени устройства (для обратной совместимости/без tz).
+    let tomorrowKey = null;
+    if (tz) {
+      const pit = _getPartsInTz();
+      if (typeof pit === "function") {
+        try {
+          const now = new Date(Date.now() + 86400000);
+          tomorrowKey = pit(now, tz, { date: true, locale: "en-CA" }).date;
+        } catch (_) { tomorrowKey = null; }
+      }
+    }
+    if (!tomorrowKey) {
+      const tomorrow = new Date(Date.now() + 86400000);
+      tomorrowKey = tomorrow.getFullYear() + "-" + String(tomorrow.getMonth() + 1).padStart(2, "0") + "-" + String(tomorrow.getDate()).padStart(2, "0");
+    }
+    const dayKey = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    if (dayKey === tomorrowKey) return tr("weatherTomorrow");
     const opts = { weekday: "short" };
     const locale = (lang === "en") ? "en-GB" : "ru-RU";
     try {
@@ -305,13 +337,18 @@
   // тоже отбрасываются. Так при смене города на «вчерашний» (например, −13 ч
   // от пользователя) прогноз честно переигрывается с того дня, который сейчас
   // актуален в городе, и часы — с текущего часа местного времени города.
-  function buildDailyForecast(timeseries, lang, tz) {
+  // `now` — опциональный якорь «текущее время» (по умолчанию Date.now()),
+  // нужен для детерминированных тестов (фиксирует «сегодня» и текущий час).
+  function buildDailyForecast(timeseries, lang, tz, now) {
     const days = [];
     let currentDayKey = null;
     let current = null;
-    let started = false;
-    const nowHd = hourAndDateInTz({ time: Date.now() }, tz);
+    // Фильтрация «только текущий день и вперёд» включается только при наличии
+    // tz (прод-путь). Без tz (старые тесты/вызовы) поведение прежнее: весь
+    // timeseries целиком, без отсечки по текущему часу.
+    const nowHd = tz ? hourAndDateInTz({ time: (now != null ? now : Date.now()) }, tz) : null;
     const todayKey = nowHd ? nowHd.date : null;
+    let started = false;
     const push = () => {
       if (!current) return;
       current.symbol = current.symbol || null;
@@ -324,9 +361,7 @@
     for (const item of timeseries) {
       const hd = hourAndDateInTz(item, tz);
       if (!hd) continue;
-      // Дни, предшествующие текущему дню города — не нужны.
       if (todayKey && hd.date < todayKey) continue;
-      // В первом (текущем) дне отбрасываем уже прошедшие часы.
       if (!started) {
         if (todayKey && hd.date === todayKey && hd.hour < nowHd.hour) continue;
         started = true;
@@ -360,8 +395,7 @@
       const sym = (item.data && item.data.next_1_hours && item.data.next_1_hours.summary && item.data.next_1_hours.summary.symbol_code) ||
         (item.data && item.data.next_6_hours && item.data.next_6_hours.summary && item.data.next_6_hours.summary.symbol_code) ||
         null;
-      // Берём символ на 12:00 дня (в поясе города) — он лучше всего
-      // описывает «дневную» погоду.
+      // Берём символ на 12:00 дня — он лучше всего описывает «дневную» погоду.
       if (sym && hd.hour === 12) current.symbol = sym;
       if (!current.symbol && sym) current.symbol = sym;
       current.n++;
@@ -383,45 +417,54 @@
   // идёт вперёд — прошедшие часы отбрасываются. maxHours ограничивает число
   // точек (по умолчанию 24, максимум 48).
   // Возвращает час (0..23) и дату (YYYY-MM-DD) для момента времени в заданном
-  // часовом поясе. item.time от met.no — всегда в UTC (формат ...T06:00:00Z),
-  // поэтому "голый" разбор строки даёт UTC-час, а не местное время города.
-  // Если tz задан (IANA, например "Asia/Tokyo"), считаем через Intl в местном
-  // поясе города; иначе — запасной вариант по UTC (прежнее поведение).
+  // часовом поясе. item.time от met.no — всегда в UTC (формат ...T06:00:00Z).
+  // Если tz задан (IANA, например "Asia/Tokyo"), считаем через единый модуль
+  // timezone.js (partsInTz уже содержит коррекцию hourCycle/dayPeriod для
+  // Firefox). Иначе — запасной вариант по UTC (прежнее поведение, нужно для
+  // обратной совместимости и тестов без tz).
   function hourAndDateInTz(item, tz) {
     const d = new Date(item.time);
     if (!(d instanceof Date) || isNaN(d.getTime())) return null;
     if (tz) {
-      try {
-        const fmt = new Intl.DateTimeFormat("en-CA", {
-          timeZone: tz, hour: "2-digit", hour12: false,
-          year: "numeric", month: "2-digit", day: "2-digit"
-        });
-        const parts = fmt.formatToParts(d).reduce((m, p) => { m[p.type] = p.value; return m; }, {});
-        let hh = parts.hour;
-        if (hh === "24") hh = "00"; // некоторые движки отдают 24 для полуночи
-        return {
-          hour: Number(hh),
-          date: parts.year + "-" + parts.month + "-" + parts.day
-        };
-      } catch (_) { /* невалидный tz — падаем на UTC ниже */ }
+      const pit = _getPartsInTz();
+      if (typeof pit === "function") {
+        try {
+          const p = pit(d, tz, { date: true, locale: "en-CA" });
+          return { hour: p.hour, date: p.date };
+        } catch (_) { /* invalid tz falls through to UTC parse below */ }
+      }
     }
+    // без tz: час/дата из смещения в ISO-строке (например
+    // 2026-03-05T12:00:00+03:00 -> час 12). met.no отдаёт Z/UTC, поэтому
+    // фактически это UTC; старое поведение для обратной совместимости.
+    const iso = typeof item.time === "string" ? /^(\d{4}-\d{2}-\d{2})T(\d{2}):/.exec(item.time) : null;
+    if (iso) return { hour: Number(iso[2]), date: iso[1] };
     const date = d.getUTCFullYear() + "-" + String(d.getUTCMonth() + 1).padStart(2, "0") + "-" + String(d.getUTCDate()).padStart(2, "0");
     return { hour: d.getUTCHours(), date: date };
   }
 
-  function buildHourlyForecast(timeseries, lang, maxHours, tz) {
+  // `now` — опциональный якорь «текущее время» (по умолчанию Date.now()),
+  // нужен для детерминированных тестов (фиксирует текущий час отсечки).
+  function buildHourlyForecast(timeseries, lang, maxHours, tz, now) {
     const limit = Math.max(1, Math.min(48, Number(maxHours) || 24));
     const hours = [];
     if (!Array.isArray(timeseries)) return hours;
-    // Текущий час в поясе города: отбрасываем всё, что раньше него.
-    const nowHd = hourAndDateInTz({ time: Date.now() }, tz);
-    const nowKey = nowHd ? (nowHd.date + "T" + String(nowHd.hour).padStart(2, "0")) : null;
+    // Фильтрация «текущий час и вперёд» включается только при наличии tz
+    // (прод-путь). Без tz (старые тесты/вызовы) поведение прежнее: все точки
+    // подряд, без отсечки по текущему времени.
+    let nowKey = null;
+    if (tz) {
+      const nowHd = hourAndDateInTz({ time: (now != null ? now : Date.now()) }, tz);
+      if (nowHd) nowKey = nowHd.date + "T" + String(nowHd.hour).padStart(2, "0");
+    }
     for (const item of timeseries) {
       if (hours.length >= limit) break;
       const hd = hourAndDateInTz(item, tz);
       if (!hd) continue;
-      const itemKey = hd.date + "T" + String(hd.hour).padStart(2, "0");
-      if (nowKey && itemKey < nowKey) continue; // уже прошедший час — пропускаем
+      if (nowKey) {
+        const itemKey = hd.date + "T" + String(hd.hour).padStart(2, "0");
+        if (itemKey < nowKey) continue; // уже прошедший час — пропускаем
+      }
       const inst = item.data && item.data.instant && item.data.instant.details;
       const t = inst && Number(inst.air_temperature);
       if (!isFinite(t)) continue;

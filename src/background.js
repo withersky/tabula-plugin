@@ -26,22 +26,51 @@ try { importScripts("lib/browser.js"); } catch (_) { /* ignore if not in worker 
 try { importScripts("i18n/generated/symbols.js"); } catch (_) { /* ignore if not in worker context */ }
 // Pure helpers (weather symbol mapping, forecast folding) live in lib/core.js.
 try { importScripts("lib/core.js"); } catch (_) { /* ignore if not in worker context */ }
+// Единый модуль работы с таймзонами (partsInTz, resolveTimezoneByName,
+// ensureCityTimezone) — используется и здесь, и в newtab/options виджетах.
+try { importScripts("lib/timezone.js"); } catch (_) { /* ignore if not in worker context */ }
 
 const METNO_USER_AGENT = "TabulaNewTab/1.0 (contact: extension-local)";
 const METNO_TTL_MS = 10 * 60 * 1000; // 10 минут: met.no обновляет прогнозы примерно раз в 10 минут
 const METNO_CACHE_MAX = 8;           // предел записей кэша, чтобы не раздувать память воркера
-const _metnoCache = new Map();       // "lat,lon,lang" → { at: Date.now(), data: результат }
+const _metnoCache = new Map();       // "lat,lon,lang,tz" → { at: Date.now(), data: результат }
 
-function metnoCacheKey(lat, lon, lang) {
+function metnoCacheKey(lat, lon, lang, tz) {
   // Округляем до 4 знаков (~11 м), чтобы координаты с шумом плавающей точки
   // не плодили дубликаты записей кэша.
-  return Number(lat).toFixed(4) + "," + Number(lon).toFixed(4) + "," + (lang || "ru");
+  // ВАЖНО: ключ ОБЯЗАН включать tz. Прогноз (buildHourlyForecast/buildDailyForecast)
+  // считается в местном поясе города, и для восточных поясов (UTC+12 и т.п.)
+  // даты часов/дней отличаются от UTC. Если не учитывать tz, то прогноз,
+  // однажды построенный в UTC для города без timezone, закэшируется и будет
+  // отдаваться повторно даже после догеокодинга (когда город уже получил
+  // timezone) — рендер же считает «сегодня» уже в местном поясе, возникает
+  // рассинхрон: даты из кэша в UTC, а подсветка в местном времени (два «Сегодня»
+  // и сдвиг часов, например 13:00 вместо 01:00).
+  return Number(lat).toFixed(4) + "," + Number(lon).toFixed(4) + "," + (lang || "ru") + "," + (tz || "UTC");
 }
 
-async function fetchWeather(lat, lon, lang, tz) {
-  const cacheKey = metnoCacheKey(lat, lon, lang);
+async function fetchWeather(lat, lon, lang, tz, cityName) {
+  // Нормализуем tz: открытый мет.no/геокодер возвращают чистую строку
+  // ("Pacific/Tarawa"), но в старых данных или при двойной JSON-сериализации
+  // поле может прийти как '"Pacific/Tarawa"' (строка с кавычками внутри).
+  // Intl.DateTimeFormat с таким "поясом" бросает исключение → часы считаются
+  // в UTC (13:00 вместо 01:00, два «Сегодня»). Срезаем обрамляющие кавычки.
+  tz = normalizeTz(tz);
+  // Если часовой пояс не передан (старые/мигрированные города без timezone),
+  // пытаемся получить его по имени города через единый модуль timezone.js
+  // (resolveTimezoneByName), чтобы почасовой/дневной прогноз считался в
+  // местном времени города, а не в UTC. Делаем ДО проверки кэша: от этого
+  // зависит ключ кэша (он включает tz), иначе прогноз не перестроился бы при
+  // появлении timezone у города.
+  if (!tz && cityName) {
+    try { tz = normalizeTz(await resolveTimezoneByName(String(cityName), { fetchImpl: fetch })); } catch (_) { tz = ""; }
+  }
+
+  const cacheKey = metnoCacheKey(lat, lon, lang, tz);
   const cached = _metnoCache.get(cacheKey);
-  if (cached && Date.now() - cached.at < METNO_TTL_MS) return cached.data;
+  if (cached && Date.now() - cached.at < METNO_TTL_MS) {
+    return cached.data;
+  }
 
   const params = new URLSearchParams({
     lat: String(lat),
@@ -74,6 +103,7 @@ async function fetchWeather(lat, lon, lang, tz) {
     desc: symbol || (lang === "en" ? "Weather" : "Погода"),
     forecast: buildDailyForecast(ts, lang, tz),
     hourly: buildHourlyForecast(ts, lang, 24, tz),
+    tz: tz || "",
     lat: lat,
     lon: lon,
     fetchedAt: Date.now()
@@ -95,7 +125,7 @@ async function fetchWeather(lat, lon, lang, tz) {
 async function geocodeCity(name, lang) {
   const params = new URLSearchParams({
     name: name,
-    count: "5",
+    count: "10",
     language: (lang === "en" ? "en" : "ru"),
     format: "json"
   });
@@ -104,14 +134,21 @@ async function geocodeCity(name, lang) {
   if (!resp.ok) throw new Error("geocoder http " + resp.status);
   const j = await resp.json();
   const list = Array.isArray(j.results) ? j.results : [];
-  return list.map(r => ({
-    name: r.name || name,
-    country: r.country || "",
-    admin1: r.admin1 || "",
-    lat: Number(r.latitude),
-    lon: Number(r.longitude),
-    timezone: r.timezone || ""
-  }));
+  // Оставляем только населённые пункты/регионы. Страны (feature_code = "PCLI")
+  // у Open-Meteo не отдают поле timezone, и для них почасовой прогноз погоды
+  // не может быть посчитан в местном времени (считался бы в UTC). Поэтому
+  // исключаем страны и любые записи без timezone.
+  return list
+    .filter(r => r.feature_code && r.feature_code !== "PCLI" && !!r.timezone)
+    .map(r => ({
+      name: r.name || name,
+      country: r.country || "",
+      admin1: r.admin1 || "",
+      featureCode: r.feature_code || "",
+      lat: Number(r.latitude),
+      lon: Number(r.longitude),
+      timezone: r.timezone || ""
+    }));
 }
 
 const SUGGEST_ENDPOINTS = {
@@ -177,6 +214,18 @@ ext.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
+  if (msg && msg.type === "weatherReverseGeocode") {
+    const name = String(msg.name || (msg.city) || "").trim();
+    if (!name) { sendResponse({ ok: true, timezone: "" }); return true; }
+    // Open-Meteo geocoding возвращает timezone при поиске по имени города.
+    // Единый расчёт через resolveTimezoneByName (lib/timezone.js), который
+    // странам (feature_code = "PCLI") вернёт "" — timezone там нет.
+    resolveTimezoneByName(name, { fetchImpl: fetch, lang: msg.lang })
+      .then(tz => sendResponse({ ok: true, timezone: tz }))
+      .catch(err => sendResponse({ error: String(err && err.message || err) }));
+    return true;
+  }
+
   if (msg && msg.type === "weather") {
     const lat = Number(msg.lat);
     const lon = Number(msg.lon);
@@ -185,8 +234,9 @@ ext.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       return true;
     }
     // tz — IANA-пояс активного города (нужен, чтобы почасовой прогноз
-    // отображался в местном времени города, а не в UTC).
-    fetchWeather(lat, lon, msg.lang, msg.tz)
+    // отображался в местном времени города, а не в UTC). Если пуст —
+    // fetchWeather сам догеокодирует по имени через lib/timezone.js.
+    fetchWeather(lat, lon, msg.lang, msg.tz, msg.cityName)
       .then(r => sendResponse(r))
       .catch(err => sendResponse({ error: String(err && err.message || err) }));
     return true;

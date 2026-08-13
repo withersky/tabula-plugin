@@ -21,9 +21,14 @@
  * локальное время устройства.
  */
 
-import { getState, setState } from "./state.js";
+import { getState, setState, getLang } from "./state.js";
 import { tx } from "./i18n.js";
 import { pad2 } from "./utils.js";
+// partsInTz / ensureCityTimezone — единый модуль таймзон (lib/timezone.js,
+// подключён глобально в newtab.html перед ES-модулями).
+const { partsInTz, ensureCityTimezone } = (typeof globalThis !== "undefined" && globalThis.partsInTz)
+  ? globalThis
+  : {};
 
 const clockWidget = document.getElementById("clockWidget");
 const clockTimeEl = document.getElementById("clockTime");
@@ -36,8 +41,6 @@ let clockTimer = null;
 let _clockPopupTimer = null;
 let _clockPopupClosing = false;
 
-const WEEKDAY_INDEX = { "Sun": 0, "Mon": 1, "Tue": 2, "Wed": 3, "Thu": 4, "Fri": 5, "Sat": 6 };
-
 /** Активный город часов (или первый). null — локальное время. */
 function activeClockCity(s) {
   const list = Array.isArray(s && s.clockCities) ? s.clockCities : [];
@@ -45,54 +48,14 @@ function activeClockCity(s) {
   return list.find(c => c && c.id === activeId) || list[0] || null;
 }
 
-// Кэш Intl.DateTimeFormat по таймзоне: конструктор дорогой, а datePartsFor
-// вызывается каждые 15 секунд (и после каждого onChanged настроек).
-const _tzFormatters = new Map();
-function tzFormatter(tz) {
-  let f = _tzFormatters.get(tz);
-  if (!f) {
-    f = new Intl.DateTimeFormat("en-US", {
-      timeZone: tz,
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-      weekday: "short",
-      day: "numeric",
-      month: "numeric"
-    });
-    _tzFormatters.set(tz, f);
-  }
-  return f;
-}
+// Расчёт времени в таймзоне города вынесен в единый модуль lib/timezone.js
+// (функция partsInTz). Здесь только виджет-обвязка.
 
 /** Числовые части текущего времени в таймзоне города (или локальные). */
 function datePartsFor(city) {
-  const d = new Date();
-  const tz = city && city.timezone;
-  if (!tz) {
-    return {
-      hour: d.getHours(),
-      minute: d.getMinutes(),
-      weekday: d.getDay(),
-      day: d.getDate(),
-      month: d.getMonth()
-    };
-  }
-  try {
-    const fmt = tzFormatter(tz);
-    const parts = {};
-    for (const p of fmt.formatToParts(d)) parts[p.type] = p.value;
-    const hour = (parts.hour === "24") ? "00" : parts.hour;
-    return {
-      hour: Number(hour),
-      minute: Number(parts.minute),
-      weekday: (WEEKDAY_INDEX[parts.weekday] != null) ? WEEKDAY_INDEX[parts.weekday] : d.getDay(),
-      day: Number(parts.day),
-      month: Number(parts.month) - 1
-    };
-  } catch (_) {
-    return { hour: d.getHours(), minute: d.getMinutes(), weekday: d.getDay(), day: d.getDate(), month: d.getMonth() };
-  }
+  const days = tx("clockDays");
+  const weekdayNames = Array.isArray(days) ? days : null;
+  return partsInTz(new Date(), (city && city.timezone) || "", { date: true, weekdayNames });
 }
 
 export function updateClock() {
@@ -124,6 +87,20 @@ export function startClock() {
   if (clockTimer) clearInterval(clockTimer);
   updateClock();
   clockTimer = setInterval(updateClock, 15 * 1000);
+  // Догеокодируем часовые пояса для старых/мигрированных городов без timezone
+  // (раньше у часов это не делалось — и в попапе показывалось локальное время
+  // устройства вместо времени города). Используем единый модуль timezone.js.
+  const s = getState() && getState().settings;
+  const cities = Array.isArray(s && s.clockCities) ? s.clockCities : [];
+  cities.forEach((c) => {
+    if (c && !c.timezone) {
+      ensureCityTimezone(c, {
+        sendMessage: (m) => ext.runtime.sendMessage(m),
+        storage: (typeof Storage !== "undefined" ? Storage : null),
+        getState, setState, lang: getLang()
+      }).catch(() => {});
+    }
+  });
 }
 
 function closeClockPopup() {

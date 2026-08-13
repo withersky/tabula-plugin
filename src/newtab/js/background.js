@@ -297,7 +297,6 @@ export async function maybeLoadBingBackground() {
     applyBackground();
     applySelectionColor();
   } catch (err) {
-    console.warn("Bing fetch failed:", err);
     toast(tx("bingFailed"), true);
   }
 }

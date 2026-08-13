@@ -103,6 +103,11 @@ export async function runGeoSearch() {
 function renderGeoResults(list) {
   if (!geoResults) return;
   geoResults.innerHTML = "";
+  // Не показываем страны/записи без timezone — для них почасовой прогноз
+  // не может быть посчитан в местном времени (Open-Meteo не отдаёт timezone
+  // для стран, feature_code = "PCLI").
+  list = (list || []).filter(r => !r.featureCode || r.featureCode !== "PCLI");
+  if (list.length === 0) { setGeoStatus(tx("geoNotFound"), true); return; }
   list.forEach((r) => {
     const li = document.createElement("li");
     li.className = "geo-result";
@@ -132,6 +137,12 @@ function renderGeoResults(list) {
 }
 
 export async function pickGeoResult(r) {
+  // Страховка: не сохраняем страны (PCLI) и записи без timezone — иначе
+  // почасовой прогноз для города считался бы в UTC вместо местного времени.
+  if (!r || r.featureCode === "PCLI" || !r.timezone) {
+    flash(tx("geoNoCityTimezone"), true);
+    return;
+  }
   try {
     const newCity = {
       id: cryptoId(),

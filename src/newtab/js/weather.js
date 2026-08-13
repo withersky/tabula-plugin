@@ -24,6 +24,12 @@
 import { getState, setState, getLang } from "./state.js";
 import { tx } from "./i18n.js";
 import { toast, pad2 } from "./utils.js";
+// partsInTz / ensureCityTimezone — единый модуль таймзон (lib/timezone.js,
+// подключён глобально в newtab.html перед ES-модулями). Модульную функцию
+// берём под именем ensureCityTimezoneImpl, чтобы не конфликтовать с локальной
+// обёрткой ensureCityTimezone(city) в этом файле.
+const { partsInTz, ensureCityTimezone: ensureCityTimezoneImpl } =
+  (typeof globalThis !== "undefined" && globalThis.partsInTz) ? globalThis : {};
 
 const weatherWidget = document.getElementById("weatherWidget");
 const weatherIconEl = document.getElementById("weatherIcon");
@@ -151,6 +157,24 @@ async function geocodeAndSave(city) {
   }
 }
 
+/** Догеокодирует город по имени, чтобы подставить часовой пояс (timezone).
+ *  Делегирует единому модулю lib/timezone.js (ensureCityTimezone), общему с
+ *  часами. Нужно для старых/мигрированных городов, у которых timezone пустой
+ *  — иначе почасовой и дневной прогнозы считаются в UTC, а не в местном
+ *  времени города. */
+async function ensureCityTimezone(city) {
+  if (!city || city.timezone) return;
+  try {
+    await ensureCityTimezoneImpl(city, {
+      sendMessage: (m) => ext.runtime.sendMessage(m),
+      storage: (typeof Storage !== "undefined" ? Storage : null),
+      getState, setState, lang: getLang()
+    });
+  } catch (e) {
+    /* не критично: прогноз просто будет в UTC */
+  }
+}
+
 export async function refreshWeather() {
   const state = getState();
   const s0 = state && state.settings;
@@ -180,6 +204,15 @@ export async function refreshWeather() {
         return;
       }
     }
+    // Если у города нет часового пояса (старые/мигрированные города),
+    // догеокодируем его по координатам, чтобы почасовой/дневной прогноз
+    // считался в местном времени, а не в UTC.
+    if (city && !(city.timezone)) {
+      await ensureCityTimezone(city);
+      if (myGen !== _weatherGen) return;
+      s = getState() && getState().settings;
+      city = activeWeatherCity(s) || city;
+    }
     const lat = Number(city && city.lat);
     const lon = Number(city && city.lon);
     if (!isFinite(lat) || !isFinite(lon)) {
@@ -188,11 +221,13 @@ export async function refreshWeather() {
       return;
     }
     const resp = await withTimeout(
-      ext.runtime.sendMessage({ type: "weather", lat: lat, lon: lon, lang: getLang(), tz: (city && city.timezone) || "" }),
+      ext.runtime.sendMessage({ type: "weather", lat: lat, lon: lon, lang: getLang(), tz: (city && city.timezone) || "", cityName: (city && city.name) || "" }),
       8000
     );
     if (myGen !== _weatherGen) return;
-    if (!resp || resp.error || !resp.ok) throw new Error(resp && resp.error || "no response");
+    if (!resp || resp.error || !resp.ok) {
+      throw new Error(resp && resp.error || "no response");
+    }
     const humanDesc = describeSymbol(resp.symbol, getLang());
     if (humanDesc) resp.desc = humanDesc;
     const s2 = getState() && getState().settings;
@@ -208,7 +243,6 @@ export async function refreshWeather() {
     _weatherHasError = false;
   } catch (err) {
     if (myGen !== _weatherGen) return;
-    console.warn("[Tabula] weather fetch failed:", err && err.message || err);
     _weatherHasError = true;
     toast(tx("weatherLoadFailed"), true);
   } finally {
@@ -403,20 +437,23 @@ function renderWeatherPopupHourly(cache, tz) {
   }
   weatherPopupHourlyWrapEl.hidden = false;
   weatherPopupHourlyEl.textContent = "";
-  // «Сегодня» считаем в местном поясе города, а не пользователя, чтобы
-  // подсветка первого дня совпадала с местной датой прогноза.
-  let todayKey;
-  if (tz) {
+  // «Сегодня» должен совпадать с поясом, в котором РЕАЛЬНО построен прогноз
+  // (cache.tz). Если прогноз пришёл без пояса (UTC, старые/мигрированные
+  // города), а у города уже есть timezone — подсветку «сегодня» считаем по
+  // UTC-дате первого часа из кэша, иначе даты кэша (UTC) и подсветка
+  // (местный пояс) разъедутся → два «Сегодня» и сдвиг часов. Единый расчёт
+  // через partsInTz (lib/timezone.js).
+  const cacheTz = (cache && cache.tz) || "";
+  const renderTz = cacheTz || (tz || "");
+  let todayKey = null;
+  if (renderTz) {
     try {
-      const p = new Intl.DateTimeFormat("en-CA", {
-        timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit"
-      }).formatToParts(new Date()).reduce((m, x) => { m[x.type] = x.value; return m; }, {});
-      todayKey = p.year + "-" + p.month + "-" + p.day;
+      todayKey = partsInTz(new Date(), renderTz, { date: true }).date;
     } catch (_) { todayKey = null; }
-  }
-  if (!todayKey) {
-    const now = new Date();
-    todayKey = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0");
+  } else if (list[0] && list[0].date) {
+    // Прогноз в UTC, а у города timezone — чтобы не было рассинхрона,
+    // «сегодня» = дата первого (текущего) часа в кэше.
+    todayKey = list[0].date;
   }
   // Шахматный порядок дней: чётные дни — обычный фон, нечётные — alt.
   let dayParity = 0;
@@ -464,6 +501,25 @@ function renderWeatherPopup() {
       ? (city.name + (city.country ? ", " + city.country : ""))
       : ((cache && cache.city) || (s && s.weatherCity) || "");
   }
+  // «Сегодня» считаем в поясе, в котором РЕАЛЬНО построен прогноз (cache.tz).
+  // Если прогноз пришёл без пояса (UTC, старые/мигрированные города), а у
+  // города уже есть timezone — считаем «сегодня» по первой дате прогноза
+  // (UTC), иначе даты кэша и подсветка разъедутся (два «Сегодня» и сдвиг
+  // часов). Единый расчёт через partsInTz (lib/timezone.js).
+  const cityTz = (cache && cache.tz) || (city && city.timezone) || "";
+  let today;
+  if (cityTz) {
+    try {
+      today = partsInTz(new Date(), cityTz, { date: true }).date;
+    } catch (_) { today = null; }
+  }
+  if (!today && list[0] && list[0].date) {
+    today = list[0].date; // UTC-кэш + город с таймзоной: «сегодня» = первая дата прогноза
+  }
+  if (!today) {
+    const now = new Date();
+    today = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0");
+  }
   renderWeatherPopupCities(s, city);
   renderWeatherPopupHourly(cache, (city && city.timezone) || "");
   weatherPopupDaysEl.textContent = "";
@@ -474,23 +530,6 @@ function renderWeatherPopup() {
     weatherPopupDaysEl.appendChild(empty);
     return;
   }
-  const cityTz = (city && city.timezone) || "";
-  // «Сегодня» считаем в местном поясе города, чтобы подсветка первого дня
-  // совпадала с первым днём прогноза (который теперь тоже начинается с
-  // текущего дня города).
-  let today;
-  if (cityTz) {
-    try {
-      const p = new Intl.DateTimeFormat("en-CA", {
-        timeZone: cityTz, year: "numeric", month: "2-digit", day: "2-digit"
-      }).formatToParts(new Date()).reduce((m, x) => { m[x.type] = x.value; return m; }, {});
-      today = p.year + "-" + p.month + "-" + p.day;
-    } catch (_) { today = null; }
-  }
-  if (!today) {
-    const now = new Date();
-    today = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0");
-  }
   list.slice(0, maxDays).forEach((day, idx) => {
     const row = document.createElement("div");
     row.className = "weather-popup-day";
@@ -498,7 +537,7 @@ function renderWeatherPopup() {
     const isToday = idx === 0 || day.date === today;
     const label = document.createElement("span");
     label.className = "weather-popup-day-label" + (isToday ? " today" : "");
-    label.textContent = dayLabel(date, idx, isToday, getLang(), tx);
+    label.textContent = dayLabel(date, idx, isToday, getLang(), tx, cityTz);
     const fmt = (s && s.weatherDateFmt) || "dd.mm";
     if (fmt && fmt !== "off") {
       const dateEl = document.createElement("span");

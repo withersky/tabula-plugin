@@ -152,3 +152,14 @@ Day Label Weekday Russian / Метка дня: день недели (рус.)
 Day Label Weekday English / Метка дня: день недели (англ.)
     [Documentation]    2031-01-15 — среда (Wed)
     Core Function Should Equal    dayLabel    Wed    {"$date":"2031-01-15T12:00:00"}    0    ${False}    en    ${None}
+
+Day Label Tomorrow In City Tz / Метка дня: «Завтра» в поясе города
+    [Documentation]    Регресс: для восточного пояса (UTC+12, Южная Тарава) второй день
+    ...                прогноза — это городское «завтра», хотя по часам пользователя
+    ...                (Москва, UTC+3) это уже другая дата. Раньше метка показывала
+    ...                день недели вместо «Завтра». Якорь «сейчас» зафиксирован
+    ...                (2026-08-13T13:05Z): в Tarawa это 2026-08-14, завтра — 2026-08-15.
+    Core Function Should Equal    dayLabel    weatherTomorrow    {"$date":"2026-08-15T12:00:00+12:00"}    1    ${False}    ru    ${None}    Pacific/Tarawa
+    # Без tz — старое поведение по локальному времени устройства (детерминизма нет,
+    # но для совместимости оставляем ветку без tz).
+    Core Function Should Equal    dayLabel    сб    {"$date":"2031-01-18T12:00:00"}    0    ${False}    ru    ${None}
