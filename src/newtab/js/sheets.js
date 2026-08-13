@@ -111,7 +111,13 @@ export function renderSheetBar() {
     tab.addEventListener("click", (e) => {
       if (tab.querySelector("input.sheet-name-input")) return;
       if (suppressSheetClick) { suppressSheetClick = false; return; }
-      if (sh.id !== state.activeSheetId) switchSheet(sh.id);
+      // Берём ТЕКУЩИЙ активный лист, а не значение из замыкания renderSheetBar:
+      // после switchSheet DOM вкладок не пересоздаётся, поэтому замыкание state
+      // может хранить устаревший activeSheetId (в Firefox onChanged для локальных
+      // правок той же страницы не перерисовывает бар), и клик по листу, который
+      // был активен в момент последнего renderSheetBar, ошибочно считался «уже
+      // активным» и не переключался.
+      if (sh.id !== getState().activeSheetId) switchSheet(sh.id);
     });
     tab.addEventListener("dblclick", (e) => {
       e.stopPropagation();

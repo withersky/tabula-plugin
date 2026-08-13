@@ -188,7 +188,7 @@ export async function refreshWeather() {
       return;
     }
     const resp = await withTimeout(
-      ext.runtime.sendMessage({ type: "weather", lat: lat, lon: lon, lang: getLang() }),
+      ext.runtime.sendMessage({ type: "weather", lat: lat, lon: lon, lang: getLang(), tz: (city && city.timezone) || "" }),
       8000
     );
     if (myGen !== _weatherGen) return;
@@ -393,8 +393,8 @@ function renderWeatherPopupCities(s, city) {
   });
 }
 
-/** Горизонтальная лента почасового прогноза. */
-function renderWeatherPopupHourly(cache) {
+/** Горизонтальная лента почасового прогноза. tz — IANA-пояс активного города. */
+function renderWeatherPopupHourly(cache, tz) {
   if (!weatherPopupHourlyEl || !weatherPopupHourlyWrapEl) return;
   const list = (cache && Array.isArray(cache.hourly)) ? cache.hourly : [];
   if (!list.length) {
@@ -403,8 +403,21 @@ function renderWeatherPopupHourly(cache) {
   }
   weatherPopupHourlyWrapEl.hidden = false;
   weatherPopupHourlyEl.textContent = "";
-  const now = new Date();
-  const todayKey = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0");
+  // «Сегодня» считаем в местном поясе города, а не пользователя, чтобы
+  // подсветка первого дня совпадала с местной датой прогноза.
+  let todayKey;
+  if (tz) {
+    try {
+      const p = new Intl.DateTimeFormat("en-CA", {
+        timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit"
+      }).formatToParts(new Date()).reduce((m, x) => { m[x.type] = x.value; return m; }, {});
+      todayKey = p.year + "-" + p.month + "-" + p.day;
+    } catch (_) { todayKey = null; }
+  }
+  if (!todayKey) {
+    const now = new Date();
+    todayKey = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0");
+  }
   // Шахматный порядок дней: чётные дни — обычный фон, нечётные — alt.
   let dayParity = 0;
   let prevDate = null;
@@ -452,7 +465,7 @@ function renderWeatherPopup() {
       : ((cache && cache.city) || (s && s.weatherCity) || "");
   }
   renderWeatherPopupCities(s, city);
-  renderWeatherPopupHourly(cache);
+  renderWeatherPopupHourly(cache, (city && city.timezone) || "");
   weatherPopupDaysEl.textContent = "";
   if (!list.length) {
     const empty = document.createElement("div");
@@ -461,13 +474,28 @@ function renderWeatherPopup() {
     weatherPopupDaysEl.appendChild(empty);
     return;
   }
-  const now = new Date();
-  const today = now.toDateString();
+  const cityTz = (city && city.timezone) || "";
+  // «Сегодня» считаем в местном поясе города, чтобы подсветка первого дня
+  // совпадала с первым днём прогноза (который теперь тоже начинается с
+  // текущего дня города).
+  let today;
+  if (cityTz) {
+    try {
+      const p = new Intl.DateTimeFormat("en-CA", {
+        timeZone: cityTz, year: "numeric", month: "2-digit", day: "2-digit"
+      }).formatToParts(new Date()).reduce((m, x) => { m[x.type] = x.value; return m; }, {});
+      today = p.year + "-" + p.month + "-" + p.day;
+    } catch (_) { today = null; }
+  }
+  if (!today) {
+    const now = new Date();
+    today = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0");
+  }
   list.slice(0, maxDays).forEach((day, idx) => {
     const row = document.createElement("div");
     row.className = "weather-popup-day";
-    const date = day.date ? new Date(day.date + "T12:00:00") : new Date(now.getTime() + idx * 86400000);
-    const isToday = idx === 0 || date.toDateString() === today;
+    const date = day.date ? new Date(day.date + "T12:00:00") : new Date(Date.now() + idx * 86400000);
+    const isToday = idx === 0 || day.date === today;
     const label = document.createElement("span");
     label.className = "weather-popup-day-label" + (isToday ? " today" : "");
     label.textContent = dayLabel(date, idx, isToday, getLang(), tx);

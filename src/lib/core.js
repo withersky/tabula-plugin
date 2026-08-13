@@ -299,13 +299,19 @@
   }
 
   // Сворачивает почасовой timeseries met.no в прогноз по дням.
-  // День и «полдень» считаются по времени точки наблюдения (смещение указано
-  // в ISO-строке), а не по часовому поясу машины, чтобы результат был
-  // одинаковым на любом устройстве и в CI.
-  function buildDailyForecast(timeseries, lang) {
+  // День и час считаются в часовом поясе города (tz, IANA), если он задан,
+  // иначе — по UTC (прежнее поведение). Первый день начинается с ТЕКУЩЕГО
+  // часа (прошедшие часы отбрасываются), а дни раньше текущего дня города —
+  // тоже отбрасываются. Так при смене города на «вчерашний» (например, −13 ч
+  // от пользователя) прогноз честно переигрывается с того дня, который сейчас
+  // актуален в городе, и часы — с текущего часа местного времени города.
+  function buildDailyForecast(timeseries, lang, tz) {
     const days = [];
     let currentDayKey = null;
     let current = null;
+    let started = false;
+    const nowHd = hourAndDateInTz({ time: Date.now() }, tz);
+    const todayKey = nowHd ? nowHd.date : null;
     const push = () => {
       if (!current) return;
       current.symbol = current.symbol || null;
@@ -314,19 +320,30 @@
       days.push(current);
       current = null;
     };
+    if (!Array.isArray(timeseries)) return days;
     for (const item of timeseries) {
-      const d = new Date(item.time);
-      if (isNaN(d.getTime())) continue;
-      // Дата и час из ISO-строки («2026-03-05T12:00:00+03:00» → день 2026-03-05,
-      // час 12) — это локальное время точки, не зависящее от TZ окружения.
-      const iso = typeof item.time === "string" ? /^(\d{4}-\d{2}-\d{2})T(\d{2}):/.exec(item.time) : null;
-      const key = iso ? iso[1] : (d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"));
-      const hour = iso ? Number(iso[2]) : d.getHours();
-      if (key !== currentDayKey) {
-        push();
-        currentDayKey = key;
+      const hd = hourAndDateInTz(item, tz);
+      if (!hd) continue;
+      // Дни, предшествующие текущему дню города — не нужны.
+      if (todayKey && hd.date < todayKey) continue;
+      // В первом (текущем) дне отбрасываем уже прошедшие часы.
+      if (!started) {
+        if (todayKey && hd.date === todayKey && hd.hour < nowHd.hour) continue;
+        started = true;
+        currentDayKey = hd.date;
         current = {
-          date: key,
+          date: hd.date,
+          tMin: Infinity,
+          tMax: -Infinity,
+          symbol: null,
+          n: 0
+        };
+      }
+      if (hd.date !== currentDayKey) {
+        push();
+        currentDayKey = hd.date;
+        current = {
+          date: hd.date,
           tMin: Infinity,
           tMax: -Infinity,
           symbol: null,
@@ -343,9 +360,9 @@
       const sym = (item.data && item.data.next_1_hours && item.data.next_1_hours.summary && item.data.next_1_hours.summary.symbol_code) ||
         (item.data && item.data.next_6_hours && item.data.next_6_hours.summary && item.data.next_6_hours.summary.symbol_code) ||
         null;
-      // Берём символ на 12:00 дня (по времени точки) — он лучше всего
+      // Берём символ на 12:00 дня (в поясе города) — он лучше всего
       // описывает «дневную» погоду.
-      if (sym && hour === 12) current.symbol = sym;
+      if (sym && hd.hour === 12) current.symbol = sym;
       if (!current.symbol && sym) current.symbol = sym;
       current.n++;
     }
@@ -361,21 +378,50 @@
   }
 
   // Сворачивает почасовой timeseries met.no в почасовой прогноз.
-  // Час и дата берутся из ISO-строки («2026-03-05T12:00:00+03:00» → 12:00
-  // локального времени точки), температура — из instant.details.air_temperature,
-  // символ — из next_1_hours/next_6_hours. maxHours ограничивает число точек
-  // (по умолчанию 24, максимум 48).
-  function buildHourlyForecast(timeseries, lang, maxHours) {
+  // Час и дата считаются в часовом поясе города (tz, IANA), если он задан,
+  // иначе — по UTC. Прогноз начинается с ТЕКУЩЕГО часа (в поясе города) и
+  // идёт вперёд — прошедшие часы отбрасываются. maxHours ограничивает число
+  // точек (по умолчанию 24, максимум 48).
+  // Возвращает час (0..23) и дату (YYYY-MM-DD) для момента времени в заданном
+  // часовом поясе. item.time от met.no — всегда в UTC (формат ...T06:00:00Z),
+  // поэтому "голый" разбор строки даёт UTC-час, а не местное время города.
+  // Если tz задан (IANA, например "Asia/Tokyo"), считаем через Intl в местном
+  // поясе города; иначе — запасной вариант по UTC (прежнее поведение).
+  function hourAndDateInTz(item, tz) {
+    const d = new Date(item.time);
+    if (!(d instanceof Date) || isNaN(d.getTime())) return null;
+    if (tz) {
+      try {
+        const fmt = new Intl.DateTimeFormat("en-CA", {
+          timeZone: tz, hour: "2-digit", hour12: false,
+          year: "numeric", month: "2-digit", day: "2-digit"
+        });
+        const parts = fmt.formatToParts(d).reduce((m, p) => { m[p.type] = p.value; return m; }, {});
+        let hh = parts.hour;
+        if (hh === "24") hh = "00"; // некоторые движки отдают 24 для полуночи
+        return {
+          hour: Number(hh),
+          date: parts.year + "-" + parts.month + "-" + parts.day
+        };
+      } catch (_) { /* невалидный tz — падаем на UTC ниже */ }
+    }
+    const date = d.getUTCFullYear() + "-" + String(d.getUTCMonth() + 1).padStart(2, "0") + "-" + String(d.getUTCDate()).padStart(2, "0");
+    return { hour: d.getUTCHours(), date: date };
+  }
+
+  function buildHourlyForecast(timeseries, lang, maxHours, tz) {
     const limit = Math.max(1, Math.min(48, Number(maxHours) || 24));
     const hours = [];
     if (!Array.isArray(timeseries)) return hours;
+    // Текущий час в поясе города: отбрасываем всё, что раньше него.
+    const nowHd = hourAndDateInTz({ time: Date.now() }, tz);
+    const nowKey = nowHd ? (nowHd.date + "T" + String(nowHd.hour).padStart(2, "0")) : null;
     for (const item of timeseries) {
       if (hours.length >= limit) break;
-      const d = new Date(item.time);
-      if (isNaN(d.getTime())) continue;
-      const iso = typeof item.time === "string" ? /^(\d{4}-\d{2}-\d{2})T(\d{2}):/.exec(item.time) : null;
-      const date = iso ? iso[1] : (d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"));
-      const hour = iso ? Number(iso[2]) : d.getHours();
+      const hd = hourAndDateInTz(item, tz);
+      if (!hd) continue;
+      const itemKey = hd.date + "T" + String(hd.hour).padStart(2, "0");
+      if (nowKey && itemKey < nowKey) continue; // уже прошедший час — пропускаем
       const inst = item.data && item.data.instant && item.data.instant.details;
       const t = inst && Number(inst.air_temperature);
       if (!isFinite(t)) continue;
@@ -383,8 +429,8 @@
         (item.data && item.data.next_6_hours && item.data.next_6_hours.summary && item.data.next_6_hours.summary.symbol_code) ||
         null;
       hours.push({
-        date: date,
-        hour: hour,
+        date: hd.date,
+        hour: hd.hour,
         tempC: Math.round(t),
         symbol: sym,
         code: symbolToCode(sym),

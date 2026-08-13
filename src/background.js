@@ -38,7 +38,7 @@ function metnoCacheKey(lat, lon, lang) {
   return Number(lat).toFixed(4) + "," + Number(lon).toFixed(4) + "," + (lang || "ru");
 }
 
-async function fetchWeather(lat, lon, lang) {
+async function fetchWeather(lat, lon, lang, tz) {
   const cacheKey = metnoCacheKey(lat, lon, lang);
   const cached = _metnoCache.get(cacheKey);
   if (cached && Date.now() - cached.at < METNO_TTL_MS) return cached.data;
@@ -72,8 +72,8 @@ async function fetchWeather(lat, lon, lang) {
     windMs: num(data.wind_speed),
     windKmph: (data.wind_speed != null && isFinite(Number(data.wind_speed))) ? Number(data.wind_speed) * 3.6 : null,
     desc: symbol || (lang === "en" ? "Weather" : "Погода"),
-    forecast: buildDailyForecast(ts, lang),
-    hourly: buildHourlyForecast(ts, lang, 24),
+    forecast: buildDailyForecast(ts, lang, tz),
+    hourly: buildHourlyForecast(ts, lang, 24, tz),
     lat: lat,
     lon: lon,
     fetchedAt: Date.now()
@@ -184,7 +184,9 @@ ext.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       sendResponse({ error: "no-coords" });
       return true;
     }
-    fetchWeather(lat, lon, msg.lang)
+    // tz — IANA-пояс активного города (нужен, чтобы почасовой прогноз
+    // отображался в местном времени города, а не в UTC).
+    fetchWeather(lat, lon, msg.lang, msg.tz)
       .then(r => sendResponse(r))
       .catch(err => sendResponse({ error: String(err && err.message || err) }));
     return true;
@@ -197,7 +199,8 @@ ext.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 if (ext.action && ext.action.onClicked && ext.action.onClicked.addListener) {
   ext.action.onClicked.addListener(() => {
     try {
-      const url = ext._raw.runtime.getURL("newtab.html");
+      // newtab.html живёт в подпапке newtab/ — путь от корня расширения.
+      const url = ext._raw.runtime.getURL("newtab/newtab.html");
       const p = ext._raw.tabs.create({ url: url });
       if (p && typeof p.catch === "function") p.catch(() => {});
     } catch (_) { /* ignore */ }
