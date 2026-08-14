@@ -92,12 +92,7 @@ var I18N = {
     footerBy: "автор",
     footerSource: "Исходный код на GitHub",
     versionActual: "Актуальная версия: ",
-    signedChrome: "Chrome: подписан",
-    unsignedChrome: "Chrome: неподписан",
-    signedFirefox: "Firefox: подписан",
-    unsignedFirefox: "Firefox: неподписан",
     yandexLabel: "Yandex",
-    versionSeeReleases: "смотрите раздел Releases",
     versionNoArchives: "В последнем релизе нет архивов — откройте раздел Releases.",
     versionError: "Не удалось получить данные о релизе — кнопки ведут в раздел Releases."
   },
@@ -166,12 +161,7 @@ var I18N = {
     footerBy: "by",
     footerSource: "Source code on GitHub",
     versionActual: "Current version: ",
-    signedChrome: "Chrome: signed",
-    unsignedChrome: "Chrome: unsigned",
-    signedFirefox: "Firefox: signed",
-    unsignedFirefox: "Firefox: unsigned",
     yandexLabel: "Yandex",
-    versionSeeReleases: "see the Releases section",
     versionNoArchives: "The latest release has no archives — open the Releases section.",
     versionError: "Couldn't fetch release data — the buttons point to the Releases section."
   }
@@ -260,13 +250,7 @@ function renderVersionNote() {
     return;
   }
   if (s.tag) {
-    var notes = [];
-    if (s.chromeSigned === true) notes.push(t("signedChrome"));
-    if (s.chromeSigned === false) notes.push(t("unsignedChrome"));
-    if (s.firefoxSigned === true) notes.push(t("signedFirefox"));
-    if (s.firefoxSigned === false) notes.push(t("unsignedFirefox"));
-    versionNote.textContent = t("versionActual") + s.tag + " · " +
-      (notes.length ? notes.join(", ") : t("versionSeeReleases"));
+    versionNote.textContent = t("versionActual") + s.tag;
   } else {
     versionNote.textContent = "";
   }
@@ -416,7 +400,7 @@ function applyFirefoxVariant(name) {
   }
 }
 
-function applyLinks(tag, chromeName, firefoxName, yandexName, signed) {
+function applyLinks(tag, chromeName, firefoxName, yandexName) {
   if (chromeName) {
     chromeBtn.href = "https://github.com/" + REPO + "/releases/download/" +
       tag + "/" + chromeName;
@@ -433,8 +417,6 @@ function applyLinks(tag, chromeName, firefoxName, yandexName, signed) {
   loaded = true;
   versionState = {
     tag: tag || null,
-    chromeSigned: chromeName ? signed : null,
-    firefoxSigned: firefoxName ? signed : null,
     noArchives: !chromeName && !firefoxName && !yandexName
   };
   renderVersionNote();
@@ -471,8 +453,6 @@ function loadFromApi() {
       loaded = true;
       versionState = {
         tag: release.tag_name || null,
-        chromeSigned: chromeDL ? !!chromeDL.signed : null,
-        firefoxSigned: firefoxDL ? !!firefoxDL.signed : null,
         noArchives: !chromeDL && !firefoxDL && !yandexDL
       };
       renderVersionNote();
@@ -491,7 +471,7 @@ fetch(LATEST_FILE)
     if (!snap || !snap.tag || !(snap.chrome || snap.firefox || snap.yandex)) {
       throw new Error("latest.json is empty");
     }
-    applyLinks(snap.tag, snap.chrome || "", snap.firefox || "", snap.yandex || "", false);
+    applyLinks(snap.tag, snap.chrome || "", snap.firefox || "", snap.yandex || "");
     // Фоном уточняем через API (на случай ручного релиза мимо workflow).
     loadFromApi().catch(function () { /* снимок уже применили */ });
   })
