@@ -25,7 +25,7 @@ import { isSearcherOpen, openSearcher } from "./searcher.js";
 import { isShortcutsOpen, hideShortcuts, showShortcuts } from "./shortcuts.js";
 import { closeModal, hideCtx, hideCtxEmpty, hideSheetCtx } from "./grid.js";
 import { closeSheetModal, switchSheetBySwipe } from "./sheets.js";
-import { quickInput, hideSuggest, markSuggestActive, onQuickGo, suggestState } from "./search.js";
+import { quickInput, hideSuggest, markSuggestActive, onQuickGo, suggestState, setSuggestIndex } from "./search.js";
 import { keyCode } from "./utils.js";
 
 const modalEl        = document.getElementById("modal");
@@ -88,7 +88,7 @@ export function bindHotkeyEvents() {
         const next = (e.key === "ArrowDown")
           ? (sst.index + 1) % sst.items.length
           : (sst.index - 1 + sst.items.length) % sst.items.length;
-        sst.index = next;
+        setSuggestIndex(next);
         markSuggestActive();
         return;
       }

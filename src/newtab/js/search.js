@@ -159,6 +159,12 @@ export function suggestState() {
   return { items: _suggestItems, index: _suggestIndex };
 }
 
+/** Устанавливает активный индекс подсказки (навигация стрелками). */
+export function setSuggestIndex(i) {
+  const n = _suggestItems.length;
+  _suggestIndex = (n === 0 || i < 0 || i >= n) ? -1 : i;
+}
+
 /** Слушает строку поиска: submit, ввод, фокус, blur, клик мимо. */
 export function bindSearchEvents() {
   quickGo.addEventListener("submit", onQuickGo);
