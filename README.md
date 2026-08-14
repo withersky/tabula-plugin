@@ -110,6 +110,7 @@ tabula-plugin/
 │   │   ├── timezone.js        ЕДИНЫЙ модуль таймзон (partsInTz / resolveTimezoneByName /
 │   │   │                      ensureCityTimezone) — общий для виджетов часов и погоды
 │   │   └── storage.js         дефолты, миграция v1→v2→v3, i18n, helpers
+│   │   └── i18n-shared.js     общая обвязка data-i18n* (глобал, используется newtab/options)
 │   ├── i18n/                  переводы (JSON — правят сообществом)
 │   │   ├── ru.json, en.json        словарь интерфейса
 │   │   ├── symbols.{ru,en}.json    описания погодных символов met.no
@@ -398,7 +399,7 @@ Release workflow пишет его при каждом релизе (без `upd
 
 ## Заметки
 
-- **Фавиконы** подгружаются через Google Favicon Service; если иконки нет — буквенный бейдж.
+- **Фавиконы** подгружаются напрямую с сайта (`/favicon.ico`, без внешних сервисов — ради приватности), кэшируются как data URL в `chrome.storage.local` (лимит ~8 МБ, до 400 хостов, LRU по времени). Если иконки нет — буквенный бейдж первой буквы названия.
 - **Свои изображения** хранятся как data URL в `chrome.storage.local` (лимит ~2 МБ).
 - **Bing daily** подгружается через service worker (нужны `host_permissions`), кешируется на день.
 - **Погода met.no** запрашивается через service worker; успешные ответы кешируются в памяти

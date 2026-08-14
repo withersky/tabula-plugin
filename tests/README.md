@@ -2,8 +2,11 @@
 
 Юнит-тесты **чистой логики** расширения ([`src/lib/core.js`](../src/lib/core.js:1),
 [`src/lib/storage.js`](../src/lib/storage.js:1) и [`src/lib/timezone.js`](../src/lib/timezone.js:1))
-на [Robot Framework](https://robotframework.org/). Браузер и расширение не запускаются:
+на [Robot Framework](https://robotframework.org/). Браузер и DOM-страницы не запускаются:
 функции вызываются в отдельном Node-процессе, результат сравнивается с ожидаемым значением.
+Логика визуальных страниц (`newtab/`, `options/`) и общий модуль
+[`src/lib/i18n-shared.js`](../src/lib/i18n-shared.js:1) тестами не покрыты — это проверяется
+вручную в браузере.
 
 Браузерозависимое поведение (в т.ч. **Gecko/Firefox**) покрывается детерминированно —
 см. маркеры `{"$gecko": true}` / `{"$noLeadingZeroHour": true}` в таблице «Типы аргументов»

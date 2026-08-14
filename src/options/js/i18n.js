@@ -46,12 +46,7 @@ export function updateFontSelectCustomVisibility(sel, wrap) {
 
 /** Заполняет статические тексты, заголовок, шрифты и индекс поиска. */
 export function applyI18nStatic() {
-  document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = tx(el.dataset.i18n); });
-  document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
-    el.placeholder = tx(el.dataset.i18nPlaceholder);
-  });
-  document.querySelectorAll("[data-i18n-title]").forEach(el => { el.title = tx(el.dataset.i18nTitle); });
-  document.documentElement.lang = getLang();
+  applyI18nStaticCommon(tx, getLang);
   document.title = tx("settingsTitle");
   populateFontSelect(fontFamilySelect);
   updateFontSelectCustomVisibility(fontFamilySelect, fontFamilyCustomWrap);
