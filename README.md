@@ -33,6 +33,25 @@
 > Если другое расширение уже переопределяет новую вкладку, отключите его —
 > браузер использует только одно такое расширение одновременно.
 
+### Яндекс Браузер
+
+Яндекс Браузер **не позволяет переопределять** страницу новой вкладки
+через `chrome_url_overrides`, поэтому схема запуска другая — расширение
+«живёт» в панели расширений и открывает таблицу по клику на иконку:
+
+1. Скачайте архив **Yandex** со [страницы релизов](https://github.com/withersky/tabula-plugin/releases/latest).
+2. Распакуйте его в любую папку.
+3. Откройте `browser://extensions` и включите **«Режим разработчика»** (внизу страницы).
+4. Нажмите **«Загрузить расширение»** и выберите распакованную папку.
+5. **Закрепите** иконку Tabula в панели расширений (через меню «Показать на панели»),
+   чтобы она всегда была под рукой.
+6. Клик по иконке открывает `newtab/newtab.html` в новой вкладке. Настройки —
+   иконка ⚙ в правом верхнем углу таблицы (или пункт в меню расширения).
+
+> Открытие по клику обеспечивает [`src/background.js`](src/background.js:288):
+> в `manifest.yandex.json` нет `chrome_url_overrides`, поэтому событие
+> `action.onClicked` срабатывает и создаёт вкладку с таблицей.
+
 ## Возможности
 
 **Листы и сетка**
@@ -102,6 +121,8 @@ tabula-plugin/
 ├── src/                       исходники расширения (содержимое = пакет)
 │   ├── manifest.json          MV3 (Chrome): service_worker, newtab override
 │   ├── manifest.firefox.json  MV3 (Firefox 140+): background.scripts, gecko.id
+│   ├── manifest.yandex.json   MV3 (Yandex): service_worker, БЕЗ newtab override
+│   │                          (запуск кликом по иконке из панели расширений)
 │   ├── background.js          service worker / event page: проксирует Bing и met.no
 │   │                          (ответы met.no кешируются в памяти: TTL 10 мин, до 8 городов)
 │   ├── lib/
@@ -126,7 +147,7 @@ tabula-plugin/
 │   └── icons/
 ├── scripts/
 │   └── gen-i18n.mjs           генератор src/i18n/generated/*.js из JSON
-├── build.sh                   сборка dist/{chrome,firefox} из src/
+├── build.sh                   сборка dist/{chrome,firefox,yandex} из src/
 ├── site/                      сайт-визитка (GitHub Pages)
 │   └── icons/                 копии иконок расширения (на Pages деплоится только site/)
 ├── tests/                     юнит-тесты чистой логики (см. tests/README.md)

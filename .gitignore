@@ -2,6 +2,7 @@
 dist/
 tabula-chrome-*.zip
 tabula-firefox-*.zip
+tabula-yandex-*.zip
 release_notes.md
 
 # Generated i18n bridge scripts (produced by `node scripts/gen-i18n.mjs`)

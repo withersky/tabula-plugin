@@ -82,6 +82,13 @@ var I18N = {
     installFfUnsigned4: "Дополнение действует только в текущем сеансе — после перезапуска Firefox загрузите его снова.",
     installFfUnsignedNote: "Неподписанная версия не обновляется автоматически.",
     installHint: "Если другое расширение уже переопределяет новую вкладку, отключите его — браузер использует только одно такое расширение одновременно.",
+    btnOsYandex: "Яндекс Браузер · из панели",
+    installYandexHint: "Яндекс Браузер не переопределяет страницу новой вкладки, поэтому расширение запускается кликом по иконке из панели расширений.",
+    installYandex1: "Скачайте архив <b>Yandex</b> с кнопки выше.",
+    installYandex3: "Откройте <code>browser://extensions</code> и включите «Режим разработчика» (внизу страницы).",
+    installYandex4: "Нажмите «Загрузить расширение» и выберите распакованную папку.",
+    installYandex5: "Закрепите иконку Tabula в панели расширений (через меню «Показать на панели»), чтобы она всегда была под рукой.",
+    installYandex6: "Клик по иконке открывает новую вкладку с таблицей. Настройки — иконка ⚙ в её правом верхнем углу.",
     footerBy: "автор",
     footerSource: "Исходный код на GitHub",
     versionActual: "Актуальная версия: ",
@@ -89,6 +96,7 @@ var I18N = {
     unsignedChrome: "Chrome: неподписан",
     signedFirefox: "Firefox: подписан",
     unsignedFirefox: "Firefox: неподписан",
+    yandexLabel: "Yandex",
     versionSeeReleases: "смотрите раздел Releases",
     versionNoArchives: "В последнем релизе нет архивов — откройте раздел Releases.",
     versionError: "Не удалось получить данные о релизе — кнопки ведут в раздел Releases."
@@ -148,6 +156,13 @@ var I18N = {
     installFfUnsigned4: "The extension only works for the current session — reload it after restarting Firefox.",
     installFfUnsignedNote: "The unsigned version does not update automatically.",
     installHint: "If another extension already overrides the new tab page, disable it — the browser only uses one such extension at a time.",
+    btnOsYandex: "Yandex Browser · from toolbar",
+    installYandexHint: "Yandex Browser does not override the new tab page, so the extension launches from its toolbar icon.",
+    installYandex1: "Download the <b>Yandex</b> archive from the button above.",
+    installYandex3: "Open <code>browser://extensions</code> and enable “Developer mode” (at the bottom of the page).",
+    installYandex4: "Click “Load extension” and select the unpacked folder.",
+    installYandex5: "Pin the Tabula icon to the extensions bar (via “Show on the bar”) so it is always at hand.",
+    installYandex6: "Clicking the icon opens a new tab with the table. Settings — the ⚙ icon in its top-right corner.",
     footerBy: "by",
     footerSource: "Source code on GitHub",
     versionActual: "Current version: ",
@@ -155,6 +170,7 @@ var I18N = {
     unsignedChrome: "Chrome: unsigned",
     signedFirefox: "Firefox: signed",
     unsignedFirefox: "Firefox: unsigned",
+    yandexLabel: "Yandex",
     versionSeeReleases: "see the Releases section",
     versionNoArchives: "The latest release has no archives — open the Releases section.",
     versionError: "Couldn't fetch release data — the buttons point to the Releases section."
@@ -315,6 +331,7 @@ var LATEST_FILE = "latest.json"; // статический снимок посл
 
 var chromeBtn = document.querySelector('[data-browser="chrome"]');
 var firefoxBtn = document.querySelector('[data-browser="firefox"]');
+var yandexBtn = document.querySelector('[data-browser="yandex"]');
 
 applyLang();
 updateMockClock();
@@ -355,6 +372,16 @@ function findDownloadAsset(assets, browser) {
   var extRe = isFirefox ? /\.xpi$/i : /\.zip$/i;
   var unsignedRe = isFirefox ? /-unsign\.xpi$/i : /-unsign\.zip$/i;
 
+  // Яндекс-сборка — обычный .zip расширения (без подписи). Ищем строго
+  // по суффиксу -yandex, иначе можем случайно захватить chrome-архив.
+  if (browser === "yandex") {
+    var yandexAsset = findAsset(assets, /-yandex.*\.zip$/i);
+    if (yandexAsset) {
+      return { asset: yandexAsset, signed: false };
+    }
+    return null;
+  }
+
   var signed = findAsset(assets, function (name) {
     return extRe.test(name) && !unsignedRe.test(name);
   });
@@ -389,7 +416,7 @@ function applyFirefoxVariant(name) {
   }
 }
 
-function applyLinks(tag, chromeName, firefoxName, signed) {
+function applyLinks(tag, chromeName, firefoxName, yandexName, signed) {
   if (chromeName) {
     chromeBtn.href = "https://github.com/" + REPO + "/releases/download/" +
       tag + "/" + chromeName;
@@ -398,13 +425,17 @@ function applyLinks(tag, chromeName, firefoxName, signed) {
     firefoxBtn.href = "https://github.com/" + REPO + "/releases/download/" +
       tag + "/" + firefoxName;
   }
+  if (yandexBtn && yandexName) {
+    yandexBtn.href = "https://github.com/" + REPO + "/releases/download/" +
+      tag + "/" + yandexName;
+  }
   applyFirefoxVariant(firefoxName || "");
   loaded = true;
   versionState = {
     tag: tag || null,
     chromeSigned: chromeName ? signed : null,
     firefoxSigned: firefoxName ? signed : null,
-    noArchives: !chromeName && !firefoxName
+    noArchives: !chromeName && !firefoxName && !yandexName
   };
   renderVersionNote();
 }
@@ -430,9 +461,11 @@ function loadFromApi() {
       var assets = release.assets || [];
       var chromeDL = findDownloadAsset(assets, "chrome");
       var firefoxDL = findDownloadAsset(assets, "firefox");
+      var yandexDL = yandexBtn ? findDownloadAsset(assets, "yandex") : null;
 
       if (chromeDL) chromeBtn.href = chromeDL.asset.browser_download_url;
       if (firefoxDL) firefoxBtn.href = firefoxDL.asset.browser_download_url;
+      if (yandexDL) yandexBtn.href = yandexDL.asset.browser_download_url;
       applyFirefoxVariant(firefoxDL ? firefoxDL.asset.name : "");
 
       loaded = true;
@@ -440,7 +473,7 @@ function loadFromApi() {
         tag: release.tag_name || null,
         chromeSigned: chromeDL ? !!chromeDL.signed : null,
         firefoxSigned: firefoxDL ? !!firefoxDL.signed : null,
-        noArchives: !chromeDL && !firefoxDL
+        noArchives: !chromeDL && !firefoxDL && !yandexDL
       };
       renderVersionNote();
     });
@@ -455,10 +488,10 @@ fetch(LATEST_FILE)
     return res.json();
   })
   .then(function (snap) {
-    if (!snap || !snap.tag || !(snap.chrome || snap.firefox)) {
+    if (!snap || !snap.tag || !(snap.chrome || snap.firefox || snap.yandex)) {
       throw new Error("latest.json is empty");
     }
-    applyLinks(snap.tag, snap.chrome || "", snap.firefox || "", false);
+    applyLinks(snap.tag, snap.chrome || "", snap.firefox || "", snap.yandex || "", false);
     // Фоном уточняем через API (на случай ручного релиза мимо workflow).
     loadFromApi().catch(function () { /* снимок уже применили */ });
   })

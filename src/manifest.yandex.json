@@ -1,0 +1,43 @@
+{
+  "manifest_version": 3,
+  "name": "Tabula",
+  "version": "2.8.13",
+  "description": "Customizable spreadsheet-style speed-dial new tab page with sheets, themes, and a Bing daily image option.",
+  "minimum_chrome_version": "108",
+  "permissions": [
+    "storage",
+    "bookmarks"
+  ],
+  "host_permissions": [
+    "https://www.bing.com/*",
+    "https://www.google.com/*",
+    "https://api.met.no/*",
+    "https://geocoding-api.open-meteo.com/*",
+    "https://suggestqueries.google.com/*",
+    "https://suggest.yandex.ru/*",
+    "https://api.bing.com/*",
+    "https://*/*",
+    "http://*/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_title": "Tabula — открыть новую вкладку",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "author": "withersky",
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": true
+  }
+}

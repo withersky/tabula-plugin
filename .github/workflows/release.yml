@@ -24,9 +24,9 @@ name: release
 # архивами (.zip для Chrome, .xpi для Firefox) и телом сообщения в качестве release notes.
 #
 # Требования:
-#   - В manifest.json и manifest.firefox.json поле `version` должно
-#     совпадать с `X.Y.Z` (иначе workflow упадёт — это страховка от
-#     случайного рассинхрона тега и реальной версии расширения).
+#   - В manifest.json, manifest.firefox.json и manifest.yandex.json поле
+#     `version` должно совпадать с `X.Y.Z` (иначе workflow упадёт — это
+#     страховка от случайного рассинхрона тега и реальной версии расширения).
 #   - В Settings → Actions → General → Workflow permissions должен быть
 #     включён «Read and write permissions» (нужно для создания тегов).
 
@@ -151,7 +151,7 @@ jobs:
           set -euo pipefail
           VERSION="${{ steps.meta.outputs.version }}"
 
-          for f in src/manifest.json src/manifest.firefox.json; do
+          for f in src/manifest.json src/manifest.firefox.json src/manifest.yandex.json; do
             actual="$(jq -r '.version' "$f")"
             if [[ "$actual" != "$VERSION" ]]; then
               echo "::error file=$f::version '$actual' does not match release '$VERSION'." \
@@ -238,11 +238,14 @@ jobs:
 
           (cd dist/chrome   && zip -r "../../tabula-chrome-v${VERSION}-unsign.zip"   .)
           (cd dist/firefox  && zip -r "../../tabula-firefox-v${VERSION}-unsign.xpi"  .)
+          (cd dist/yandex   && zip -r "../../tabula-yandex-v${VERSION}-unsign.zip"   .)
 
           ls -la tabula-*.zip tabula-*.xpi
           unzip -l "tabula-chrome-v${VERSION}-unsign.zip"  | tail -n +4 | head -n -2 || true
           echo "---"
           unzip -l "tabula-firefox-v${VERSION}-unsign.xpi" | tail -n +4 | head -n -2 || true
+          echo "---"
+          unzip -l "tabula-yandex-v${VERSION}-unsign.zip"  | tail -n +4 | head -n -2 || true
 
       - name: Create git tag
         if: steps.meta.outputs.skip != 'true'
@@ -292,6 +295,7 @@ jobs:
           gh release upload "$TAG" \
             "tabula-chrome-v${VERSION}-unsign.zip" \
             "tabula-firefox-v${VERSION}-unsign.xpi" \
+            "tabula-yandex-v${VERSION}-unsign.zip" \
             --clobber
           echo "Uploaded unsign artifacts to release $TAG."
 
@@ -314,7 +318,8 @@ jobs:
           {
             "tag": "${TAG}",
             "chrome": "tabula-chrome-v${VERSION}-unsign.zip",
-            "firefox": "tabula-firefox-v${VERSION}-unsign.xpi"
+            "firefox": "tabula-firefox-v${VERSION}-unsign.xpi",
+            "yandex": "tabula-yandex-v${VERSION}-unsign.zip"
           }
           EOF
 

@@ -21,12 +21,17 @@
 # Usage:
 #   ./build.sh chrome   -> build to dist/chrome/
 #   ./build.sh firefox  -> build to dist/firefox/
-#   ./build.sh all      -> build both
+#   ./build.sh yandex   -> build to dist/yandex/
+#   ./build.sh all      -> build chrome + firefox + yandex
 #
 # The script copies the shared source tree and selects the right manifest
 # for each target. The Firefox build uses manifest.firefox.json (which
 # declares background.scripts instead of service_worker for compatibility
-# with Firefox 140+).
+# with Firefox 140+). The Yandex build uses manifest.yandex.json: a Chromium
+# MV3 manifest WITHOUT chrome_url_overrides — Яндекс Браузер не позволяет
+# переопределять новую вкладку, поэтому расширение запускается кликом по
+# иконке из панели (background.js слушает action.onClicked и открывает
+# newtab/newtab.html).
 
 set -euo pipefail
 
@@ -74,6 +79,23 @@ build_firefox() {
   echo "Firefox build -> $out"
 }
 
+build_yandex() {
+  local out="$DIST/yandex"
+  rm -rf "$out"
+  mkdir -p "$out"
+
+  cp -R "$SRC_DIR/." "$out/"
+
+  # Яндекс Браузер не поддерживает chrome_url_overrides для newtab, поэтому
+  # используем манифест без переопределения страницы. Запуск — кликом по
+  # иконке расширения (action.onClicked в background.js открывает newtab.html).
+  rm -f "$out/manifest.json" "$out/manifest.firefox.json"
+  cp "$SRC_DIR/manifest.yandex.json" "$out/manifest.json"
+  rm -f "$out/manifest.yandex.json"
+
+  echo "Yandex build -> $out"
+}
+
 case "${1:-}" in
   chrome)
     build_chrome
@@ -81,12 +103,16 @@ case "${1:-}" in
   firefox)
     build_firefox
     ;;
+  yandex)
+    build_yandex
+    ;;
   all)
     build_chrome
     build_firefox
+    build_yandex
     ;;
   *)
-    echo "Usage: $0 {chrome|firefox|all}" >&2
+    echo "Usage: $0 {chrome|firefox|yandex|all}" >&2
     exit 1
     ;;
 esac

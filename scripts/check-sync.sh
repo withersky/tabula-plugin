@@ -18,13 +18,15 @@
 #
 # Проверка синхронности dist/ с src/ для расширения Tabula.
 #
-# Слабость «ручная сборка dist»: build.sh копирует src → dist/chrome и
-# dist/firefox, и легко забыть пересобрать после правок. Этот скрипт
-# пересобирает оба пакета и сверяет содержимое dist с ожидаемым:
+# Слабость «ручная сборка dist»: build.sh копирует src → dist/chrome,
+# dist/firefox и dist/yandex, и легко забыть пересобрать после правок.
+# Этот скрипт пересобирает пакеты и сверяет содержимое dist с ожидаемым:
 #
 #   dist/chrome   == src (без manifest.firefox.json)
-#   dist/firefox  == src (без manifest.json/manifest.firefox.json),
+#   dist/firefox  == src (без manifest.json/manifest.firefox.json/manifest.yandex.json),
 #                    а manifest.firefox.json должен лежать как manifest.json
+#   dist/yandex   == src (без manifest.json/manifest.firefox.json/manifest.yandex.json),
+#                    а manifest.yandex.json должен лежать как manifest.json
 #
 # Использование:
 #   ./scripts/check-sync.sh
@@ -54,14 +56,23 @@ check_dir() {
   fi
 }
 
-check_dir "chrome"  "chrome"  manifest.firefox.json
-check_dir "firefox" "firefox" manifest.json manifest.firefox.json
+check_dir "chrome"  "chrome"  manifest.firefox.json manifest.yandex.json
+check_dir "firefox" "firefox" manifest.json manifest.firefox.json manifest.yandex.json
+check_dir "yandex"  "yandex"  manifest.json manifest.firefox.json manifest.yandex.json
 
 # В Firefox-сборке манифест должен быть именно manifest.firefox.json.
 if cmp -s "$ROOT/src/manifest.firefox.json" "$ROOT/dist/firefox/manifest.json"; then
   echo "OK:   dist/firefox/manifest.json совпадает с src/manifest.firefox.json"
 else
   echo "FAIL: dist/firefox/manifest.json отличается от src/manifest.firefox.json" >&2
+  status=1
+fi
+
+# В Yandex-сборке манифест должен быть именно manifest.yandex.json.
+if cmp -s "$ROOT/src/manifest.yandex.json" "$ROOT/dist/yandex/manifest.json"; then
+  echo "OK:   dist/yandex/manifest.json совпадает с src/manifest.yandex.json"
+else
+  echo "FAIL: dist/yandex/manifest.json отличается от src/manifest.yandex.json" >&2
   status=1
 fi
 
