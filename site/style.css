@@ -172,6 +172,10 @@ main,
   background: rgba(120, 140, 255, 0.18);
 }
 
+.nav .nav-external {
+  color: var(--primary-soft);
+}
+
 .lang-switch {
   display: inline-flex;
   padding: 3px;
