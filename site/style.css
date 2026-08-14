@@ -62,6 +62,56 @@ body::before {
   background: radial-gradient(900px 420px at 50% -120px, rgba(120, 140, 255, 0.13), transparent 65%);
 }
 
+/* ----- Blurred Bing "image of the day" background ----- */
+/* The image layer sits above the gradient (z-index 0) but below all content
+   (everything else lives in normal flow with default z-index:auto > 0 only
+   where positioned). We keep the page gradient as a fallback; the image fades
+   in once it finishes loading. A dark overlay + blur make text readable. */
+
+.site-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-color: var(--bg); /* исходный цвет фона (#1a1a24) */
+  /* Исходный фон сайта ДО Bing — градиент #1a1a24→#15151e. Он же
+     выступает fallback-ом: если картинка не загрузилась, слой просто
+     показывает этот градиент вместо прозрачности. */
+  background-image: linear-gradient(180deg, #1a1a24 0%, #15151e 100%);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  /* start hidden — JS reveals it after a successful load (или при сбое,
+     чтобы стал виден fallback-градиент) */
+  opacity: 0;
+  transition: opacity 800ms ease;
+  /* heavy blur + slight scale so the blur has no hard edges */
+  filter: blur(22px) saturate(1.05);
+  transform: scale(1.08);
+}
+
+.site-bg.loaded { opacity: 1; }
+
+/* Dark, slightly tinted scrim for contrast over any picture */
+.site-bg-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(20, 20, 30, 0.72) 0%, rgba(15, 15, 24, 0.86) 100%),
+    radial-gradient(900px 420px at 50% -120px, rgba(120, 140, 255, 0.10), transparent 65%);
+}
+
+/* Keep the content above the background layers */
+main,
+.footer {
+  position: relative;
+  z-index: 1;
+}
+
+/* topbar already uses sticky + z-index:30 to stay above content on scroll */
+
 .container { width: min(1100px, 100% - 40px); margin-inline: auto; }
 
 /* ---------- Topbar (same as options page) ---------- */

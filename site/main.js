@@ -461,6 +461,63 @@ function loadFromApi() {
     });
 }
 
+// ---------- Blurred Bing "image of the day" background ----------
+/* Лендинг — статический; берём картинку дня через CORS-дружественный
+   прокси bing.biturl.top (так же, как в рабочем примере aas/). Прямой
+   запрос к bing.com/HPImageArchive.aspx браузер режет по CORS, поэтому
+   используем прокси: format=json даёт URL картинки, а format=image —
+   резервный прямой URL. Саму картинку подтверждаем загрузкой через Image(),
+   и только после onload показываем слой. При любой ошибке остаётся
+   штатный градиент body. */
+function loadBingBackground(mkt) {
+  var el = document.getElementById("siteBg");
+  if (!el) return;
+
+  // Показать слой с исходным градиентом-фоллбэком (без картинки Bing).
+  var showFallback = function () {
+    // не перезаписываем background-image, если картинка уже применена
+    if (!el.classList.contains("with-image")) el.classList.add("loaded");
+  };
+
+  var setImage = function (url) {
+    var probe = new Image();
+    probe.onload = function () {
+      el.style.backgroundImage = 'url("' + url + '")';
+      el.classList.add("with-image", "loaded");
+    };
+    probe.onerror = function () { showFallback(); };
+    probe.src = url;
+  };
+
+  var jsonUrl = "https://bing.biturl.top/?resolution=1920&format=json&index=0&mkt=" +
+    encodeURIComponent(mkt || "ru-RU");
+  var fallbackUrl = "https://bing.biturl.top/?resolution=1920&format=image&index=0&mkt=" +
+    encodeURIComponent(mkt || "ru-RU");
+
+  fetch(jsonUrl, { mode: "cors" })
+    .then(function (res) {
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return res.json();
+    })
+    .then(function (data) {
+      var url = data && data.url;
+      if (!url) throw new Error("No url in Bing response");
+      setImage(url);
+    })
+    .catch(function () {
+      // JSON-прокси недоступен — пробуем прямой image-URL, иначе фоллбэк.
+      var probe = new Image();
+      probe.onload = function () {
+        el.style.backgroundImage = 'url("' + fallbackUrl + '")';
+        el.classList.add("with-image", "loaded");
+      };
+      probe.onerror = function () { showFallback(); };
+      probe.src = fallbackUrl;
+    });
+}
+
+loadBingBackground("ru-RU");
+
 // Статический снимок релиза лежит на том же origin (GitHub Pages) и работает
 // даже если api.github.com недоступен/заблокирован. Если снимка нет —
 // пробуем GitHub API, а при неудаче оставляем ссылку на страницу релизов.
