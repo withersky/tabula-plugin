@@ -90,7 +90,6 @@ var I18N = {
     installYandex4: "Нажмите «Загрузить расширение» и выберите распакованную папку.",
     installYandex5: "Закрепите иконку Tabula в панели расширений (через меню «Показать на панели»), чтобы она всегда была под рукой.",
     installYandex6: "Клик по иконке открывает новую вкладку с таблицей. Настройки — иконка ⚙ в её правом верхнем углу.",
-    footerBy: "автор",
     footerSource: "Исходный код на GitHub",
     versionActual: "Актуальная версия: ",
     yandexLabel: "Yandex",
@@ -160,7 +159,6 @@ var I18N = {
     installYandex4: "Click “Load extension” and select the unpacked folder.",
     installYandex5: "Pin the Tabula icon to the extensions bar (via “Show on the bar”) so it is always at hand.",
     installYandex6: "Clicking the icon opens a new tab with the table. Settings — the ⚙ icon in its top-right corner.",
-    footerBy: "by",
     footerSource: "Source code on GitHub",
     versionActual: "Current version: ",
     yandexLabel: "Yandex",
@@ -322,6 +320,10 @@ var yandexBtn = document.querySelector('[data-browser="yandex"]');
 applyLang();
 updateMockClock();
 setInterval(updateMockClock, 1000);
+
+/* ---------- Year in the footer ---------- */
+var year = document.getElementById("year");
+if (year) year.textContent = new Date().getFullYear();
 
 /* Language switch */
 var langBtns = document.querySelectorAll(".lang-btn");
