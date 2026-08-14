@@ -35,7 +35,7 @@ import { applyBackground, applySelectionColor, maybeLoadBingBackground } from ".
 import { renderGrid, closeModal, onSubmitBookmark, bindGridEvents } from "./grid.js";
 import { renderSheetBar, updateSheetBarActive, refreshSheetCtx, bindSheetEvents, switchSheetBySwipe } from "./sheets.js";
 import { initFavicons, prefetchFavicons } from "./favicons.js";
-import { bindSearcherEvents } from "./searcher.js";
+import { bindSearcherEvents, openSearcher } from "./searcher.js";
 import { bindShortcutEvents } from "./shortcuts.js";
 import { bindHotkeyEvents } from "./hotkeys.js";
 
@@ -407,6 +407,10 @@ function bindEvents() {
     if (ext.runtime.openOptionsPage) ext.runtime.openOptionsPage();
     else window.open("options.html", "_blank");
   });
+  const searchPaletteBtn = document.getElementById("searchPaletteBtn");
+  if (searchPaletteBtn) {
+    searchPaletteBtn.addEventListener("click", () => openSearcher());
+  }
   document.getElementById("cancelBtn").addEventListener("click", closeModal);
   tabForm.addEventListener("submit", onSubmitBookmark);
 

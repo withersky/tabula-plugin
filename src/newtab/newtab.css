@@ -138,7 +138,7 @@ body.preview .clock-popup {
 /* ---------- topbar ---------- */
 .topbar {
   display: grid;
-  grid-template-columns: auto 1fr auto auto;
+  grid-template-columns: auto 1fr auto auto auto;
   align-items: center;
   column-gap: calc(12px * var(--ui-scale));
   padding: calc(12px * var(--ui-scale)) calc(16px * var(--ui-scale));
@@ -704,7 +704,7 @@ white-space: nowrap;
 .icon-btn.small { width: calc(26px * var(--ui-scale)); height: calc(26px * var(--ui-scale)); font-size: calc(13px * var(--ui-scale)); border-radius: calc(8px * var(--ui-scale)); }
 
 .opts-fab {
-  grid-column: 4;
+  grid-column: 5;
   justify-self: end;
   width: calc(40px * var(--ui-scale));
   height: calc(40px * var(--ui-scale));
@@ -720,6 +720,24 @@ white-space: nowrap;
   to   { transform: rotate(0) scale(1); opacity: 1; }
 }
 .opts-fab:hover { background: var(--topbar-bg-hover); transform: scale(1.06); }
+
+.search-palette-fab {
+  grid-column: 4;
+  justify-self: end;
+  width: calc(40px * var(--ui-scale));
+  height: calc(40px * var(--ui-scale));
+  border-radius: 50%;
+  background: var(--topbar-bg-hover);
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--text-color);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--input-border);
+  animation: fadeIn 240ms ease, fabSpin 600ms ease-out;
+  transition: background 160ms ease, transform 160ms ease;
+}
+.search-palette-fab svg { display: block; }
+.search-palette-fab:hover { background: var(--topbar-bg-hover); transform: scale(1.06); }
+.search-palette-fab:active { transform: scale(0.97); }
 
 /* ---------- spreadsheet grid (static, transparent cells) ---------- */
 .grid-wrap {

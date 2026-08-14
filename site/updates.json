@@ -3,8 +3,8 @@
     "tabula@withersky.local": {
       "updates": [
         {
-          "version": "2.8.10",
-          "update_link": "https://github.com/withersky/tabula-plugin/releases/download/v2.8.10/tabula-firefox-v2.8.10.xpi",
+          "version": "2.8.11",
+          "update_link": "https://github.com/withersky/tabula-plugin/releases/download/v2.8.11/tabula-firefox-v2.8.11.xpi",
           "update_hash": "sha256:a1754e2e9247d0693d3a8f76fd08a3dc7a91982e82605e4e2604cb1be030f901"
         }
       ]

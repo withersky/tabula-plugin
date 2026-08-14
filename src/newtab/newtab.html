@@ -29,7 +29,7 @@
   <div id="bg"></div>
 
   <header class="topbar">
-    <div id="clockWidget" class="clock-widget" aria-label="Clock" tabindex="0" role="button">
+    <div id="clockWidget" class="clock-widget" aria-label="Clock" tabindex="0" role="button" data-i18n-title="clockTitle" title="Время в городах">
       <div id="clockTime" class="clock-time">--:--</div>
       <div id="clockDate" class="clock-date">—</div>
       <div id="clockCity" class="clock-city"></div>
@@ -68,6 +68,14 @@ spellcheck="false" />
 <button type="button" id="weatherPopupOpenBtn" class="weather-popup-open" data-i18n="weatherOpenForecast">Открыть прогноз</button>
 </div>
 </div>
+    <button id="searchPaletteBtn" class="icon-btn search-palette-fab" type="button"
+            data-i18n-title="searchPalette" title="Поиск по листам" aria-label="Поиск по листам">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="11" cy="11" r="7"/>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+    </button>
     <button id="optsBtn" class="icon-btn opts-fab" data-i18n-title="settings" title="Настройки">⚙</button>
   </header>
 
