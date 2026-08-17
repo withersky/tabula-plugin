@@ -84,6 +84,11 @@ function applySettings() {
   const uop = Number(s.uiOpacity);
   const uopA = (isFinite(uop)? Math.max(0, Math.min(100, uop)): 90) / 100;
   root.setProperty("--ui-bg-opacity", String(uopA));
+  // Блюр ячеек: ползунок силы (0..30px). 0px = без размытия (эквивалент
+  // выключенной галочке). Блюр применяется в CSS только при непрозрачной
+  // подложке (body.ui-frost), чтобы не жечь GPU впустую при полной прозрачности.
+  const cellBlurPx = (isFinite(Number(s.cellBlurPx)) ? Number(s.cellBlurPx) : 18);
+  root.setProperty("--cell-blur", Math.max(0, Math.min(30, cellBlurPx)) + "px");
   // Блюр ячеек включаем только при непрозрачной подложке, чтобы не жечь GPU впустую.
   document.body.classList.toggle("ui-frost", uopA > 0);
   // Цвет выделения ячейки (используется в .cell.selected / .cell.drop-target).
@@ -194,6 +199,17 @@ async function init() {
   // (в iframe настроек не дёргаем сеть при каждом движении ползунков).
   if (!PREVIEW_MODE && getState() && getState().settings.showFavicon) {
     prefetchFavicons(collectVisibleUrls());
+  }
+
+  // Сброс кэша иконок из настроек: чистим память (сделал слушатель в
+  // favicons.js) и перезагружаем видимые иконки текущего листа.
+  if (!PREVIEW_MODE) {
+    window.addEventListener("tabula:favicons-reset", () => {
+      renderGrid();
+      if (getState() && getState().settings.showFavicon) {
+        prefetchFavicons(collectVisibleUrls());
+      }
+    });
   }
 
   // Запись CSS-переменных откладывается в rAF: ResizeObserver доставляется до

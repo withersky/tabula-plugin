@@ -103,6 +103,26 @@ button { font: inherit; }
   color: rgba(180,240,210,1);
 }
 
+/* Скрываем контент настроек до применения локализации, чтобы избежать
+   мигания (FOUT) русским фолбэком в data-i18n при открытии страницы на
+   другом языке. Класс .i18n-ready ставит boot-скрипт сразу после
+   синхронной локализации, ещё до первой отрисовки переведённого DOM.
+
+   Важно: прячем через opacity (а не visibility), и НЕ проигрываем анимации
+   панелей/шапки, пока контент скрыт — иначе они отыграют «вслепую» и к
+   моменту показа уже завершатся (анимации откроются пропавшими). Саму
+   анимацию появления панелей запускаем только на .i18n-ready (см. ниже). */
+body:not(.i18n-ready) .layout,
+body:not(.i18n-ready) .settings-head {
+  opacity: 0;
+}
+/* Блокируем «слепой» проигрыш анимаций до локализации. */
+body:not(.i18n-ready) .panel,
+body:not(.i18n-ready) .tabs-bar,
+body:not(.i18n-ready) .settings-head {
+  animation: none !important;
+}
+
 /* ---------- settings search ---------- */
 .search-wrap {
   position: relative;
@@ -353,6 +373,12 @@ main {
   margin: 18px 0;
   animation: panelIn 180ms ease;
 }
+/* Анимация появления панелей: пока контент скрыт до локализации — блокируем
+   (см. выше). Запускаем её заново ровно когда снимаем скрытие (.i18n-ready),
+   чтобы пользователь видел плавное появление, а не статичный результат. */
+body.i18n-ready .panel {
+  animation: panelIn 180ms ease;
+}
 .panel:first-child { margin-top: 22px; }
 @keyframes panelIn {
   from { opacity: 0; transform: translateY(4px); }
@@ -372,17 +398,6 @@ main {
 }
 .hint.inline { display: inline; }
 
-/* ---------- group titles ---------- */
-.group-title {
-  display: block;
-  margin: 20px 0 4px;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--muted);
-}
-.panel > .group-title:first-of-type { margin-top: 2px; }
 
 /* ---------- form layout ---------- */
 .grid-2 {
@@ -780,6 +795,8 @@ select { cursor: pointer; }
 
 .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .data-actions { margin-top: 12px; }
+.favicon-cache-row { align-items: baseline; }
+.favicon-cache-row .hint { margin: 0; }
 
 /* ---------- dropzone ---------- */
 .dropzone {

@@ -31,7 +31,7 @@
    * селект шрифтов и индекс поиска — здесь только общая часть.
    *
    * @param {function(string):string} tx  перевод ключа в текущей локали
-   * @param {function():string} getLang   текущая локаль ("ru"/"en")
+   * @param {function():string} getLang   текущая локаль ("ru"/"en"/"ar"/…)
    */
   function applyI18nStaticCommon(tx, getLang) {
     document.querySelectorAll("[data-i18n]").forEach(function (el) {
@@ -43,7 +43,12 @@
     document.querySelectorAll("[data-i18n-title]").forEach(function (el) {
       el.title = tx(el.dataset.i18nTitle);
     });
-    document.documentElement.lang = getLang();
+    var lang = getLang();
+    document.documentElement.lang = lang;
+    // Направление текста: для арабского (и других RTL-языков) ставим rtl,
+    // для остальных — ltr. Список RTL-языков явный и расширяемый.
+    var rtlLangs = { ar: 1, he: 1, fa: 1, ur: 1 };
+    document.documentElement.dir = rtlLangs[lang] ? "rtl" : "ltr";
   }
 
   // Классический скрипт: выставляем глобал (ES-модули вызывают его напрямую).

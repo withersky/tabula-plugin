@@ -104,8 +104,26 @@ function resolveFont(key, customCss) {
 const I18N =
   (typeof globalThis !== "undefined" && globalThis.I18N_DATA) ||
   (typeof module === "object" && module.exports
-    ? { ru: require("../i18n/ru.json"), en: require("../i18n/en.json") }
+    ? loadAllI18n()
     : { ru: {}, en: {} });
+
+// В Node (юнит-тесты) читаем JSON напрямую. Подхватываем все файлы
+// <lang>.json в src/i18n/ без жёсткого списка — новый язык добавляется
+// просто файлом перевода.
+function loadAllI18n() {
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const dir = path.join(__dirname, "..", "i18n");
+  const out = {};
+  for (const f of fs.readdirSync(dir)) {
+    const m = /^([a-z]{2,3})\.json$/.exec(f);
+    if (!m || f === "symbols.json") continue;
+    const lang = m[1];
+    if (lang === "symbols") continue;
+    out[lang] = require(path.join(dir, f));
+  }
+  return out;
+}
 
 // t() возвращает перевод; для строк с плейсхолдерами {name}/{n} —
 // функцию-форматтер, которую вызывают с объектом параметров:
@@ -166,6 +184,7 @@ function defaultData() {
       backgroundImage: "",
       bingMkt: "ru-RU",
       showFavicon: true,
+      cellBlurPx: 18,
       touchGestures: true,
       openInNewTab: false,
       showRowNumbers: false,

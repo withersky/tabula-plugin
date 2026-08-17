@@ -40,6 +40,7 @@ const bookmarksFolderSelect = document.getElementById("bookmarksFolderSelect");
 const bookmarksFolderInfo = document.getElementById("bookmarksFolderInfo");
 const bookmarksCancelBtn  = document.getElementById("bookmarksCancelBtn");
 const bookmarksImportBtn  = document.getElementById("bookmarksImportBtn");
+const clearFaviconCacheBtn = document.getElementById("clearFaviconCacheBtn");
 
 let _bookmarkTreeRoot = null;
 let _bookmarkFolders = [];
@@ -60,6 +61,16 @@ export async function onReset() {
   setLang(getState().settings.language || "ru");
   reloadViews();
   flash(tx("resetDone"));
+}
+
+/** Сбрасывает кэш фавиконок (ключ tabula_favicons в storage). */
+export async function onClearFaviconCache() {
+  try {
+    await ext.storage.local.remove("tabula_favicons");
+    flash(tx("faviconCacheCleared"));
+  } catch (_) {
+    flash(tx("importFailed") + "favicons", true);
+  }
 }
 
 // ---------- export / import ----------
@@ -231,6 +242,7 @@ export function bindDataEvents() {
   if (exportBtn)  exportBtn.addEventListener("click", onExport);
   if (importBtn)  importBtn.addEventListener("click", onImportClick);
   bindImportFile();
+  if (clearFaviconCacheBtn) clearFaviconCacheBtn.addEventListener("click", onClearFaviconCache);
 
   if (importBookmarksBtn) importBookmarksBtn.addEventListener("click", openBookmarksModal);
   if (bookmarksCancelBtn) bookmarksCancelBtn.addEventListener("click", closeBookmarksModal);

@@ -58,8 +58,9 @@ build_chrome() {
 
   cp -R "$SRC_DIR/." "$out/"
 
-  # Remove Firefox-specific manifest from Chrome build.
-  rm -f "$out/manifest.firefox.json"
+  # Remove browser-specific manifests that don't apply to Chrome build.
+  # manifest.json itself is already the Chrome one, so it stays.
+  rm -f "$out/manifest.firefox.json" "$out/manifest.yandex.json"
 
   echo "Chrome build -> $out"
 }

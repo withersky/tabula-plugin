@@ -52,11 +52,35 @@ let cache = new Map();      // host -> { data, ts }
 let loaded = false;
 const inflight = new Map(); // host -> Promise<void> (дедупликация загрузок)
 const listeners = new Set();
+// Сырые ссылки на /favicon.ico для хостов, чьи иконки не удалось прочитать
+// в data URL (CORS/сеть). Хранятся только в памяти (не persist): браузер грузит
+// <img> кросс-доменно без CORS, поэтому иконка отображается, но оффлайн — нет.
+const fallbackUrls = new Map(); // host -> "https://host/favicon.ico"
+
+/**
+ * Внешний сброс кэша (кнопка «Сбросить кэш иконок» в настройках): при удалении
+ * ключа tabula_favicons чистим память и просим новую вкладку перезагрузить
+ * видимые иконки. Наши собственные записи (persist) содержат объект в newValue —
+ * их игнорируем, чтобы не спамить перезагрузками.
+ */
+function bindCacheClearListener() {
+  ext.storage.onChanged.addListener((changes, area) => {
+    if (area && area !== "local") return;
+    if (!changes || !(CACHE_KEY in changes)) return;
+    const nv = changes[CACHE_KEY] && changes[CACHE_KEY].newValue;
+    if (!nv) {
+      cache = new Map();
+      fallbackUrls.clear();
+      try { window.dispatchEvent(new CustomEvent("tabula:favicons-reset")); } catch (_) {}
+    }
+  });
+}
 
 /** Читает кэш из storage в память. Безопасно вызывать повторно. */
 export async function initFavicons() {
   if (loaded) return;
   loaded = true;
+  bindCacheClearListener();
   try {
     const stored = await ext.storage.local.get([CACHE_KEY]);
     const raw = stored && stored[CACHE_KEY];
@@ -83,7 +107,10 @@ export function cachedSrc(url) {
   const host = faviconHost(url);
   if (!host) return "";
   const e = cache.get(host);
-  return e ? e.data : "";
+  if (e && e.data) return e.data;
+  const fb = fallbackUrls.get(host);
+  if (fb) return fb;
+  return "";
 }
 
 /** Фоновая загрузка фавиконок для списка URL (дедупликация по хосту). */
@@ -131,9 +158,17 @@ async function doFetch(host, sampleUrl) {
   } catch (_) {
     data = "";
   }
+  if (!data) {
+    // Не удалось получить data URL (CORS/сеть/битый файл): показываем иконку
+    // напрямую через <img src>. Браузер грузит кросс-доменные картинки без
+    // CORS, поэтому иконка отобразится, хоть и без оффлайн-кэша. Это решает
+    // проблему «иконки не грузятся совсем» для сайтов без CORS-заголовков
+    // (типично при импорте из закладок).
+    fallbackUrls.set(host, url);
+  }
   cache.set(host, { data, ts: now });
   await persist();
-  if (data) emit(host);
+  emit(host);
 }
 
 // blob (favicon.ico) -> квадратный PNG 64x64 как data URL.

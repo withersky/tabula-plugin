@@ -349,12 +349,23 @@ function weatherCitiesList(s) {
 function positionPopupInIframe(popup, anchor, align) {
   if (!popup || !anchor) return;
   const r = anchor.getBoundingClientRect();
+  const rtl = (document.documentElement.dir || document.documentElement.getAttribute("dir") || "").toLowerCase() === "rtl";
   popup.style.position = "fixed";
   popup.style.top = (r.bottom + 6) + "px";
   const pw = popup.offsetWidth || 240;
-  if (align === "right") {
+  // В LTR виджет погоды справа (align "right") — прижимаем правый край попапа
+  // к правому краю виджета, попап раскрывается влево. В RTL топбар зеркалится,
+  // виджет оказывается слева, поэтому «right» означает левый (start) край
+  // экрана — прижимаем левый край попапа к виджету, попап раскрывается вправо.
+  if (align === "right" && !rtl) {
     popup.style.left = "auto";
     popup.style.right = Math.max(8, window.innerWidth - r.right) + "px";
+  } else if (align === "right" && rtl) {
+    popup.style.right = "auto";
+    popup.style.left = Math.max(8, r.left) + "px";
+  } else if (align !== "right" && rtl) {
+    popup.style.left = "auto";
+    popup.style.right = Math.max(8, window.innerWidth - r.left) + "px";
   } else {
     popup.style.right = "auto";
     popup.style.left = Math.max(8, r.left) + "px";
@@ -378,8 +389,16 @@ function closeWeatherCityMenu() {
 function openWeatherCityMenu() {
   if (!weatherPopupCitiesEl || !weatherPopupCityEl) return;
   const r = weatherPopupCityEl.getBoundingClientRect();
-  // Меню не должно выходить за правый край вьюпорта (min-width меню ~200px).
-  const left = Math.max(8, Math.min(r.left, window.innerWidth - 208));
+  const rtl = (document.documentElement.dir || document.documentElement.getAttribute("dir") || "").toLowerCase() === "rtl";
+  // Меню не должно выходить за противоположный виджету край вьюпорта.
+  // В LTR кнопка справа — ограничиваем правый край; в RTL топбар зеркалён,
+  // кнопка слева — ограничиваем левый край (min-width меню ~200px).
+  let left;
+  if (rtl) {
+    left = Math.max(8, r.left);
+  } else {
+    left = Math.max(8, Math.min(r.left, window.innerWidth - 208));
+  }
   weatherPopupCitiesEl.style.left = left + "px";
   weatherPopupCitiesEl.style.top = (r.bottom + 4) + "px";
   weatherPopupCitiesEl.hidden = false;

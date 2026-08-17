@@ -24,7 +24,7 @@
 import { getState } from "./state.js";
 import { sendPreview } from "./preview.js";
 
-export const RANGE_KEYS = ["defaultColumns", "uiOpacity", "uiScale", "fontSize", "weatherRefreshMin", "weatherForecastDays", "cellSelectedColor", "gridRows"];
+export const RANGE_KEYS = ["defaultColumns", "uiOpacity", "uiScale", "fontSize", "weatherRefreshMin", "weatherForecastDays", "cellSelectedColor", "gridRows", "cellBlurPx"];
 
 const $  = (sel, root) => (root || document).querySelector(sel);
 const $$ = (sel, root) => Array.from((root || document).querySelectorAll(sel));
@@ -48,6 +48,7 @@ export function fillForm() {
   syncWidgetCollapsed();
   sendPreview(collectSettings());
 }
+
 
 /** Собирает текущие значения формы в объект настроек. */
 export function collectSettings() {

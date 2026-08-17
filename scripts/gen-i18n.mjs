@@ -22,7 +22,7 @@
 
 // Генератор браузерных i18n-скриптов из JSON-словарей.
 //
-// Исходники:  src/i18n/{ru,en}.json, src/i18n/symbols.{ru,en}.json
+// Исходники:  src/i18n/<lang>.json, src/i18n/symbols.<lang>.json
 // Результат:  src/i18n/generated/ui.js       → глобал I18N_DATA
 //             src/i18n/generated/symbols.js  → глобал I18N_SYMBOLS
 //
@@ -34,8 +34,11 @@
 //   1) положить src/i18n/<lang>.json (и при желании symbols.<lang>.json);
 //   2) запустить `node scripts/gen-i18n.mjs` или build.sh — данные
 //      попадут в generated-скрипты автоматически.
+//
+// Все языки (коды ISO 639-1: ru, en, es, fr, zh, ar, …) определяются
+// автоматически по наличию файлов в src/i18n/, жёсткого списка нет.
 
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
@@ -45,6 +48,40 @@ const OUT_DIR = path.join(I18N_DIR, "generated");
 
 function readJson(file) {
   return JSON.parse(readFileSync(path.join(I18N_DIR, file), "utf8"));
+}
+
+// Автоматически находим все языки по файлам <lang>.json в src/i18n/.
+// Жёсткого списка нет: новый язык добавляется просто файлом <lang>.json.
+const LANG_RE = /^([a-z]{2,3})\.json$/;
+const SYM_RE = /^symbols\.([a-z]{2,3})\.json$/;
+
+const uiLangs = {};
+const symLangs = {};
+for (const f of readdirSync(I18N_DIR)) {
+  let m = f.match(LANG_RE);
+  if (m) {
+    const lang = m[1];
+    if (lang === "symbols") continue; // не путать с symbols.<lang>.json
+    uiLangs[lang] = readJson(f);
+    continue;
+  }
+  m = f.match(SYM_RE);
+  if (m) symLangs[m[1]] = readJson(f);
+}
+
+// Сортируем коды языков для стабильного порядка в сгенерированном файле:
+// сначала «базовые» ru/en, затем остальные по алфавиту.
+const sortLangs = (obj) =>
+  Object.keys(obj).sort((a, b) => {
+    const rank = (x) => (x === "ru" ? 0 : x === "en" ? 1 : 2);
+    const ra = rank(a), rb = rank(b);
+    return ra !== rb ? ra - rb : a.localeCompare(b);
+  });
+
+function buildLangsMap(obj) {
+  const out = {};
+  for (const lang of sortLangs(obj)) out[lang] = obj[lang];
+  return out;
 }
 
 function writeBridge(name, globalName, langs) {
@@ -70,15 +107,15 @@ function writeBridge(name, globalName, langs) {
 
 mkdirSync(OUT_DIR, { recursive: true });
 
-const ru = readJson("ru.json");
-const en = readJson("en.json");
-const symbolsRu = readJson("symbols.ru.json");
-const symbolsEn = readJson("symbols.en.json");
+const uiMap = buildLangsMap(uiLangs);
+const symMap = buildLangsMap(symLangs);
 
-writeBridge("ui.js", "I18N_DATA", { ru, en });
-writeBridge("symbols.js", "I18N_SYMBOLS", { ru: symbolsRu, en: symbolsEn });
+writeBridge("ui.js", "I18N_DATA", uiMap);
+writeBridge("symbols.js", "I18N_SYMBOLS", symMap);
 
 console.log(
-  `i18n: generated ui.js (${Object.keys(ru).length + Object.keys(en).length} keys) ` +
-  `and symbols.js (${Object.keys(symbolsRu).length + Object.keys(symbolsEn).length} keys)`
+  `i18n: generated ui.js (${Object.keys(uiMap).length} langs, ` +
+  `${Object.values(uiMap).reduce((n, d) => n + Object.keys(d).length, 0)} keys) ` +
+  `and symbols.js (${Object.keys(symMap).length} langs, ` +
+  `${Object.values(symMap).reduce((n, d) => n + Object.keys(d).length, 0)} keys)`
 );

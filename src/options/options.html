@@ -165,6 +165,14 @@
             </span>
             <input type="range" name="uiOpacity" min="0" max="100" step="5" />
           </label>
+          <label class="full cell-blur-row" id="cellBlurRow">
+            <span class="row">
+              <span data-i18n="labelCellBlur">Сила блюра ячеек</span>
+              <span class="hint" data-i18n="labelCellBlurHint"></span>
+              <output data-out="cellBlurPx"></output>
+            </span>
+            <input type="range" name="cellBlurPx" min="0" max="30" step="1" />
+          </label>
         </div>
 
         <span class="group-title" data-i18n="groupGrid">Сетка</span>
@@ -430,6 +438,34 @@
               <div class="lang-name">English</div>
             </div>
           </label>
+          <label class="lang-card">
+            <input type="radio" name="language" value="es" />
+            <div class="lang-card-inner">
+              <div class="lang-flag">🇪🇸</div>
+              <div class="lang-name">Español</div>
+            </div>
+          </label>
+          <label class="lang-card">
+            <input type="radio" name="language" value="fr" />
+            <div class="lang-card-inner">
+              <div class="lang-flag">🇫🇷</div>
+              <div class="lang-name">Français</div>
+            </div>
+          </label>
+          <label class="lang-card">
+            <input type="radio" name="language" value="zh" />
+            <div class="lang-card-inner">
+              <div class="lang-flag">🇨🇳</div>
+              <div class="lang-name">中文</div>
+            </div>
+          </label>
+          <label class="lang-card">
+            <input type="radio" name="language" value="ar" />
+            <div class="lang-card-inner">
+              <div class="lang-flag">🇸🇦</div>
+              <div class="lang-name" dir="rtl">العربية</div>
+            </div>
+          </label>
         </div>
       </section>
 
@@ -437,12 +473,23 @@
       <section id="tab-data" class="panel tab-panel" data-tab="data">
         <h2 data-i18n="sectionData">Данные</h2>
         <p class="hint" data-i18n="dataHint">Все данные хранятся локально. Экспортируйте, чтобы сделать резервную копию.</p>
+
         <div class="row data-actions">
           <button id="exportBtn" class="btn" data-i18n="export">Экспорт</button>
           <button id="importBtn" class="btn" data-i18n="import">Импорт</button>
-          <button id="importBookmarksBtn" class="btn" data-i18n="importBookmarks">Из папки закладок</button>
-          <button id="resetBtn"  class="btn danger" data-i18n="reset">Сбросить настройки</button>
           <input id="importFile" type="file" accept="application/json" hidden />
+        </div>
+
+        <div class="row data-actions">
+          <button id="importBookmarksBtn" class="btn" data-i18n="importBookmarks">Импорт из закладок</button>
+        </div>
+
+        <div class="row data-actions">
+          <button id="resetBtn" class="btn danger" data-i18n="reset">Сбросить настройки</button>
+        </div>
+        <div class="row data-actions favicon-cache-row">
+          <button id="clearFaviconCacheBtn" class="btn" data-i18n="clearFaviconCache">Сбросить кэш иконок</button>
+          <span class="hint" data-i18n="clearFaviconCacheHint">Перезагрузить все иконки сайтов, если они отображаются некорректно.</span>
         </div>
       </section>
 
@@ -581,6 +628,9 @@
   <script src="../lib/timezone.js"></script>
   <script src="../lib/storage.js"></script>
   <script src="../lib/i18n-shared.js"></script>
+  <!-- Синхронная локализация ДО первой отрисовки: убирает мигание русским
+       фолбэком при открытии настроек на другом языке (см. js/i18n-boot.js). -->
+  <script src="js/i18n-boot.js"></script>
   <script type="module" src="js/main.js"></script>
 </body>
 </html>
