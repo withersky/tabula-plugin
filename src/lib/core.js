@@ -119,27 +119,40 @@
   // что и дата прогноза (date). Иначе для восточных поясов (UTC+12 и т.п.) второй
   // день прогноза (городской «завтра») по часам пользователя — уже другая дата,
   // и метка вместо «Завтра» показывала день недели.
-  function dayLabel(date, idx, isToday, lang, translate, tz) {
+  function dayLabel(date, idx, isToday, lang, translate, tz, now) {
     const tr = (typeof translate === "function") ? translate : (k) => k;
     if (isToday) return tr("weatherToday");
     const d = date || new Date();
+    // «Сейчас» — фиксируемый момент (по умолчанию реальное время устройства).
+    // Параметр now делает функцию детерминированной: в тестах задаётся якорь,
+    // в продакшене передаётся new Date(). Без него «завтра» зависит от
+    // реальных часов и тесты протухают со временем.
+    const nowMs = (now instanceof Date && !isNaN(now.getTime())) ? now.getTime() : Date.now();
+    const pit = _getPartsInTz();
+    const useTz = tz && typeof pit === "function";
     // «Завтра» = следующий день после «сегодня» в поясе города (tz), иначе —
     // по локальному времени устройства (для обратной совместимости/без tz).
+    // Ключ дня СРАВНИВАЕМОЙ даты (dayKey) обязан считаться в ТОМ ЖЕ поясе, что
+    // и tomorrowKey — иначе при расхождении поясов города и устройства метка
+    // «Завтра» ломается (возвращается имя дня недели вместо «Завтра»).
     let tomorrowKey = null;
-    if (tz) {
-      const pit = _getPartsInTz();
-      if (typeof pit === "function") {
-        try {
-          const now = new Date(Date.now() + 86400000);
-          tomorrowKey = pit(now, tz, { date: true, locale: "en-CA" }).date;
-        } catch (_) { tomorrowKey = null; }
+    let dayKey = null;
+    if (useTz) {
+      try {
+        tomorrowKey = pit(new Date(nowMs + 86400000), tz, { date: true, locale: "en-CA" }).date;
+        dayKey = pit(d, tz, { date: true, locale: "en-CA" }).date;
+      } catch (_) {
+        tomorrowKey = null;
+        dayKey = null;
       }
     }
     if (!tomorrowKey) {
-      const tomorrow = new Date(Date.now() + 86400000);
+      const tomorrow = new Date(nowMs + 86400000);
       tomorrowKey = tomorrow.getFullYear() + "-" + String(tomorrow.getMonth() + 1).padStart(2, "0") + "-" + String(tomorrow.getDate()).padStart(2, "0");
     }
-    const dayKey = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    if (!dayKey) {
+      dayKey = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    }
     if (dayKey === tomorrowKey) return tr("weatherTomorrow");
     const opts = { weekday: "short" };
     const locale = (lang === "en") ? "en-GB" : "ru-RU";

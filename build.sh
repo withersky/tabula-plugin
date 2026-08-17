@@ -73,7 +73,7 @@ build_firefox() {
   cp -R "$SRC_DIR/." "$out/"
 
   # Replace Chrome manifest with the Firefox-specific one.
-  rm -f "$out/manifest.json"
+  rm -f "$out/manifest.json" "$out/manifest.yandex.json"
   cp "$SRC_DIR/manifest.firefox.json" "$out/manifest.json"
   rm -f "$out/manifest.firefox.json"
 

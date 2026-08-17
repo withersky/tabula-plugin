@@ -565,7 +565,7 @@ function renderWeatherPopup() {
     const isToday = idx === 0 || day.date === today;
     const label = document.createElement("span");
     label.className = "weather-popup-day-label" + (isToday ? " today" : "");
-    label.textContent = dayLabel(date, idx, isToday, getLang(), tx, cityTz);
+    label.textContent = dayLabel(date, idx, isToday, getLang(), tx, cityTz, new Date());
     const fmt = (s && s.weatherDateFmt) || "dd.mm";
     if (fmt && fmt !== "off") {
       const dateEl = document.createElement("span");
