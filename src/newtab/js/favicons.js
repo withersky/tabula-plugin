@@ -144,27 +144,46 @@ function ensureHost(host, sampleUrl) {
 }
 
 async function doFetch(host, sampleUrl) {
-  const url = faviconUrl(sampleUrl);
-  if (!url) return;
+  const proto = (() => {
+    try {
+      const p = new URL(normalizeUrl(sampleUrl));
+      return p.protocol === "http:" ? "http:" : "https:";
+    } catch (_) {
+      return "https:";
+    }
+  })();
+  // Сначала пробуем современный SVG-логотип сайта (/favicon.svg), затем
+  // классический /favicon.ico. SVG даёт чёткую векторную иконку без растра
+  // и весит меньше; .ico — запасной вариант для старых/простых сайтов.
+  const candidates = [
+    proto + "//" + host + "/favicon.svg",
+    faviconUrl(sampleUrl), // .../favicon.ico
+  ].filter(Boolean);
   const now = Date.now();
   let data = "";
-  try {
-    const res = await fetch(url, { credentials: "omit" });
-    if (!res.ok) throw new Error("HTTP " + res.status);
-    const blob = await res.blob();
-    if (!blob || blob.size === 0 || blob.size > MAX_SRC_LEN) throw new Error("bad blob");
-    data = await blobToSquarePng(blob, ICON_SIZE);
-    if (data.length > MAX_PNG_LEN) data = "";
-  } catch (_) {
-    data = "";
+  let lastUrl = "";
+  for (const url of candidates) {
+    lastUrl = url;
+    try {
+      const res = await fetch(url, { credentials: "omit" });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const blob = await res.blob();
+      if (!blob || blob.size === 0 || blob.size > MAX_SRC_LEN) throw new Error("bad blob");
+      data = await blobToSquarePng(blob, ICON_SIZE);
+      if (data.length > MAX_PNG_LEN) data = "";
+      if (data) break; // нашли рабочую иконку — дальше не идём
+    } catch (_) {
+      data = "";
+    }
   }
   if (!data) {
     // Не удалось получить data URL (CORS/сеть/битый файл): показываем иконку
     // напрямую через <img src>. Браузер грузит кросс-доменные картинки без
     // CORS, поэтому иконка отобразится, хоть и без оффлайн-кэша. Это решает
     // проблему «иконки не грузятся совсем» для сайтов без CORS-заголовков
-    // (типично при импорте из закладок).
-    fallbackUrls.set(host, url);
+    // (типично при импорте из закладок). Используем .ico как наиболее
+    // универсальный фолбэк для прямой отрисовки <img>.
+    fallbackUrls.set(host, faviconUrl(sampleUrl) || lastUrl);
   }
   cache.set(host, { data, ts: now });
   await persist();
