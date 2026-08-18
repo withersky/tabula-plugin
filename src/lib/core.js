@@ -122,7 +122,14 @@
   function dayLabel(date, idx, isToday, lang, translate, tz, now) {
     const tr = (typeof translate === "function") ? translate : (k) => k;
     if (isToday) return tr("weatherToday");
-    const d = date || new Date();
+    // Сравниваемая дата прогноза. В проде приходит СТРОКА "YYYY-MM-DD" уже в
+    // поясе города (day.date из buildDailyForecast через hourAndDateInTz). В
+    // тестах/старом коде может прийти Date. Для западных поясов критично НЕ
+    // интерпретировать строку как локальное время устройства — иначе 12:00
+    // устройства попадает в предыдущий городской день, и метка «Завтра»
+    // ломается (бага Гонолулу: вместо «Завтра» показывался день недели).
+    // Поэтому строку "YYYY-MM-DD" берём как городской dayKey напрямую.
+    const d = (date === undefined || date === null) ? new Date() : date;
     // «Сейчас» — фиксируемый момент (по умолчанию реальное время устройства).
     // Параметр now делает функцию детерминированной: в тестах задаётся якорь,
     // в продакшене передаётся new Date(). Без него «завтра» зависит от
@@ -130,36 +137,43 @@
     const nowMs = (now instanceof Date && !isNaN(now.getTime())) ? now.getTime() : Date.now();
     const pit = _getPartsInTz();
     const useTz = tz && typeof pit === "function";
-    // «Завтра» = следующий день после «сегодня» в поясе города (tz), иначе —
-    // по локальному времени устройства (для обратной совместимости/без tz).
-    // Ключ дня СРАВНИВАЕМОЙ даты (dayKey) обязан считаться в ТОМ ЖЕ поясе, что
-    // и tomorrowKey — иначе при расхождении поясов города и устройства метка
-    // «Завтра» ломается (возвращается имя дня недели вместо «Завтра»).
+    // «Завтра» = следующий календарный день после городского «сегодня»
+    // (вычисляется в поясе города tz, иначе — по локальному времени устройства
+    // для обратной совместимости/без tz).
     let tomorrowKey = null;
-    let dayKey = null;
     if (useTz) {
       try {
         tomorrowKey = pit(new Date(nowMs + 86400000), tz, { date: true, locale: "en-CA" }).date;
-        dayKey = pit(d, tz, { date: true, locale: "en-CA" }).date;
       } catch (_) {
         tomorrowKey = null;
-        dayKey = null;
       }
     }
     if (!tomorrowKey) {
       const tomorrow = new Date(nowMs + 86400000);
       tomorrowKey = tomorrow.getFullYear() + "-" + String(tomorrow.getMonth() + 1).padStart(2, "0") + "-" + String(tomorrow.getDate()).padStart(2, "0");
     }
-    if (!dayKey) {
-      dayKey = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    // Ключ дня СРАВНИВАЕМОЙ даты. Если передана строка "YYYY-MM-DD" — это уже
+    // городская дата, берём её как есть. Если Date — пересчитываем в поясе
+    // города (tz), иначе по локальному времени устройства.
+    let dayKey = null;
+    if (typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
+      dayKey = d;
+    } else if (d instanceof Date && !isNaN(d.getTime())) {
+      dayKey = useTz
+        ? pit(d, tz, { date: true, locale: "en-CA" }).date
+        : (d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"));
     }
     if (dayKey === tomorrowKey) return tr("weatherTomorrow");
+    // Имя дня недели. Для строковой даты берём 12:00 UTC той же календарной
+    // даты (имя дня недели от TZ не зависит), чтобы не зависеть от локального
+    // времени устройства.
+    const weekdayDate = (typeof d === "string") ? new Date(d + "T12:00:00Z") : d;
     const opts = { weekday: "short" };
     const locale = (lang === "en") ? "en-GB" : "ru-RU";
     try {
-      return d.toLocaleDateString(locale, opts).replace(/\.$/, "");
+      return weekdayDate.toLocaleDateString(locale, opts).replace(/\.$/, "");
     } catch (_) {
-      return d.toLocaleDateString("ru-RU", opts).replace(/\.$/, "");
+      return weekdayDate.toLocaleDateString("ru-RU", opts).replace(/\.$/, "");
     }
   }
 

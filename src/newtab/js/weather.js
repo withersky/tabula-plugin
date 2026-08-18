@@ -561,11 +561,18 @@ function renderWeatherPopup() {
   list.slice(0, maxDays).forEach((day, idx) => {
     const row = document.createElement("div");
     row.className = "weather-popup-day";
-    const date = day.date ? new Date(day.date + "T12:00:00") : new Date(Date.now() + idx * 86400000);
-    const isToday = idx === 0 || day.date === today;
+    // day.date — строка "YYYY-MM-DD" УЖЕ в поясе города (её строит
+    // buildDailyForecast через hourAndDateInTz). Чтобы метка «Завтра» не
+    // ломалась для западных поясов (Гонолулу, UTC-10), передаём в dayLabel
+    // именно эту строку как городскую дату — НЕ интерпретируем её как
+    // локальное время устройства (иначе 12:00 устройства попадали бы в
+    // предыдущий городской день и «Завтра» заменялось именем дня недели).
+    const cityDate = (day && day.date) ? day.date : null;
+    const date = cityDate ? new Date(cityDate + "T12:00:00Z") : new Date(Date.now() + idx * 86400000);
+    const isToday = idx === 0 || cityDate === today;
     const label = document.createElement("span");
     label.className = "weather-popup-day-label" + (isToday ? " today" : "");
-    label.textContent = dayLabel(date, idx, isToday, getLang(), tx, cityTz, new Date());
+    label.textContent = dayLabel(cityDate, idx, isToday, getLang(), tx, cityTz, new Date());
     const fmt = (s && s.weatherDateFmt) || "dd.mm";
     if (fmt && fmt !== "off") {
       const dateEl = document.createElement("span");
