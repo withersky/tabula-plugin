@@ -152,8 +152,7 @@ tabula-plugin/
 │   └── icons/                 копии иконок расширения (на Workers заливается папка site/)
 ├── tests/                     юнит-тесты чистой логики (см. tests/README.md)
 └── .github/workflows/
-    ├── release.yml            сборка релизов по коммитам `vX.Y.Z` (с прогоном тестов)
-    └── firefox-finalize.yml  ручной долив `update_hash` в updates.json после подписи AMO
+    └── release.yml            сборка релизов по коммитам `vX.Y.Z` (с прогоном тестов)
 ```
 
 ### Запуск в режиме разработки
@@ -262,7 +261,7 @@ node scripts/gen-i18n.mjs   # требуется Node.js; повторяйте �
    архива — `tabula-chrome-v1.2.3-unsign.zip` (Chrome) и
    `tabula-firefox-v1.2.3-unsign.xpi` (Firefox, неподписанный). Workflow также
    запишет [`site/latest.json`](site/latest.json:1) и [`site/updates.json`](site/updates.json:1)
-   (без `update_hash`) и закоммитит их. Файлы сайта попадут на сайт только
+   и закоммитит их. Файлы сайта попадут на сайт только
    после ручной заливки папки `site/` в Workers (см. раздел «Сайт-визитка»),
    поэтому кнопки скачивания будут указывать на новый релиз.
 
@@ -293,13 +292,11 @@ Mozilla `.xpi` (неподписанный `-unsign` файл он отклон�
 1. Скачайте подписанный `.xpi` из Центра разработчиков.
 2. Переименуйте его в `tabula-firefox-v1.2.3.xpi` (без суффикса `-unsign`).
 3. Загрузите в **тот же релиз** `v1.2.3` на GitHub (через интерфейс
-  **Releases → Attach a file** или командой `gh release upload`).
-4. Запустите вручную воркфлоу [`.github/workflows/firefox-finalize.yml`](.github/workflows/firefox-finalize.yml:1)
-  (Actions → firefox-finalize, поле `version` = `1.2.3`). Он возьмёт подписанный
-  `.xpi` из релиза, посчитает `sha256` и допишет `update_hash` в `updates.json`,
-  затем закоммитит site/latest.json и site/updates.json (сайт обновляется вручную:
-  см. раздел «Сайт-визитка»). Пока подписанный файл не
-  загружен и `update_hash` не добавлен, Firefox проверит подпись по https при скачивании.
+   **Releases → Attach a file** или командой `gh release upload`).
+   `release.yml` сам дописывает `update_link` на этот подписанный `.xpi` в
+   `site/updates.json` (без `update_hash` — self-hosted `update_url` принимает
+   `.xpi` и без sha256, как подтверждено на практике). Дополнительных ручных
+   шагов не требуется; Firefox увидит новую версию автоматически.
 
 **Ручной перезапуск сборки (без нового коммита):** воркфлоу
 [`.github/workflows/release.yml`](.github/workflows/release.yml:1) поддерживает
@@ -331,11 +328,10 @@ Run workflow**, укажите ветку и, при необходимости,
 
 В той же папке лежит [`site/updates.json`](site/updates.json:1) — Firefox
 update-манифест для `update_url` из [`src/manifest.firefox.json`](src/manifest.firefox.json:1)
-(сейчас указывает на `https://tabula-plugin.workers.dev/updates.json`).
-Release workflow пишет его при каждом релизе (без `update_hash`), а
-[`firefox-finalize.yml`](.github/workflows/firefox-finalize.yml:1) дописывает
-`sha256` (`update_hash`) после загрузки подписанного `.xpi`. Файл всегда актуален
-и доступен по `https://tabula-plugin.workers.dev/updates.json`.
+(сейчас указывает на `https://tabula.withersky.workers.dev/updates.json`).
+Release workflow пишет его при каждом релизе: `update_link` ведёт на подписанный
+`.xpi` из релиза, self-hosted `update_url` обновляет Firefox без `update_hash`.
+Файл всегда актуален и доступен по `https://tabula.withersky.workers.dev/updates.json`.
 
 ### Автодеплой в Cloudflare Workers через Git-интеграцию
 
@@ -360,8 +356,8 @@ Worker `tabula-plugin` → **Settings → Builds → Connect Git repository**,
 > захотите вернуться на GitHub Pages, уберите guard и включите push-триггер
 > обратно.
 
-**Релизы:** `release.yml`/`firefox-finalize.yml` обновляют `site/latest.json`
-и `site/updates.json` и пушат их в `main` — а значит Cloudflare сам
+**Релизы:** `release.yml` обновляет `site/latest.json`
+и `site/updates.json` и пушит их в `main` — а значит Cloudflare сам
 пересоберёт и перезальёт сайт, включая актуальный Firefox `update_url`.
 Дополнительных ручных действий после релиза не требуется; Firefox увидит
 новую версию по `https://tabula.withersky.workers.dev/updates.json` автоматически.

@@ -299,12 +299,12 @@ jobs:
             --clobber
           echo "Uploaded unsign artifacts to release $TAG."
 
-      # Пишем статический снимок релиза на сайте. update_hash (sha256
-      # подписанного xpi) пока НЕ добавляем — файл ещё не подписан в AMO.
-      # Его допишет отдельный воркфлоу firefox-finalize.yml (ручной запуск
-      # после загрузки подписанного xpi). Сам коммит меняет site/**, поэтому
-      # Cloudflare (Workers Builds, Git-интеграция) сам перезальёт папку site/
-      # на воркер при пуше (без префикса в сообщении).
+      # Пишем статический снимок релиза на сайте. updates.json содержит
+      # update_link на подписанный .xpi — Firefox обновляется по нему сам
+      # (без update_hash; self-hosted update_url принимает .xpi и без sha256).
+      # Сам коммит меняет site/**, поэтому Cloudflare (Workers Builds,
+      # Git-интеграция) сам перезальёт папку site/ на воркер при пуше
+      # (без префикса в сообщении).
       - name: Write site snapshot (latest.json + updates.json)
         if: steps.meta.outputs.skip != 'true'
         shell: bash
@@ -358,7 +358,6 @@ jobs:
           # папку site/ на воркер. release workflow только обновляет
           # site/latest.json и site/updates.json в git — остальное делает CF.
 
-      # Финализацию Firefox-обновления (добавление update_hash) вынесли в
-      # отдельный воркфлоу firefox-finalize.yml. Запускайте его вручную
-      # (Actions → firefox-finalize) ПОСЛЕ того, как подписанный
-      # tabula-firefox-vX.Y.Z.xpi загружен в релиз.
+      # Firefox обновляется по update_url -> site/updates.json (пишется выше):
+      # update_link ведёт на подписанный .xpi в релизе, self-hosted апдейт
+      # работает без update_hash. Отдельный воркфлоу финализации не нужен.
