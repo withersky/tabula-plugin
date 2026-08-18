@@ -4,7 +4,8 @@
       "updates": [
         {
           "version": "2.8.15",
-          "update_link": "https://github.com/withersky/tabula-plugin/releases/download/v2.8.15/tabula-firefox-v2.8.15.xpi"
+          "update_link": "https://github.com/withersky/tabula-plugin/releases/download/v2.8.15/tabula-firefox-v2.8.15.xpi",
+          "update_hash": "sha256:1dd76a9ceea39c2253e378d656d50991ad32f3db9756f07f2621cc235de092eb"
         }
       ]
     }
