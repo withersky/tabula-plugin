@@ -1,7 +1,7 @@
 # Tabula
 
 [![Release](https://img.shields.io/github/v/release/withersky/tabula-plugin?label=release&style=flat-square)](https://github.com/withersky/tabula-plugin/releases/latest)
-[![Site](https://img.shields.io/badge/site-tabula-plugin.workers.dev-34d399?style=flat-square)](https://tabula-plugin.workers.dev/)
+[![Site](https://img.shields.io/badge/site-tabula-plugin.workers.dev-34d399?style=flat-square)](https://tabula.withersky.workers.dev/)
 
 **Tabula** — расширение для браузера, которое превращает новую вкладку в **электронную таблицу**.
 Закладки раскладываются по ячейкам сетки, как в Excel: со своими листами, темами, фоном, часами и погодой.
