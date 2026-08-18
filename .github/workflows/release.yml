@@ -303,7 +303,8 @@ jobs:
       # подписанного xpi) пока НЕ добавляем — файл ещё не подписан в AMO.
       # Его допишет отдельный воркфлоу firefox-finalize.yml (ручной запуск
       # после загрузки подписанного xpi). Сам коммит меняет site/**, поэтому
-      # site.yml автоматически пересоберёт сайт (без префикса в сообщении).
+      # Cloudflare (Workers Builds, Git-интеграция) сам перезальёт папку site/
+      # на воркер при пуше (без префикса в сообщении).
       - name: Write site snapshot (latest.json + updates.json)
         if: steps.meta.outputs.skip != 'true'
         shell: bash
@@ -352,11 +353,10 @@ jobs:
             echo "Pushed site/latest.json and site/updates.json (${TAG})."
           fi
 
-          # Пуш от GITHUB_TOKEN не триггерит соседние workflow (защита от
-          # рекурсии), поэтому site.yml не запустится сам. Явно дёрнем деплой
-          # сайта, чтобы Pages обновил latest.json/updates.json.
-          echo "Triggering site deploy (site.yml)…"
-          gh workflow run site.yml --ref "${GITHUB_REF_NAME}"
+          # Сайт деплоится автоматически через Cloudflare Workers Builds
+          # (Git-интеграция): каждый пуш в подключённую ветку перезаливает
+          # папку site/ на воркер. release workflow только обновляет
+          # site/latest.json и site/updates.json в git — остальное делает CF.
 
       # Финализацию Firefox-обновления (добавление update_hash) вынесли в
       # отдельный воркфлоу firefox-finalize.yml. Запускайте его вручную

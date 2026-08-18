@@ -17,6 +17,12 @@
 
 name: site
 
+# ❄️ ЗАМОРОЖЕНО (disabled). Сайт переехал на Cloudflare Workers —
+# см. ручную заливку папки `site/` в Cloudflare Workers. Этот файл
+# оставлен намеренно (не удалён), чтобы при желании вернуться на GitHub
+# Pages достаточно было убрать guard `inputs.deploy` ниже и включить
+# обратно push-триггер.
+#
 # Деплой сайта-визитки (папка `site/`) на GitHub Pages.
 #
 # Триггерится двумя способами:
@@ -34,11 +40,16 @@ name: site
 #   - Права Pages и id-token выдаются через `permissions` ниже, отдельные
 #     секреты не нужны.
 
-on:
-  push:
-    paths:
-      - 'site/**'
-  workflow_dispatch:
+# Чтобы включить обратно: раскомментируйте блок `on:` и поставьте
+# `deploy: true` в workflow_dispatch (или уберите guard в job).
+# on:
+#   workflow_dispatch:
+#     inputs:
+#       deploy:
+#         description: 'Фактически задеплоить на GitHub Pages (осторожно: сайт уже на CF).'
+#         required: false
+#         default: false
+#         type: boolean
 
 permissions:
   contents: read
@@ -53,6 +64,8 @@ jobs:
   deploy:
     name: Build and deploy site to GitHub Pages
     runs-on: ubuntu-24.04
+    # Guard: по умолчанию ничего не делаем — воркфлоу заморожен.
+    if: ${{ github.event.inputs.deploy == 'true' }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

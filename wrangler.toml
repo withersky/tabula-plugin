@@ -1,0 +1,9 @@
+name = "tabula-plugin"
+main = "worker.js"
+compatibility_date = "2024-09-23"
+
+# Статические ассеты сайта. Workers Builds (Git-интеграция) берёт эту папку
+# и заливает её на воркер при каждом пуше в ветку, подключённую в дашборде.
+[assets]
+directory = "site"
+binding = "ASSETS"

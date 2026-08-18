@@ -7,7 +7,7 @@
 "gecko": {
 "id": "tabula@withersky.local",
 "strict_min_version": "140.0",
-"update_url": "https://withersky.github.io/tabula-plugin/updates.json",
+"update_url": "https://tabula.withersky.workers.dev/updates.json",
 "data_collection_permissions": {
 "required": ["none"]
 }

@@ -22,3 +22,4 @@ Thumbs.db
 # Robot Framework test results
 tests/results/
 tests/lib/__pycache__/
+

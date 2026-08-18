@@ -1,7 +1,7 @@
 # Tabula
 
 [![Release](https://img.shields.io/github/v/release/withersky/tabula-plugin?label=release&style=flat-square)](https://github.com/withersky/tabula-plugin/releases/latest)
-[![Site](https://img.shields.io/badge/site-withersky.github.io/tabula--plugin-34d399?style=flat-square)](https://withersky.github.io/tabula-plugin/)
+[![Site](https://img.shields.io/badge/site-tabula-plugin.workers.dev-34d399?style=flat-square)](https://tabula-plugin.workers.dev/)
 
 **Tabula** — расширение для браузера, которое превращает новую вкладку в **электронную таблицу**.
 Закладки раскладываются по ячейкам сетки, как в Excel: со своими листами, темами, фоном, часами и погодой.
@@ -11,7 +11,7 @@
 - **Без подписок, без телеметрии** — все данные хранятся локально в вашем браузере.
 - Автор: [withersky](https://github.com/withersky).
 
-> 🌐 Сайт-визитка с кнопками скачивания: <https://withersky.github.io/tabula-plugin/>
+> 🌐 Сайт-визитка с кнопками скачивания: <https://tabula-plugin.workers.dev/>
 
 ## Установка
 
@@ -148,8 +148,8 @@ tabula-plugin/
 ├── scripts/
 │   └── gen-i18n.mjs           генератор src/i18n/generated/*.js из JSON
 ├── build.sh                   сборка dist/{chrome,firefox,yandex} из src/
-├── site/                      сайт-визитка (GitHub Pages)
-│   └── icons/                 копии иконок расширения (на Pages деплоится только site/)
+├── site/                      сайт-визитка (Cloudflare Workers, заливка вручную)
+│   └── icons/                 копии иконок расширения (на Workers заливается папка site/)
 ├── tests/                     юнит-тесты чистой логики (см. tests/README.md)
 └── .github/workflows/
     ├── release.yml            сборка релизов по коммитам `vX.Y.Z` (с прогоном тестов)
@@ -262,8 +262,8 @@ node scripts/gen-i18n.mjs   # требуется Node.js; повторяйте �
    архива — `tabula-chrome-v1.2.3-unsign.zip` (Chrome) и
    `tabula-firefox-v1.2.3-unsign.xpi` (Firefox, неподписанный). Workflow также
    запишет [`site/latest.json`](site/latest.json:1) и [`site/updates.json`](site/updates.json:1)
-   (без `update_hash`) и закоммитит их. Затем release.yml явно запускает
-   деплой сайта (см. раздел «Сайт-визитка») через `gh workflow run site.yml`,
+   (без `update_hash`) и закоммитит их. Файлы сайта попадут на сайт только
+   после ручной заливки папки `site/` в Workers (см. раздел «Сайт-визитка»),
    поэтому кнопки скачивания будут указывать на новый релиз.
 
 **Автообновление Firefox (update_url):**
@@ -297,7 +297,7 @@ Mozilla `.xpi` (неподписанный `-unsign` файл он отклон�
 4. Запустите вручную воркфлоу [`.github/workflows/firefox-finalize.yml`](.github/workflows/firefox-finalize.yml:1)
   (Actions → firefox-finalize, поле `version` = `1.2.3`). Он возьмёт подписанный
   `.xpi` из релиза, посчитает `sha256` и допишет `update_hash` в `updates.json`,
-  затем закоммитит и явно запустит деплой сайта (`gh workflow run site.yml`,
+  затем закоммитит site/latest.json и site/updates.json (сайт обновляется вручную:
   см. раздел «Сайт-визитка»). Пока подписанный файл не
   загружен и `update_hash` не добавлен, Firefox проверит подпись по https при скачивании.
 
@@ -311,14 +311,14 @@ Run workflow**, укажите ветку и, при необходимости,
 запуска использует **старую** версию файла воркфлоу, поэтому для применения
 правок флоу используйте именно `workflow_dispatch` или новый push.
 
-## Сайт-визитка и GitHub Pages
+## Сайт-визитка и Cloudflare Workers
 
 Папка [`site/`](site/index.html:1) — статичный одностраничный сайт с кнопками
 скачивания. Стиль сайта повторяет интерфейс расширения (та же палитра, что в
 [`src/options/options.css`](src/options/options.css:1), и CSS-мокап новой вкладки), а в шапке и фавиконке
 используется настоящая иконка Tabula, в кнопках скачивания — логотипы браузеров
 (`chromium.svg`, `firefox.svg`). Копии всех этих ресурсов лежат в `site/icons/`
-(на GitHub Pages публикуется только папка `site/`, поэтому иконки продублированы
+(на Workers заливается папка `site/`, поэтому иконки продублированы
 рядом). Если вы поменяете `src/icons/icon*.png` или `src/icons/*.svg` — обновите
 и копии в `site/icons/`.
 
@@ -330,38 +330,41 @@ Run workflow**, укажите ветку и, при необходимости,
 `tabula-chrome-vX.Y.Z-unsign.zip` и `tabula-firefox-vX.Y.Z-unsign.xpi`.
 
 В той же папке лежит [`site/updates.json`](site/updates.json:1) — Firefox
-update-манифест для `update_url` из [`src/manifest.firefox.json`](src/manifest.firefox.json:1).
+update-манифест для `update_url` из [`src/manifest.firefox.json`](src/manifest.firefox.json:1)
+(сейчас указывает на `https://tabula-plugin.workers.dev/updates.json`).
 Release workflow пишет его при каждом релизе (без `update_hash`), а
 [`firefox-finalize.yml`](.github/workflows/firefox-finalize.yml:1) дописывает
 `sha256` (`update_hash`) после загрузки подписанного `.xpi`. Файл всегда актуален
-и доступен по `https://withersky.github.io/tabula-plugin/updates.json`.
+и доступен по `https://tabula-plugin.workers.dev/updates.json`.
 
-Деплой сайта выполняется отдельным воркфлоу
-[`.github/workflows/site.yml`](.github/workflows/site.yml:1), который публикует
-**только содержимое папки `site/`** на GitHub Pages. Остальные папки репозитория
-(`src/`, `Tests/`, `.github/` и т.д.) на сайт не попадают и остаются приватными.
+### Автодеплой в Cloudflare Workers через Git-интеграцию
 
-**Важно:** в **Settings → Pages → Build and deployment** источник должен быть
-**«GitHub Actions»** (а не ветка). Это требование самого `site.yml` — иначе
-деплой не сработает.
+Сайт деплоится **автоматически** при каждом пуше в подключённую ветку /site —
+через [Workers Builds](https://developers.cloudflare.com/workers/ci-cd/builds/)
+(нативная Git-интеграция Cloudflare, как у Pages, но для обычного Worker).
 
-Воркфлоу запускается тремя способами:
-- **Автоматически при правке статики** — любой push, меняющий файлы в `site/`
-  (обычный коммит пользователя), запускает `site.yml` через `push: paths:
-  ['site/**']`. Сайт пересоберётся сам.
-- **Вручную** — Actions → site → Run workflow.
-- **Из релизных воркфлоу** — [`release.yml`](.github/workflows/release.yml:1) и
-  [`firefox-finalize.yml`](.github/workflows/firefox-finalize.yml:1) вызывают
-  `gh workflow run site.yml` явно. Прямой вызов нужен, потому что пуш от
-  `GITHUB_TOKEN` в соседнем воркфлоу **не** запускает этот воркфлоу (защита
-  GitHub от рекурсии) — поэтому релизные правки `site/` деплоятся именно
-  явным вызовом, а не push-триггером.
+Конфигурация лежит в [`wrangler.toml`](wrangler.toml:1):
+`name = "tabula-plugin"`, `assets.directory = "site"` — то есть воркер
+отдаёт статическую папку [`site/`](site/index.html:1) как есть (сборка не
+нужна, build-шаг пустой).
 
-**Как опубликовать правки сайта:**
+**Подключение репозитория (делается один раз в дашборде Cloudflare):** см.
+пошаговые пути в [`CLOUDFLARE-SETUP.md`](CLOUDFLARE-SETUP.md:1). Кратко:
+Worker `tabula-plugin` → **Settings → Builds → Connect Git repository**,
+ветка `main`, Build command пусто, Deploy command `wrangler deploy`, и
+рекомендуется поставить **Path filter** `site/**`.
 
-1. Измените файлы в `site/`.
-2. Обычный коммит и push в `main` — `site.yml` запустится сам по `push`-триггеру.
-3. Через ~1 минуту сайт обновится на `https://withersky.github.io/tabula-plugin/`.
+> ❄️ Старый воркфлоу GitHub Pages (`.github/workflows/site.yml`) **заморожен** —
+> из него убран push-триггер и добавлен guard `inputs.deploy` (по умолчанию
+> `false`), поэтому он ничего не публикует. Файл оставлен намеренно: если
+> захотите вернуться на GitHub Pages, уберите guard и включите push-триггер
+> обратно.
+
+**Релизы:** `release.yml`/`firefox-finalize.yml` обновляют `site/latest.json`
+и `site/updates.json` и пушат их в `main` — а значит Cloudflare сам
+пересоберёт и перезальёт сайт, включая актуальный Firefox `update_url`.
+Дополнительных ручных действий после релиза не требуется; Firefox увидит
+новую версию по `https://tabula.withersky.workers.dev/updates.json` автоматически.
 
 ## Модель данных
 

@@ -23,8 +23,8 @@
 #
 # Воркфлоу берёт подписанный xpi из существующего релиза, считает sha256
 # (update_hash), дописывает его в site/updates.json и коммитит. Коммит меняет
-# site/**, поэтому site.yml автоматически пересоберёт сайт (без префикса в
-# сообщении).
+# site/**, поэтому Cloudflare (Workers Builds, Git-интеграция) сам перезальёт
+# папку site/ на воркер при пуше (без префикса в сообщении).
 #
 # Запуск без schedule/поллинга — не тратит минуты бесплатного GitHub Actions:
 # вы нажимаете один раз, когда подписанный xpi уже загружен.
@@ -178,11 +178,9 @@ jobs:
             echo "Pushed site/updates.json (${TAG})."
           fi
 
-          # Пуш от GITHUB_TOKEN не триггерит соседние workflow (защита от
-          # рекурсии), поэтому site.yml не запустится сам. Явно дёрнем деплой
-          # сайта, чтобы Pages обновил updates.json.
-          echo "Triggering site deploy (site.yml)…"
-          gh workflow run site.yml --ref "${GITHUB_REF_NAME}"
+          # Сайт деплоится автоматически: Cloudflare Workers Builds (Git-интеграция)
+          # перезаливает папку site/ при каждом пуше в подключённую ветку.
+          # Обновлённый updates.json попадёт на сайт без ручных действий.
 
       - name: Result
         shell: bash
@@ -191,4 +189,4 @@ jobs:
           TAG="${{ steps.meta.outputs.tag }}"
           echo "::notice::Релиз ${TAG} финализирован (update_hash добавлен)."
           echo "::notice::Firefox-обновление доступно по update_url (updates.json обновлён)."
-          echo "::notice::Сайт покажет 'Firefox: подписан', когда site.yml опубликует изменения."
+          echo "::notice::Сайт покажет 'Firefox: подписан' автоматически после пуша (Workers Builds перезальёт site/)."
