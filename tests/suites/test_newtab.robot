@@ -193,3 +193,35 @@ Day Label Tomorrow Honolulu Weekday Not Leaking / Метка дня: Гонол�
     ...                «вт»/«Tue» здесь не возвращается).
     Core Function Should Equal    dayLabel    weatherTomorrow    "2026-08-18"    1    ${False}    ru    ${None}    Pacific/Honolulu    {"$date":"2026-08-18T09:00:00+03:00"}
     Core Function Should Equal    dayLabel    weatherTomorrow    "2026-08-18"    1    ${False}    en    ${None}    Pacific/Honolulu    {"$date":"2026-08-18T09:00:00+03:00"}
+
+Today Hourly Key Midnight Crossing / Ключ «сегодня» почасовки: переход через полночь
+    [Documentation]    РЕГРЕСС БАГА: на востоке (Южная Тарава, UTC+12) при 23:00
+    ...                прогноз начинается с 23:00 текущего дня, а следующие часы —
+    ...                00:00 и далее УЖЕ следующего дня. Раньше «сегодня» считалось
+    ...                от new Date() в момент рендера попапа: первый час
+    ...                (уже вчерашний по городу) подсвечивался «сегодня» через
+    ...                idx===0, а весь новый день — через совпадение с todayKey =>
+    ...                ДВА «Сегодня» и синий следующий день. Теперь todayHourlyKey
+    ...                берёт дату ПЕРВОГО часа прогноза, поэтому для списка
+    ...                [23:00 2026-08-15, 00:00 2026-08-16, 01:00 2026-08-16, ...]
+    ...                ключ — «2026-08-15» (а НЕ «2026-08-16»). Это и есть фикс:
+    ...                сегодня ровно тот день, с которого начат прогноз.
+    Core Function Should Equal    todayHourlyKey    2026-08-15    [{"date":"2026-08-15","hour":23,"code":1,"tempC":20},{"date":"2026-08-16","hour":0,"code":1,"tempC":19},{"date":"2026-08-16","hour":1,"code":2,"tempC":19},{"date":"2026-08-16","hour":2,"code":3,"tempC":18}]
+
+Today Hourly Key West Tz / Ключ «сегодня» почасовки: западный пояс (Гонолулу)
+    [Documentation]    Зеркальный случай для запада (Гонолулу, UTC-10): прогноз
+    ...                тоже может начинаться с позднего часа и перейти через
+    ...                полночь. Ключ «сегодня» должен быть датой первого часа,
+    ...                а не следующего дня.
+    Core Function Should Equal    todayHourlyKey    2026-08-17    [{"date":"2026-08-17","hour":20,"code":1,"tempC":25},{"date":"2026-08-17","hour":21,"code":1,"tempC":24},{"date":"2026-08-18","hour":0,"code":2,"tempC":23},{"date":"2026-08-18","hour":1,"code":3,"tempC":23}]
+
+Today Hourly Key Same Day / Ключ «сегодня» почасовки: всё в одном дне
+    [Documentation]    Обычный случай без перехода через полночь: все часы
+    ...                одного дня — ключ равен этой дате.
+    Core Function Should Equal    todayHourlyKey    2026-08-19    [{"date":"2026-08-19","hour":9,"code":1,"tempC":15},{"date":"2026-08-19","hour":10,"code":1,"tempC":16},{"date":"2026-08-19","hour":11,"code":2,"tempC":17}]
+
+Today Hourly Key Edge Cases / Ключ «сегодня» почасовки: пустой/без даты
+    [Documentation]    Крайние случаи: пустой список и список без поля date
+    ...                должны давать null (никакой подсветки «сегодня»).
+    Core Function Should Equal    todayHourlyKey    ${None}    []
+    Core Function Should Equal    todayHourlyKey    ${None}    [{"hour":23,"code":1}]

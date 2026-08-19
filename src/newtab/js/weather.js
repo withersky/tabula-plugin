@@ -459,27 +459,16 @@ function renderWeatherPopupHourly(cache, tz) {
   }
   weatherPopupHourlyWrapEl.hidden = false;
   weatherPopupHourlyEl.textContent = "";
-  // «Сегодня» должен совпадать с поясом, в котором РЕАЛЬНО построен прогноз
-  // (cache.tz). Если прогноз пришёл без пояса (UTC, старые/мигрированные
-  // города), а у города уже есть timezone — подсветку «сегодня» считаем по
-  // UTC-дате первого часа из кэша, иначе даты кэша (UTC) и подсветка
-  // (местный пояс) разъедутся → два «Сегодня» и сдвиг часов. Единый расчёт
-  // через partsInTz (lib/timezone.js).
-  const cacheTz = (cache && cache.tz) || "";
-  const renderTz = cacheTz || (tz || "");
-  let todayKey = null;
-  if (renderTz) {
-    try {
-      todayKey = partsInTz(new Date(), renderTz, { date: true }).date;
-    } catch (e) {
-      console.error("[Tabula] partsInTz failed (hourly) for tz=" + renderTz, e);
-      todayKey = null;
-    }
-  } else if (list[0] && list[0].date) {
-    // Прогноз в UTC, а у города timezone — чтобы не было рассинхрона,
-    // «сегодня» = дата первого (текущего) часа в кэше.
-    todayKey = list[0].date;
-  }
+  // «Сегодня» определяем по дате ПЕРВОГО часа прогноза (list[0].date), а НЕ по
+  // текущим часам устройства. Прогноз строится в background от Date.now() и
+  // кэшируется; между построением кэша и открытием попапа в городе (особенно
+  // для экстремальных поясов, Тараве UTC+12 / Гонолулу UTC-10) дата может
+  // смениться. Если считать «сегодня» от new Date() в момент рендера, первый
+  // час (уже вчерашний по городскому времени) подсвечивается «сегодня» через
+  // idx===0, а весь новый день — через совпадение с todayKey => два «Сегодня»
+  // и синий следующий день. Привязка к list[0].date устраняет рассинхрон:
+  // сегодня — это ровно тот день, с которого начат прогноз.
+  const todayKey = todayHourlyKey(list);
   // Шахматный порядок дней: чётные дни — обычный фон, нечётные — alt.
   let dayParity = 0;
   let prevDate = null;
