@@ -11,7 +11,7 @@
 - **Без подписок, без телеметрии** — все данные хранятся локально в вашем браузере.
 - Автор: [withersky](https://github.com/withersky).
 
-> 🌐 Сайт-визитка с кнопками скачивания: <https://tabula-plugin.workers.dev/>
+> 🌐 Сайт-визитка с кнопками скачивания: <https://tabula.withersky.workers.dev/>
 
 ## Установка
 
