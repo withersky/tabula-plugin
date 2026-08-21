@@ -152,12 +152,14 @@ async function doFetch(host, sampleUrl) {
       return "https:";
     }
   })();
-  // Сначала пробуем современный SVG-логотип сайта (/favicon.svg), затем
-  // классический /favicon.ico. SVG даёт чёткую векторную иконку без растра
-  // и весит меньше; .ico — запасной вариант для старых/простых сайтов.
+  // Фолбэк-цепочка: сначала классический /favicon.ico (универсален и есть
+  // почти везде), затем современный векторный /favicon.svg, затем /favicon.png.
+  // Каждый вариант пережимается в квадратный PNG 64x64 (см. blobToSquarePng),
+  // поэтому итоговый кэш — единый PNG data URL независимо от исходника.
   const candidates = [
+    faviconUrl(sampleUrl),                         // https://host/favicon.ico
     proto + "//" + host + "/favicon.svg",
-    faviconUrl(sampleUrl), // .../favicon.ico
+    proto + "//" + host + "/favicon.png"
   ].filter(Boolean);
   const now = Date.now();
   let data = "";

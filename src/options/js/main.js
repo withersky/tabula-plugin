@@ -30,7 +30,8 @@ import { wireTabs } from "./tabs.js";
 import { wireSearch } from "./search.js";
 import {
   fillForm, collectSettings, syncCellSelectedMode, syncWidgetCollapsed,
-  refreshRangeOutputs, persistSettings, RANGE_KEYS
+  refreshRangeOutputs, persistSettings, RANGE_KEYS, DATEFMT_KEYS,
+  updateDateFmtCustomVisibility
 } from "./form.js";
 import { sendPreview } from "./preview.js";
 import {
@@ -137,6 +138,14 @@ function wireEvents() {
     const el = document.querySelector('input[name="' + k + '"]');
     if (!el) return;
     el.addEventListener("change", syncWidgetCollapsed);
+  });
+
+  // Кастомный формат даты (часы/погода): показать/спрятать поле шаблона
+  // при переключении селекта на «Свой формат…».
+  DATEFMT_KEYS.forEach(k => {
+    const el = document.querySelector('[name="' + k + '"]');
+    if (!el) return;
+    el.addEventListener("change", () => updateDateFmtCustomVisibility(k));
   });
 }
 

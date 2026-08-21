@@ -67,7 +67,7 @@ function datePartsFor(city) {
       hour: now.getHours(),
       minute: now.getMinutes(),
       year: now.getFullYear(),
-      month: now.getMonth() + 1,
+      month: now.getMonth(),
       day: now.getDate(),
       weekday: now.getDay(),
       date: now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0"),
@@ -92,12 +92,20 @@ export function updateClock() {
   const p = datePartsFor(city);
   clockTimeEl.textContent = pad2(p.hour) + ":" + pad2(p.minute);
   const days   = tx("clockDays");
-  const months = tx("clockMonths");
-  let dayName = "";
-  if (Array.isArray(days) && days[p.weekday]) dayName = days[p.weekday];
-  let monthName = "";
-  if (Array.isArray(months) && months[p.month]) monthName = months[p.month];
-  clockDateEl.textContent = (dayName ? dayName + ", " : "") + p.day + " " + monthName;
+  const dayName = (Array.isArray(days) && days[p.weekday]) ? days[p.weekday] : "";
+  // Дата строится через formatDateFmt (глобал core.js) по настройке clockDateFmt,
+  // которая поддерживает кастомные шаблоны ("custom:DD.MM.YYYY", "custom:D MMM" и т.п.).
+  // Если шаблон "off" — дату не показываем вовсе.
+  const dateFmt = (s && s.clockDateFmt) || "custom:DD.MM.YYYY";
+  if (dateFmt === "off") {
+    clockDateEl.textContent = dayName;
+  } else {
+    const dateOnly = new Date(p.year, p.month, p.day);
+    const formatted = (typeof formatDateFmt === "function")
+      ? formatDateFmt(dateOnly, dateFmt, getLang())
+      : (p.day + " " + (tx("clockMonths") && tx("clockMonths")[p.month] || ""));
+    clockDateEl.textContent = (dayName ? dayName + ", " : "") + formatted;
+  }
   if (clockCityEl) clockCityEl.textContent = (city && city.name) || "";
 }
 

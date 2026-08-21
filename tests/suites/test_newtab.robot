@@ -123,6 +123,13 @@ Format Date Fmt / Форматирование даты
     Core Function Should Equal    formatDateFmt    ${EMPTY}    ${None}    dd.mm.yyyy    ru
     Core Function Should Equal    formatDateFmt    ${EMPTY}    {"$date":"2026-03-05T12:00:00"}    off    ru
 
+Format Date Fmt Custom / Кастомный шаблон даты
+    Core Function Should Equal    formatDateFmt    15.08.2026    {"$date":"2026-08-15T12:00:00"}    custom:DD.MM.YYYY    ru
+    Core Function Should Equal    formatDateFmt    5 авг    {"$date":"2026-08-05T12:00:00"}    custom:D MMM    ru
+    Core Function Should Equal    formatDateFmt    05.08.26    {"$date":"2026-08-05T12:00:00"}    custom:DD.MM.YY    ru
+    Core Function Should Equal    formatDateFmt    2026-08-05    {"$date":"2026-08-05T12:00:00"}    custom:YYYY-MM-DD    ru
+    Core Function Should Equal    formatDateFmt    5 August    {"$date":"2026-08-05T12:00:00"}    custom:D MMMM    en
+
 Aggregator Url With Coords / Агрегатор: по координатам
     Core Function Should Equal    aggregatorUrl    https://yandex.ru/pogoda/ru?lat=56.3286&lon=44.002    56.3286    44.002    ${EMPTY}    ru
     Core Function Should Equal    aggregatorUrl    https://yandex.ru/pogoda/en?lat=56.3286&lon=44.002    56.3286    44.002    ${EMPTY}    en

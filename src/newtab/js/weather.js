@@ -566,6 +566,8 @@ function renderWeatherPopup() {
     if (fmt && fmt !== "off") {
       const dateEl = document.createElement("span");
       dateEl.className = "weather-popup-day-date";
+      // formatDateFmt поддерживает как заготовленные шаблоны (dd.mm, dd.mon…),
+      // так и кастомные ("custom:DD.MM.YYYY", "custom:D MMM" и т.п.).
       dateEl.textContent = formatDateFmt(date, fmt, getLang());
       label.appendChild(dateEl);
     }

@@ -26,6 +26,10 @@ import { sendPreview } from "./preview.js";
 
 export const RANGE_KEYS = ["defaultColumns", "uiOpacity", "uiScale", "fontSize", "weatherRefreshMin", "weatherForecastDays", "cellSelectedColor", "gridRows", "cellBlurPx"];
 
+// Ключи настроек, у которых есть «свой формат» (value="__custom__" в селекте +
+// скрытое текстовое поле <key>Custom с шаблоном, хранящимся как "custom:<тmpl>").
+export const DATEFMT_KEYS = ["clockDateFmt", "weatherDateFmt"];
+
 const $  = (sel, root) => (root || document).querySelector(sel);
 const $$ = (sel, root) => Array.from((root || document).querySelectorAll(sel));
 
@@ -43,10 +47,57 @@ export function fillForm() {
       first.value = s[key] != null ? s[key] : "";
     }
   }
+  DATEFMT_KEYS.forEach(k => applyDateFmtCustom(k, s));
   syncCellSelectedMode();
   refreshRangeOutputs();
   syncWidgetCollapsed();
   sendPreview(collectSettings());
+}
+
+// Показывает/прячет кастомное поле формата даты и заполняет его значением из
+// настроек. Если значение — готовый пресет ("custom:DD.MM.YYYY"), совпадающий с
+// одной из опций селекта, показываем сам пресет; иначе переключаем селект на
+// «__custom__» и выставляем текстовый шаблон.
+export function updateDateFmtCustomVisibility(key) {
+  const sel = document.querySelector('[name="' + key + '"]');
+  const wrap = document.getElementById(key + "CustomWrap");
+  if (!sel || !wrap) return;
+  wrap.hidden = sel.value !== "__custom__";
+}
+
+function applyDateFmtCustom(key, s) {
+  const sel = document.querySelector('[name="' + key + '"]');
+  if (!sel) return;
+  const val = (s && s[key]) || "";
+  const wrap = document.getElementById(key + "CustomWrap");
+  const customInput = document.querySelector('[name="' + key + 'Custom"]');
+  if (typeof val === "string" && val.startsWith("custom:")) {
+    const tmpl = val.slice("custom:".length);
+    const matchesPreset = Array.from(sel.options).some(o => o.value === val);
+    if (matchesPreset) {
+      sel.value = val;
+      if (wrap) wrap.hidden = true;
+    } else {
+      sel.value = "__custom__";
+      if (wrap) wrap.hidden = false;
+      if (customInput) customInput.value = tmpl;
+    }
+  } else {
+    sel.value = val;
+    if (wrap) wrap.hidden = true;
+  }
+}
+
+// Собирает итоговое значение формата даты: для «__custom__» — "custom:<тmpl>".
+function collectDateFmtCustom(key, settings) {
+  const sel = document.querySelector('[name="' + key + '"]');
+  if (!sel) return;
+  if (sel.value === "__custom__") {
+    const customInput = document.querySelector('[name="' + key + 'Custom"]');
+    settings[key] = "custom:" + (customInput ? customInput.value : "");
+  } else {
+    settings[key] = sel.value;
+  }
 }
 
 
@@ -69,6 +120,7 @@ export function collectSettings() {
     else v = first.value;
     settings[key] = v;
   }
+  DATEFMT_KEYS.forEach(k => collectDateFmtCustom(k, settings));
   return settings;
 }
 

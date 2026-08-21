@@ -206,6 +206,7 @@ function defaultData() {
       weatherRefreshMin: 90,
       weatherForecastDays: 5,
       weatherDateFmt: "dd.mm",
+      clockDateFmt: "custom:DD.MM.YYYY",
       language: "ru"
     },
     bingCache: null,

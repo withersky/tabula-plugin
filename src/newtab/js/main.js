@@ -32,7 +32,7 @@ import { startWeather, renderWeather, bindWeatherEvents, bindWeatherCityMenu, to
 import { weatherWidget } from "./weather.js";
 import { renderQuickGoIcon, bindSearchEvents } from "./search.js";
 import { applyBackground, applySelectionColor, maybeLoadBingBackground } from "./background.js";
-import { renderGrid, closeModal, onSubmitBookmark, bindGridEvents } from "./grid.js";
+import { renderGrid, closeModal, onSubmitBookmark, bindGridEvents, hideSheetCtx } from "./grid.js";
 import { renderSheetBar, updateSheetBarActive, refreshSheetCtx, bindSheetEvents, switchSheetBySwipe } from "./sheets.js";
 import { initFavicons, prefetchFavicons } from "./favicons.js";
 import { bindSearcherEvents, openSearcher } from "./searcher.js";
@@ -361,7 +361,9 @@ function bindPreview() {
       e.stopPropagation();
     }
   }, true);
-  document.addEventListener("contextmenu", (e) => e.preventDefault(), true);
+  // НЕ блокируем contextmenu глобально (иначе не открыть меню ячейки/закладки
+  // в превью). Блокируем ПКМ только по вкладкам листов — в превью они
+  // неинтерактивны, и контекстное меню листа (переименовать/удалить) там не нужно.
   document.addEventListener("auxclick", (e) => e.preventDefault(), true);
   if (quickGo) quickGo.addEventListener("submit", (e) => e.preventDefault());
   if (weatherWidget) {
@@ -375,6 +377,10 @@ function bindPreview() {
   // В превью нет bindWeatherEvents — привязываем меню городов отдельно,
   // чтобы клик по городу в шапке попапа раскрывал список (а не закрывал попап).
   bindWeatherCityMenu();
+  // В превью нет bindSheetEvents — привязываем его отдельно, чтобы
+  // заблокировать ПКМ по вкладкам листов (они неинтерактивны в превью) и
+  // не открывать контекстное меню листа (переименовать/удалить).
+  bindSheetEvents();
   if (clockWidget) {
     clockWidget.addEventListener("click", (e) => {
       e.preventDefault();
@@ -388,6 +394,13 @@ function bindPreview() {
   document.addEventListener("mousedown", (e) => {
     closeWeatherPopupOutside(e);
     closeClockPopupOutside(e);
+  });
+  // В превью не вызывается bindGridEvents (где висит закрытие меню листа по
+  // клику вне), поэтому закрываем sheetCtx отдельно — иначе оно остаётся
+  // открытым после ПКМ по вкладке листа.
+  document.addEventListener("mousedown", (e) => {
+    const sheetCtx = document.getElementById("sheetCtx");
+    if (sheetCtx && !sheetCtx.hidden && !sheetCtx.contains(e.target)) hideSheetCtx();
   });
   // Превью должно реагировать на изменения storage, сделанные в другой
   // вкладке (например, смена активного города в попапе часов/погоды на

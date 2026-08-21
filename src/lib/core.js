@@ -181,6 +181,31 @@
     if (!d || !fmt || fmt === "off") return "";
     const dd = String(d.getDate()).padStart(2, "0");
     const mm = String(d.getMonth() + 1).padStart(2, "0");
+    // Кастомный формат: префикс "custom:" + шаблон с токенами:
+    //   DD  — день (2 цифры), D  — день (без ведущего нуля)
+    //   MM  — месяц (2 цифры), M  — месяц (без ведущего нуля)
+    //   YYYY — год (4 цифры), YY — год (2 цифры)
+    //   MMM — месяц кратко (авг/Авг), MMMM — месяц полностью (август/Август)
+    // Пример: "custom:DD.MM.YYYY" => 15.08.2026, "custom:D MMM" => 5 авг.
+    if (typeof fmt === "string" && fmt.startsWith("custom:")) {
+      const tmpl = fmt.slice("custom:".length);
+      const year = d.getFullYear();
+      const locale = (lang === "en") ? "en-GB" : "ru-RU";
+      let monShort = "", monLong = "";
+      try {
+        monShort = d.toLocaleDateString(locale, { month: "short" }).replace(/\./g, "");
+        monLong  = d.toLocaleDateString(locale, { month: "long"  }).replace(/\./g, "");
+      } catch (_) { /* остаются пустыми — токены MMM/MMMM станут пустыми */ }
+      return tmpl
+        .replace(/YYYY/g, String(year))
+        .replace(/YY/g,   String(year).slice(-2))
+        .replace(/DD/g,   dd)
+        .replace(/D/g,    String(d.getDate()))
+        .replace(/MMMM/g, monLong)
+        .replace(/MMM/g,  monShort)
+        .replace(/MM/g,   mm)
+        .replace(/M/g,    String(d.getMonth() + 1));
+    }
     if (fmt === "dd.mm.yyyy") return dd + "." + mm + "." + d.getFullYear();
     if (fmt === "dd.mm.yy") return dd + "." + mm + "." + String(d.getFullYear()).slice(-2);
     if (fmt === "dd.mon" || fmt === "dd.month") {

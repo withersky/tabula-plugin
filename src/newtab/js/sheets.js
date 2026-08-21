@@ -607,5 +607,15 @@ export function bindSheetEvents() {
     document.addEventListener("pointercancel", onSheetBarPointerCancel);
   }
 
+  // Гасим «родное» контекстное меню браузера по вкладке листа. В обычном режиме
+  // ПКМ по вкладке обрабатывается в renderSheetBar (открывает меню листа), а здесь
+  // лишь убираем дефолтное меню. В превью (iframe настроек) bindSheetEvents тоже
+  // вешается — и тогда ПКМ по вкладке ничего не открывает (вкладки неинтерактивны).
+  if (sheetTabsEl) {
+    sheetTabsEl.addEventListener("contextmenu", (e) => {
+      if (e.target && e.target.closest && e.target.closest(".sheet-tab")) e.preventDefault();
+    });
+  }
+
   sheetCtx.addEventListener("click", onSheetCtxAction);
 }

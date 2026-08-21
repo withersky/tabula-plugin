@@ -319,6 +319,34 @@
               </button>
             </div>
           </div>
+
+          <div class="widget-subsection">
+            <span class="widget-subsection-title" data-i18n="widgetSubsectionAppearance">Внешний вид</span>
+            <div class="grid-2">
+              <label>
+                <span class="row">
+                  <span data-i18n="optClockDateFmt">Формат даты в часах</span>
+                </span>
+                <select name="clockDateFmt">
+                  <option value="custom:DD.MM.YYYY" data-i18n="clockDateFmtDdMmYyyy">дд.мм.гггг (15.08.2026)</option>
+                  <option value="custom:DD.MM.YY" data-i18n="clockDateFmtDdMmYy">дд.мм.гг (15.08.26)</option>
+                  <option value="custom:DD.MM" data-i18n="clockDateFmtDdMm">дд.мм (15.08)</option>
+                  <option value="custom:D MMM" data-i18n="clockDateFmtDMon">дд месяц кр. (15 авг)</option>
+                  <option value="custom:D MMMM" data-i18n="clockDateFmtDMonth">дд месяц полн. (15 августа)</option>
+                  <option value="custom:YYYY-MM-DD" data-i18n="clockDateFmtIso">ISO (2026-08-15)</option>
+                  <option value="off" data-i18n="clockDateFmtOff">Не показывать</option>
+                  <option value="__custom__" data-i18n="dateFmtCustom">Свой формат…</option>
+                </select>
+              </label>
+              <label class="custom-datefmt-wrap" id="clockDateFmtCustomWrap" hidden>
+                <span class="row">
+                  <span data-i18n="optClockDateFmtCustom">Свой шаблон</span>
+                  <span class="hint" data-i18n="dateFmtHint">DD день, MM месяц, YYYY год, MMM авг, MMMM август. Напр. DD.MM.YYYY</span>
+                </span>
+                <input type="text" name="clockDateFmtCustom" placeholder="DD.MM.YYYY" />
+              </label>
+            </div>
+          </div>
         </div>
 
         <div class="widget-block" id="widget-search">
@@ -413,7 +441,15 @@
                   <option value="dd.mon" data-i18n="weatherDateFmtDdMon">дд месяц кр. (15 авг)</option>
                   <option value="dd.month" data-i18n="weatherDateFmtDdMonth">дд месяц полн. (15 августа)</option>
                   <option value="off" data-i18n="weatherDateFmtOff">Не показывать</option>
+                  <option value="__custom__" data-i18n="dateFmtCustom">Свой формат…</option>
                 </select>
+              </label>
+              <label class="custom-datefmt-wrap" id="weatherDateFmtCustomWrap" hidden>
+                <span class="row">
+                  <span data-i18n="optWeatherDateFmtCustom">Свой шаблон</span>
+                  <span class="hint" data-i18n="dateFmtHint">DD день, MM месяц, YYYY год, MMM авг, MMMM август. Напр. DD.MM.YYYY</span>
+                </span>
+                <input type="text" name="weatherDateFmtCustom" placeholder="DD.MM.YYYY" />
               </label>
             </div>
           </div>
