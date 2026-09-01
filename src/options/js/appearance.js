@@ -35,6 +35,8 @@ const uploadPreviewImg = document.getElementById("uploadPreviewImg");
 const uploadInfo    = document.getElementById("uploadInfo");
 const dropZone      = document.getElementById("dropZone");
 const bingCopyright = document.getElementById("bingCopyright");
+const macosInfo     = document.getElementById("macosInfo");
+const macosRefreshBtn = document.getElementById("macosRefreshBtn");
 const bgPreview     = document.getElementById("bgPreview");
 const fontPreview   = document.getElementById("fontPreview");
 const fontFamilySelect = document.getElementById("fontFamilyKeySelect");
@@ -107,6 +109,85 @@ export function updateBingCopyright() {
   else bingCopyright.textContent = "";
 }
 
+// ---------- macOS-обои: инфо и ручное обновление коллекции ----------
+export function updateMacosInfo() {
+  if (!macosInfo) return;
+  const c = getState().macosCache;
+  if (c && Array.isArray(c.list) && c.list.length) {
+    const count = tx("macosCount")({ n: c.list.length });
+    const title = c.url ? " · " + globalThis.macosWallpaperTitle(c.url) : "";
+    macosInfo.textContent = count + title;
+  } else {
+    macosInfo.textContent = "";
+  }
+}
+
+// Перевыкачивает коллекцию обоев, выбирает случайный и сразу применяет.
+export async function onRefreshMacos() {
+  try {
+    const resp = await ext.runtime.sendMessage({ type: "macosWallpapers", refresh: true });
+    if (!resp || resp.error || !Array.isArray(resp.list) || !resp.list.length) {
+      throw new Error(resp && resp.error || "no list");
+    }
+    const list = resp.list;
+    const date = globalThis.todayKey();
+    const url  = globalThis.pickForDate(list, date);
+    // Сразу строим превью, чтобы новая вкладка открывалась мгновенно,
+    // как Bing, а не перекачивала оригинал 4K при каждом открытии.
+    const preview = await makeMacosPreview(url).catch(() => null);
+    await Storage.update((d) => { d.macosCache = { date, url, list, preview }; });
+    setState(await Storage.get());
+    updateMacosInfo();
+    updateBgPreview();
+    flashSaved();
+  } catch (err) {
+    flash(tx("macosFailed"), true);
+  }
+}
+
+// ---------- macOS-обои: превью 1600px для мгновенной загрузки ----------
+// Дубликат макос-хелпера из newtab/js/background.js (страницы не делят
+// модули): при выборе обоев дня строим JPEG data URL (<=1600px) и храним
+// в macosCache.preview — фон применяется мгновенно, без повторной загрузки
+// оригинала 4K.
+const MACOS_PREVIEW_MAX = 1600;
+
+function macosPreviewSrc(src) {
+  const scale = Math.min(1, MACOS_PREVIEW_MAX / Math.max(src.width, src.height));
+  const w = Math.max(1, Math.round(src.width * scale));
+  const h = Math.max(1, Math.round(src.height * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(src, 0, 0, w, h);
+  return canvas.toDataURL("image/jpeg", 0.75);
+}
+
+async function makeMacosPreview(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("macos preview http " + res.status);
+  const blob = await res.blob();
+  let src;
+  if (typeof createImageBitmap === "function") {
+    src = await createImageBitmap(blob);
+  } else {
+    const objUrl = URL.createObjectURL(blob);
+    src = new Image();
+    await new Promise((resolve, reject) => {
+      src.onload = resolve;
+      src.onerror = () => reject(new Error("macos preview decode failed"));
+      src.src = objUrl;
+    });
+    URL.revokeObjectURL(objUrl);
+  }
+  try {
+    return macosPreviewSrc(src);
+  } finally {
+    if (src && typeof src.close === "function") src.close();
+  }
+}
+
 // ---------- previews ----------
 export function updateAllPreviews() {
   updateBgPreview();
@@ -121,6 +202,13 @@ export function updateBgPreview() {
     const cached = getState().bingCache;
     if (cached && cached.url) {
       bgPreview.style.background = `url("${cssEscape(cached.url)}") center / cover no-repeat, ${s.backgroundColor}`;
+    } else {
+      bgPreview.style.background = s.backgroundColor;
+    }
+  } else if (t === "macos") {
+    const cached = getState().macosCache;
+    if (cached && cached.url) {
+      bgPreview.style.background = `url("${cssEscape(cached.preview || cached.url)}") center / cover no-repeat, ${s.backgroundColor}`;
     } else {
       bgPreview.style.background = s.backgroundColor;
     }
@@ -199,6 +287,7 @@ export function bindAppearanceEvents() {
     uploadInput.value = "";
   });
   clearUploadBtn.addEventListener("click", onClearUpload);
+  if (macosRefreshBtn) macosRefreshBtn.addEventListener("click", onRefreshMacos);
   wireDropzone();
   wirePresets();
   if (fontFamilySelect) {

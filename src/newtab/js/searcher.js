@@ -70,7 +70,7 @@ function searchAll(q) {
     const cells = sh.cells || {};
     for (const key of Object.keys(cells)) {
       const bm = cells[key];
-      if (!bm) continue;
+      if (!bm || isGroupCell(bm)) continue;
       const title = String(bm.title || "").toLowerCase();
       const url   = String(bm.url   || "").toLowerCase();
       const ts = score(nq, title);

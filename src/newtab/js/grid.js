@@ -32,11 +32,17 @@ const tabForm    = document.getElementById("tabForm");
 const ctxMenu    = document.getElementById("ctxMenu");
 const ctxEmpty   = document.getElementById("ctxMenuEmpty");
 const sheetCtx   = document.getElementById("sheetCtx");
+const ctxMenuGroup = document.getElementById("ctxMenuGroup");
+const colorMenu    = document.getElementById("colorMenu");
+const modalColorSwatches = document.getElementById("modalColorSwatches");
 
 let editingBookmark = null;
 let editingTargetKey = null;
 let ctxCellKey = null;
 let ctxBookmarkId = null;
+let colorTargetKey = null;
+let colorTargetId = null;
+let modalColorValue = "";
 let selectedCellKey = null;
 let suppressClick = false;
 let selAnchorKey = null;   // якорная ячейка текущего выделения
@@ -53,6 +59,22 @@ const LONG_PRESS_MS = 800; // порог долгого нажатия (800 мс
 const SWIPE_X = 70;        // порог горизонтального свайпа (переключение листа)
 const SWIPE_RATIO = 1.2;   // доминирование горизонтали над вертикалью
 const SWIPE_MAX_MS = 500;  // свайп — это быстрое движение, не перетаскивание
+
+// Палитра полупрозрачных тонов для окрашивания ячеек (сортировка/группы/цвет).
+const CELL_COLORS = [
+  { val: "rgba(255,92,92,0.32)",   label: "colorRed" },
+  { val: "rgba(255,148,68,0.32)",  label: "colorOrange" },
+  { val: "rgba(255,206,68,0.30)",  label: "colorYellow" },
+  { val: "rgba(144,214,80,0.30)",  label: "colorGreen" },
+  { val: "rgba(64,196,150,0.30)",  label: "colorTeal" },
+  { val: "rgba(80,180,255,0.30)",  label: "colorBlue" },
+  { val: "rgba(120,140,255,0.32)", label: "colorIndigo" },
+  { val: "rgba(180,120,255,0.32)", label: "colorPurple" },
+  { val: "rgba(255,110,190,0.30)", label: "colorPink" },
+  { val: "rgba(255,255,255,0.25)", label: "colorWhite" },
+  { val: "rgba(0,0,0,0.35)",       label: "colorBlack" },
+  { val: "rgba(120,140,255,0.22)", label: "colorSoftBlue" },
+];
 
 // ---------- рендер ----------
 
@@ -111,6 +133,17 @@ export function renderGrid() {
       rnum.textContent = String(r + 1);
       rowEl.appendChild(rnum);
     }
+    // Строка-разделитель: ячейка группы занимает всю ширину строки.
+    const gkey = r + ",0";
+    const g = sh.cells && sh.cells[gkey];
+    if (isGroupCell(g)) {
+      const cellEl = createGroupCellEl(gkey, g);
+      rowEl.classList.add("group-row");
+      cellEls.set(gkey, cellEl);
+      rowEl.appendChild(cellEl);
+      frag.appendChild(rowEl);
+      continue;
+    }
     for (let c = 0; c < cols; c++) {
       const key = r + "," + c;
       const bm = sh.cells[key];
@@ -132,16 +165,18 @@ export function clampGridRows() {
 
 export function computeFillRows(sheet) {
   // Грид растягивается на всю доступную высоту (flex: 1 1 0 у каждой строки),
-  // поэтому показываем ровно столько строк, сколько нужно контенту
-  // (минимум — настройка "Строк по умолчанию", чтобы сетка не схлопывалась).
-  // Без резерва +4 снизу — он заставлял грид «прыгать», когда закладку
-  // добавляли в последнюю видимую строку.
+  // поэтому показываем ровно столько строк, сколько нужно контенту.
+  // gridRows — минимальное число строк для закладок; каждый разделитель
+  // добавляет ещё одну строку сверху и не занимает строку закладок.
   let maxRow = -1;
+  const groupRows = new Set();
   for (const k of Object.keys(sheet.cells || {})) {
     const r = parseInt(k.split(",")[0], 10);
-    if (!isNaN(r) && r > maxRow) maxRow = r;
+    if (isNaN(r)) continue;
+    if (r > maxRow) maxRow = r;
+    if (isGroupCell(sheet.cells[k])) groupRows.add(r);
   }
-  return Math.max(maxRow + 1, clampGridRows());
+  return Math.max(maxRow + 1, clampGridRows() + groupRows.size);
 }
 
 function letterBadge(title) {
@@ -184,7 +219,33 @@ function createCellEl(key, bm) {
     title.className = "title-text";
     title.textContent = bm.title;
     cell.append(fav, title);
+    if (bm.bg) {
+      cell.style.setProperty("--cell-bg", cellBgGradient(bm.bg));
+    }
   }
+  return cell;
+}
+
+// Тот же градиентный «блик», что в :root --cell-bg, но с базой-тоном bg.
+function cellBgGradient(bg) {
+  return "linear-gradient(180deg, rgba(255,255,255,calc(var(--ui-bg-opacity) * 0.09)), rgba(255,255,255,calc(var(--ui-bg-opacity) * 0.02)) 45%, rgba(255,255,255,calc(var(--ui-bg-opacity) * 0.05))), " + bg;
+}
+
+// Ячейка-разделитель: полоска во всю ширину строки (см. .cell.group в CSS).
+function createGroupCellEl(key, g) {
+  const cell = document.createElement("div");
+  cell.className = "cell filled group";
+  cell.dataset.key = key;
+  cell.dataset.id = g.id;
+  cell.dataset.type = "group";
+  cell.title = g.title;
+  if (g.bg) {
+    cell.style.setProperty("--cell-bg", cellBgGradient(g.bg));
+  }
+  const title = document.createElement("span");
+  title.className = "title-text";
+  title.textContent = g.title;
+  cell.appendChild(title);
   return cell;
 }
 
@@ -274,7 +335,7 @@ function onCellAuxClick(e) {
   suppressClick = true;
   setTimeout(() => { suppressClick = false; }, 50);
   const bm = cell.classList.contains("filled") ? currentBookmarkAt(cell.dataset.key) : null;
-  if (!bm) return;
+  if (!bm || isGroupCell(bm)) return;
   const target = normalizeUrl(bm.url);
   window.open(target, "_blank", "noopener");
 }
@@ -284,13 +345,18 @@ function onCellContextMenu(e) {
   if (!cell) return;
   e.preventDefault();
   e.stopPropagation();
-  hideCtx(); hideCtxEmpty();
+  hideCtx(); hideCtxEmpty(); hideCtxGroup();
   const key = cell.dataset.key;
   if (!key) return;
   selectCell(key);
   const bm = cell.classList.contains("filled") ? currentBookmarkAt(key) : null;
 
-  if (bm) {
+  if (bm && isGroupCell(bm)) {
+    ctxBookmarkId = bm.id;
+    ctxCellKey = key;
+    positionMenu(ctxMenuGroup, e.clientX, e.clientY);
+    ctxMenuGroup.hidden = false;
+  } else if (bm) {
     ctxBookmarkId = bm.id;
     ctxCellKey = key;
     positionMenu(ctxMenu, e.clientX, e.clientY);
@@ -315,6 +381,7 @@ export function positionMenu(menu, x, y) {
 
 export function hideCtx()       { ctxMenu.hidden = true;    ctxBookmarkId = null; ctxCellKey = null; }
 export function hideCtxEmpty()  { ctxEmpty.hidden = true;   ctxCellKey = null; }
+export function hideCtxGroup()  { ctxMenuGroup.hidden = true; ctxBookmarkId = null; ctxCellKey = null; }
 export function hideSheetCtx()  { sheetCtx.hidden = true;   /* sheetCtxTargetId живёт в sheets.js */ }
 
 async function onCtxAction(e) {
@@ -369,7 +436,175 @@ function onCtxEmptyAction(e) {
   const act = li.dataset.act;
   const key = ctxCellKey;
   hideCtxEmpty();
-  if (act === "add" && key) openAddModal(key);
+  if (!key) return;
+  if (act === "add") openAddModal(key);
+  else if (act === "add-group") insertGroupAt(key);
+}
+
+// ---------- группы / разделители ----------
+
+// Вставляет строку-разделитель перед указанной ячейкой и запускает её
+// переименование (как добавление листа — сразу в режим ввода названия).
+async function insertGroupAt(key) {
+  const sh = activeSheet();
+  if (!sh) return;
+  const [r] = keyParts(key);
+  const group = { id: cryptoId(), title: tx("groupDefault"), type: "group" };
+  // Разделитель не «съедает» строку закладок: insertGroupRow сдвигает занятую
+  // строку вниз, и сетка просто растёт на одну строку (см. computeFillRows).
+  await Storage.update((d) => {
+    const cur = d.sheets.find(s => s.id === d.activeSheetId);
+    if (cur) cur.cells = insertGroupRow(cur.cells, r, group);
+  });
+  setState(await Storage.get()); renderGrid();
+  toast(tx("groupAdded"));
+  const cellEl = cellElByKey(r + ",0");
+  if (cellEl) beginRenameGroup(cellEl, group, r + ",0");
+}
+
+async function onCtxGroupAction(e) {
+  const li = e.target.closest('li[data-act]');
+  if (!li || !ctxMenuGroup.contains(li)) return;
+  const act = li.dataset.act;
+  const id = ctxBookmarkId;
+  const key = ctxCellKey;
+  hideCtxGroup();
+  if (!id || !act || !key) return;
+  const sh = activeSheet();
+  if (!sh) return;
+  const g = sh.cells[key];
+  if (!g || !isGroupCell(g) || g.id !== id) return;
+
+  if (act === "rename-group") {
+    const cellEl = cellElByKey(key);
+    if (cellEl) beginRenameGroup(cellEl, g, key);
+  } else if (act === "color") {
+    openColorMenu(key, g.id);
+  } else if (act === "delete-group") {
+    const row = parseInt(key.split(",")[0], 10);
+    await Storage.update((d) => {
+      const cur = d.sheets.find(s => s.id === d.activeSheetId);
+      if (cur) cur.cells = removeGroupRow(cur.cells, row);
+    });
+    setState(await Storage.get()); renderGrid();
+    toast(tx("groupDeleted"));
+  }
+}
+
+// Инлайн-переименование разделителя (как beginRenameSheet, но для группы).
+function beginRenameGroup(cellEl, group, key) {
+  if (!cellEl || cellEl.querySelector("input.group-rename-input")) return;
+  const titleEl = cellEl.querySelector(".title-text");
+  if (!titleEl) return;
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = "group-rename-input";
+  input.value = group.title;
+  input.maxLength = 60;
+  titleEl.replaceWith(input);
+  input.focus();
+  input.select();
+
+  let done = false;
+  const finish = async (commit) => {
+    if (done) return;
+    done = true;
+    const newTitle = (input.value || "").trim() || group.title;
+    const restored = document.createElement("span");
+    restored.className = "title-text";
+    restored.textContent = newTitle;
+    input.replaceWith(restored);
+    if (!commit || newTitle === group.title) return;
+    await Storage.update((d) => {
+      const cur = d.sheets.find(s => s.id === d.activeSheetId);
+      const g = cur && cur.cells[key];
+      if (g) g.title = newTitle;
+    });
+    setState(await Storage.get()); renderGrid();
+    toast(tx("groupRenamed"));
+  };
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); finish(true); }
+    else if (e.key === "Escape") { e.preventDefault(); finish(false); }
+  });
+  input.addEventListener("blur", () => finish(true));
+}
+
+// ---------- цвет ячейки ----------
+
+// Палитра в попапе по правому клику (или по пункту «Цвет ячейки»).
+function openColorMenu(key, id) {
+  colorTargetKey = key;
+  colorTargetId = id;
+  populateColorMenu(false);
+  // Позиционируем рядом с целевой ячейкой.
+  const el = cellElByKey(key);
+  const x = el ? el.getBoundingClientRect().left : window.innerWidth / 2;
+  const y = el ? el.getBoundingClientRect().top : window.innerHeight / 2;
+  positionMenu(colorMenu, x + 8, y + 8);
+  colorMenu.hidden = false;
+}
+
+function closeColorMenu() {
+  colorMenu.hidden = true;
+  colorTargetKey = null;
+  colorTargetId = null;
+}
+
+// Строит наборы цветов в попапе и модалке. isModal — для модалки добавления
+// закладки (там активный цвет подсвечивается, есть «убрать цвет»).
+function populateColorMenu(isModal) {
+  const host = isModal ? modalColorSwatches : colorMenu;
+  if (!host) return;
+  host.textContent = "";
+  const mk = (val, label) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "swatch" + (val ? "" : " swatch-clear");
+    b.dataset.val = val;
+    b.title = label;
+    if (val) {
+      // Свотч на светлой подложке: на тёмном фоне меню полупрозрачный тон
+      // смешивался бы с чёрным и выглядел бы темнее, чем в реальности.
+      b.style.background = `linear-gradient(${val}, ${val}), linear-gradient(#f2f2f5, #f2f2f5)`;
+    } else {
+      b.textContent = "✕";
+    }
+    if (isModal && val === modalColorValue) b.classList.add("active");
+    if (isModal) {
+      b.addEventListener("click", () => {
+        modalColorValue = val;
+        populateColorMenu(true);
+      });
+    }
+    return b;
+  };
+  // Первая кнопка — сброс цвета.
+  host.appendChild(mk("", tx("cellColorClear")));
+  for (const c of CELL_COLORS) host.appendChild(mk(c.val, tx(c.label)));
+}
+
+function onColorMenuClick(e) {
+  const sw = e.target.closest(".swatch");
+  if (!sw || !colorTargetKey) return;
+  const val = sw.dataset.val;
+  const key = colorTargetKey;
+  const id = colorTargetId;
+  closeColorMenu();
+  saveCellBg(key, id, val);
+}
+
+async function saveCellBg(key, id, bg) {
+  await Storage.update((d) => {
+    const cur = d.sheets.find(s => s.id === d.activeSheetId);
+    const cell = cur && cur.cells[key];
+    if (!cell) return;
+    if (id && cell.id !== id) return;
+    if (bg) cell.bg = bg;
+    else delete cell.bg;
+  });
+  setState(await Storage.get()); renderGrid();
+  toast(bg ? tx("saved") : tx("cellColorClear"));
 }
 
 export async function onAddBookmarkTop() {
@@ -386,7 +621,7 @@ function selectionFilledCells() {
   const sh = activeSheet();
   const out = [];
   if (!sh || !sh.cells) return out;
-  selRange.forEach(k => { if (sh.cells[k]) out.push({ from: k, bm: sh.cells[k] }); });
+  selRange.forEach(k => { if (sh.cells[k] && !isGroupCell(sh.cells[k])) out.push({ from: k, bm: sh.cells[k] }); });
   return out;
 }
 
@@ -417,9 +652,13 @@ function sheetTabAtPoint(x, y) {
 function createDragGhost(md) {
   const ghost = document.createElement("div");
   ghost.className = "cell-drag-ghost";
-  ghost.textContent = md.cells.length === 1
-    ? (md.cells[0].bm.title || md.cells[0].bm.url || "")
-    : (md.cells.length + " · " + (tx("moved") || ""));
+  if (md.group) {
+    ghost.textContent = md.title || tx("groupDefault");
+  } else {
+    ghost.textContent = md.cells.length === 1
+      ? (md.cells[0].bm.title || md.cells[0].bm.url || "")
+      : (md.cells.length + " · " + (tx("moved") || ""));
+  }
   document.body.appendChild(ghost);
   return ghost;
 }
@@ -515,8 +754,9 @@ function onGridPointerDown(e) {
   if (!key) return;
   const sh = activeSheet();
   const hasBookmark = !!(sh && sh.cells && sh.cells[key]);
+  const isGroup = hasBookmark && isGroupCell(sh.cells[key]);
   const inSelection = selRange.indexOf(key) !== -1;
-  // Как везде: захват заполненной ячейки — перемещение (одной или блока),
+  // Захват заполненной ячейки (включая разделитель) — перемещение;
   // захват пустой ячейки — выделение диапазона.
   const mode = hasBookmark ? "move" : "select";
   // Новый захват вне текущего выделения сужает выбор до этой ячейки,
@@ -524,6 +764,7 @@ function onGridPointerDown(e) {
   if (mode === "select" || (mode === "move" && !inSelection)) selectCell(key);
   pointerState = {
     mode,
+    isGroup,
     anchorKey: key,
     startX: e.clientX,
     startY: e.clientY,
@@ -562,10 +803,19 @@ function onGridPointerMove(e) {
     pointerState.moved = true;
     clearCellLongPress();
     if (pointerState.mode === "move") {
-      moveDrag = { cells: selectionFilledCells(), anchorKey: pointerState.anchorKey };
-      moveGhost = createDragGhost(moveDrag);
-      for (const el of cellEls.values()) {
-        if (el.classList.contains("selected")) el.classList.add("dragging");
+      if (pointerState.isGroup) {
+        const sh = activeSheet();
+        const g = sh && sh.cells && sh.cells[pointerState.anchorKey];
+        moveDrag = { group: true, key: pointerState.anchorKey, title: (g && g.title) || tx("groupDefault") };
+        moveGhost = createDragGhost(moveDrag);
+        const el = cellElByKey(pointerState.anchorKey);
+        if (el) el.classList.add("dragging");
+      } else {
+        moveDrag = { cells: selectionFilledCells(), anchorKey: pointerState.anchorKey };
+        moveGhost = createDragGhost(moveDrag);
+        for (const el of cellEls.values()) {
+          if (el.classList.contains("selected")) el.classList.add("dragging");
+        }
       }
     }
   }
@@ -583,7 +833,8 @@ function onGridPointerMove(e) {
   }
 
   // Режим переноса: вкладка листа под курсором → подсвечиваем как drop-цель.
-  const sheetTab = sheetTabAtPoint(e.clientX, e.clientY);
+  // Разделитель нельзя перенести на другой лист — только в пределах сетки.
+  const sheetTab = pointerState.isGroup ? null : sheetTabAtPoint(e.clientX, e.clientY);
   const sheetId = sheetTab && sheetTab.dataset.id;
   const curSheetId = activeSheet() && activeSheet().id;
   if (sheetId && sheetId !== curSheetId) {
@@ -605,7 +856,10 @@ function onGridPointerMove(e) {
   clearMoveTargets();
   if (key !== pointerState.anchorKey) {
     const t = cellElByKey(key);
-    if (t) {
+    if (pointerState.isGroup) {
+      // Разделитель можно переместить на любую строку (включая другую группу).
+      if (t) t.classList.add("drop-target");
+    } else if (t && !t.classList.contains("group")) {
       // Одиночную закладку можно поменять местами с занятой ячейкой.
       if (moveDrag && moveDrag.cells.length === 1 && t.classList.contains("filled")) {
         t.classList.add("drop-swap");
@@ -630,21 +884,38 @@ async function onGridPointerUp(e) {
     removeDragGhost();
     clearMoveTargets();
     clearDraggingCells();
-    const dropSheetId = moveDropSheetId;
-    moveDropSheetId = null;
-    clearSheetDropTargets();
-    if (dropSheetId) {
-      // Сброс на вкладку другого листа → перенос блока на этот лист.
-      await moveBlockToSheet(md, dropSheetId);
-    } else if (targetKey && targetKey !== md.anchorKey) {
-      // Одиночная закладка на занятую ячейку → обмен местами.
-      if (md.cells.length === 1 && currentBookmarkAt(targetKey)) {
-        await swapBookmarks(md.anchorKey, targetKey);
+    if (md.group) {
+      // Перенос разделителя на другую строку той же сетки.
+      const [fr] = keyParts(md.key);
+      const [tr] = keyParts(targetKey || md.key);
+      if (tr !== fr) {
+        await Storage.update((d) => {
+          const cur = d.sheets.find(s => s.id === d.activeSheetId);
+          if (cur) cur.cells = moveGroupRow(cur.cells, fr, tr);
+        });
+        setState(await Storage.get());
+        renderGrid();
+        toast(tx("groupMoved"));
       } else {
-        await moveSelectionBlock(md, targetKey);
+        renderGrid();
       }
     } else {
-      renderGrid();
+      const dropSheetId = moveDropSheetId;
+      moveDropSheetId = null;
+      clearSheetDropTargets();
+      if (dropSheetId) {
+        // Сброс на вкладку другого листа → перенос блока на этот лист.
+        await moveBlockToSheet(md, dropSheetId);
+      } else if (targetKey && targetKey !== md.anchorKey) {
+        // Одиночная закладка на занятую ячейку → обмен местами.
+        if (md.cells.length === 1 && currentBookmarkAt(targetKey)) {
+          await swapBookmarks(md.anchorKey, targetKey);
+        } else {
+          await moveSelectionBlock(md, targetKey);
+        }
+      } else {
+        renderGrid();
+      }
     }
     suppressClick = true;
     setTimeout(() => { suppressClick = false; }, 50);
@@ -684,7 +955,7 @@ function onCellPointerCancel() {
 
 export function openBookmarkAt(key) {
   const bm = currentBookmarkAt(key);
-  if (!bm) return;
+  if (!bm || isGroupCell(bm)) return;
   const state = getState();
   const target = normalizeUrl(bm.url);
   if (state.settings.openInNewTab) window.open(target, "_blank", "noopener");
@@ -707,14 +978,20 @@ export function openSelected() {
 export function editSelected() {
   if (!selectedCellKey) return;
   const bm = currentBookmarkAt(selectedCellKey);
-  if (bm) openEditModal(bm, selectedCellKey);
+  if (!bm) return;
+  if (isGroupCell(bm)) {
+    const cellEl = cellElByKey(selectedCellKey);
+    if (cellEl) beginRenameGroup(cellEl, bm, selectedCellKey);
+    return;
+  }
+  openEditModal(bm, selectedCellKey);
 }
 
 /** Открывает закладку выбранной ячейки в новой вкладке (Ctrl+Enter / Shift+Enter). */
 export function openSelectedInNewTab() {
   if (!selectedCellKey) return;
   const bm = currentBookmarkAt(selectedCellKey);
-  if (!bm) return;
+  if (!bm || isGroupCell(bm)) return;
   window.open(normalizeUrl(bm.url), "_blank", "noopener");
 }
 
@@ -724,12 +1001,16 @@ export async function deleteSelected() {
   const sh = activeSheet();
   if (!sh || !sh.cells || !sh.cells[selectedCellKey]) return;
   const key = selectedCellKey;
+  const isGroup = isGroupCell(sh.cells[key]);
   await Storage.update((d) => {
     const cur = d.sheets.find(s => s.id === d.activeSheetId);
-    if (cur) delete cur.cells[key];
+    if (cur) {
+      if (isGroup) cur.cells = removeGroupRow(cur.cells, parseInt(key.split(",")[0], 10));
+      else delete cur.cells[key];
+    }
   });
   setState(await Storage.get()); renderGrid();
-  toast(tx("deleted"));
+  toast(isGroup ? tx("groupDeleted") : tx("deleted"));
 }
 
 /** Дублирует закладку выбранной ячейки в первую свободную (Ctrl+D). */
@@ -741,6 +1022,7 @@ export async function duplicateSelected() {
   const newKey = nextEmptyAfter(sh, selectedCellKey, clampCols(state.settings.defaultColumns));
   if (!newKey) return;
   const bm = sh.cells[selectedCellKey];
+  if (!bm || isGroupCell(bm)) return;
   const dupTitle = bm.title + " (" + tx("duplicate").toLowerCase() + ")";
   await Storage.update((d) => {
     const cur = d.sheets.find(s => s.id === d.activeSheetId);
@@ -763,7 +1045,11 @@ export function openCellContextMenu() {
   const key = selectedCellKey;
   const bm = currentBookmarkAt(key);
   ctxCellKey = key;
-  if (bm) {
+  if (bm && isGroupCell(bm)) {
+    ctxBookmarkId = bm.id;
+    positionMenu(ctxMenuGroup, window.innerWidth / 2, window.innerHeight / 2);
+    ctxMenuGroup.hidden = false;
+  } else if (bm) {
     ctxBookmarkId = bm.id;
     positionMenu(ctxMenu, window.innerWidth / 2, window.innerHeight / 2);
     ctxMenu.hidden = false;
@@ -827,7 +1113,7 @@ function onGridKeyDown(e) {
   if (modalOpen) return;
   const searcherOpen = document.getElementById("searcher") && !document.getElementById("searcher").hidden;
   if (searcherOpen) return;
-  if (!ctxMenu.hidden || !ctxEmpty.hidden || !sheetCtx.hidden) return;
+  if (!ctxMenu.hidden || !ctxEmpty.hidden || !ctxMenuGroup.hidden || !sheetCtx.hidden || !colorMenu.hidden) return;
   const k = e.key;
   const code = keyCode(e);
 
@@ -983,7 +1269,7 @@ async function swapBookmarks(aKey, bKey) {
     if (!cur) return;
     const a = cur.cells[aKey];
     const b = cur.cells[bKey];
-    if (!a || !b) return;
+    if (!a || !b || isGroupCell(a) || isGroupCell(b)) return;
     cur.cells[aKey] = b;
     cur.cells[bKey] = a;
   });
@@ -997,9 +1283,11 @@ async function swapBookmarks(aKey, bKey) {
 function openAddModal(key) {
   editingBookmark = null;
   editingTargetKey = key || null;
+  modalColorValue = "";
   modalTitle.textContent = tx("modalAdd");
   tabForm.elements.title.value = "";
   tabForm.elements.url.value   = "";
+  populateColorMenu(true);
   modalEl.hidden = false;
   // restart modal animation
   const card = modalEl.querySelector(".modal-card");
@@ -1014,9 +1302,11 @@ function openAddModal(key) {
 function openEditModal(bm, key) {
   editingBookmark = { id: bm.id, key };
   editingTargetKey = key;
+  modalColorValue = bm.bg || "";
   modalTitle.textContent = tx("modalEdit");
   tabForm.elements.title.value = bm.title || "";
   tabForm.elements.url.value   = bm.url   || "";
+  populateColorMenu(true);
   modalEl.hidden = false;
   const card = modalEl.querySelector(".modal-card");
   if (card) { card.style.animation = "none"; void card.offsetWidth; card.style.animation = ""; }
@@ -1050,11 +1340,15 @@ export async function onSubmitBookmark(e) {
       if (x && x.id === editingBookmark.id) {
         x.title = title;
         x.url   = url;
+        if (modalColorValue) x.bg = modalColorValue;
+        else delete x.bg;
       }
     } else {
       const state = getState();
       const k = editingTargetKey || findFirstEmptyCell(cur, computeFillRows(cur), clampCols(state.settings.defaultColumns)) || "0,0";
-      cur.cells[k] = { id: cryptoId(), title, url };
+      const cell = { id: cryptoId(), title, url };
+      if (modalColorValue) cell.bg = modalColorValue;
+      cur.cells[k] = cell;
     }
   });
   setState(await Storage.get());
@@ -1088,6 +1382,8 @@ export function bindGridEvents() {
 
   ctxMenu.addEventListener("click", onCtxAction);
   ctxEmpty.addEventListener("click", onCtxEmptyAction);
+  ctxMenuGroup.addEventListener("click", onCtxGroupAction);
+  colorMenu.addEventListener("click", onColorMenuClick);
 
   gridEl.addEventListener("contextmenu", (e) => {
     if (!e.target.closest(".cell")) e.preventDefault();
@@ -1100,13 +1396,15 @@ export function bindGridEvents() {
     if (modalOpen) return; // don't interfere with open modals
     if (!ctxMenu.hidden && !ctxMenu.contains(e.target)) hideCtx();
     if (!ctxEmpty.hidden && !ctxEmpty.contains(e.target)) hideCtxEmpty();
+    if (!ctxMenuGroup.hidden && !ctxMenuGroup.contains(e.target)) hideCtxGroup();
     if (!sheetCtx.hidden && !sheetCtx.contains(e.target)) hideSheetCtx();
+    if (!colorMenu.hidden && !colorMenu.contains(e.target)) closeColorMenu();
     if (!e.target.closest(".cell") && !e.target.closest(".ctx-menu") && !e.target.closest(".modal")) {
       selectCell(null);
     }
   });
   document.addEventListener("scroll", () => {
-    hideCtx(); hideCtxEmpty(); hideSheetCtx();
+    hideCtx(); hideCtxEmpty(); hideCtxGroup(); hideSheetCtx(); closeColorMenu();
   }, true);
 }
 

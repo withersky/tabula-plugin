@@ -252,6 +252,10 @@ export async function refreshWeather() {
     if (myGen === _weatherGen) {
       _weatherInFlight = false;
       renderWeather();
+      // Попап мог быть открыт во время загрузки (смена города на холодном
+      // старте, фоновая догрузка) — перерисовываем его свежим прогнозом,
+      // иначе он продолжает показывать старый город.
+      if (weatherPopupEl && !weatherPopupEl.hidden) renderWeatherPopup();
     }
   }
 }
@@ -436,13 +440,15 @@ function renderWeatherPopupCities(s, city) {
       if (c.id === (city && city.id)) return;
       await Storage.update((d) => { d.settings.weatherActiveCityId = c.id; });
       setState(await Storage.get());
+      // Сразу перерисовываем виджет И попап под новый активный город. Если
+      // кэша для него ещё нет (холодный старт), попап показывает имя нового
+      // города и «нет данных» вместо прогноза старого города.
+      renderWeather();
+      renderWeatherPopup();
       const minutes = Math.max(5, Number((getState() && getState().settings && getState().settings.weatherRefreshMin) || 30));
       const ms = minutes * 60 * 1000;
       if (!weatherCacheFresh(weatherCacheFor(getState(), c), ms)) {
         refreshWeather();
-      } else {
-        renderWeather();
-        renderWeatherPopup();
       }
     });
     weatherPopupCitiesEl.appendChild(item);

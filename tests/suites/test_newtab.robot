@@ -232,3 +232,98 @@ Today Hourly Key Edge Cases / Ключ «сегодня» почасовки: п
     ...                должны давать null (никакой подсветки «сегодня»).
     Core Function Should Equal    todayHourlyKey    ${None}    []
     Core Function Should Equal    todayHourlyKey    ${None}    [{"hour":23,"code":1}]
+
+Is Group Cell / Проверка типа группы
+    Core Function Should Equal    isGroupCell    ${True}    {"id":"x","type":"group"}
+    Core Function Should Equal    isGroupCell    ${False}    {"id":"x","title":"G","url":"https://g"}
+    Core Function Should Equal    isGroupCell    ${False}    ${None}
+    Core Function Should Equal    isGroupCell    ${False}    {}
+
+Insert Group Row / Вставка строки разделителя
+    [Documentation]    insertGroupRow ставит разделитель в колонку 0, сохраняя данные.
+    ...                Если строка row уже занята закладкой, ячейки с r >= row
+    ...                сдвигаются на строку вниз; если строка пуста — сдвига нет.
+    ...                Разделитель не занимает строку закладок (см. computeFillRows).
+    Core Function Should Equal    insertGroupRow    {"0,0":{"id":"a","title":"A","url":"https://a"},"0,1":{"id":"b","title":"B","url":"https://b"},"1,0":{"id":"g","title":"Group","type":"group"}}    {"0,0":{"id":"a","title":"A","url":"https://a"},"0,1":{"id":"b","title":"B","url":"https://b"}}    1    {"id":"g","title":"Group","type":"group"}
+    Core Function Should Equal    insertGroupRow    {"0,0":{"id":"a","title":"A","url":"https://a"},"1,0":{"id":"g","title":"Group","type":"group"},"2,0":{"id":"b","title":"B","url":"https://b"}}    {"0,0":{"id":"a","title":"A","url":"https://a"},"1,0":{"id":"b","title":"B","url":"https://b"}}    1    {"id":"g","title":"Group","type":"group"}
+    # Вставка в строку с занятой другой колонкой: (1,0) пуста, (1,1) занята —
+    # закладка сдвигается вниз, чтобы разделитель её не перекрыл.
+    Core Function Should Equal    insertGroupRow    {"0,0":{"id":"a","title":"A","url":"https://a"},"1,0":{"id":"g","title":"Group","type":"group"},"2,1":{"id":"b","title":"B","url":"https://b"}}    {"0,0":{"id":"a","title":"A","url":"https://a"},"1,1":{"id":"b","title":"B","url":"https://b"}}    1    {"id":"g","title":"Group","type":"group"}
+
+Move Group Row / Перемещение строки разделителя
+    [Documentation]    moveGroupRow убирает группу с fromRow, сдвигает промежуточные
+    ...                строки и вставляет разделитель на toRow, не теряя данные.
+    Core Function Should Equal    moveGroupRow    {"0,0":{"id":"a","title":"A","url":"https://a"},"1,0":{"id":"b","title":"B","url":"https://b"},"2,0":{"id":"c","title":"C","url":"https://c"},"3,0":{"id":"d","title":"D","url":"https://d"},"4,0":{"id":"e","title":"E","url":"https://e"},"5,0":{"id":"g","title":"Group","type":"group"},"6,0":{"id":"f","title":"F","url":"https://f"}}    {"0,0":{"id":"a","title":"A","url":"https://a"},"1,0":{"id":"b","title":"B","url":"https://b"},"2,0":{"id":"g","title":"Group","type":"group"},"3,0":{"id":"c","title":"C","url":"https://c"},"4,0":{"id":"d","title":"D","url":"https://d"},"5,0":{"id":"e","title":"E","url":"https://e"},"6,0":{"id":"f","title":"F","url":"https://f"}}    2    5
+    Core Function Should Equal    moveGroupRow    {"0,0":{"id":"a","title":"A","url":"https://a"},"1,0":{"id":"g","title":"Group","type":"group"},"2,0":{"id":"b","title":"B","url":"https://b"},"3,0":{"id":"c","title":"C","url":"https://c"}}    {"0,0":{"id":"a","title":"A","url":"https://a"},"1,0":{"id":"b","title":"B","url":"https://b"},"2,0":{"id":"g","title":"Group","type":"group"},"3,0":{"id":"c","title":"C","url":"https://c"}}    2    1
+    Core Function Should Equal    moveGroupRow    {"0,0":{"id":"a","title":"A","url":"https://a"},"2,0":{"id":"g","title":"Group","type":"group"}}    {"0,0":{"id":"a","title":"A","url":"https://a"},"2,0":{"id":"g","title":"Group","type":"group"}}    2    2
+    Core Function Should Equal    moveGroupRow    {"0,0":{"id":"a","title":"A","url":"https://a"}}    {"0,0":{"id":"a","title":"A","url":"https://a"}}    0    2
+
+Remove Group Row / Удаление строки разделителя
+    [Documentation]    removeGroupRow убирает группу с row и поднимает все ячейки
+    ...                с r > row на строку вверх. Инвариант: инверсная пара с
+    ...                insertGroupRow (для занятой и пустой строки).
+    Core Function Should Equal    removeGroupRow    {}    {}    0
+    # Инверс: insertGroupRow в занятую строку (1,1) → removeGroupRow → исходные данные.
+    Core Function Should Equal    removeGroupRow    {"0,0":{"id":"a","title":"A","url":"https://a"},"1,1":{"id":"b","title":"B","url":"https://b"}}    {"0,0":{"id":"a","title":"A","url":"https://a"},"1,0":{"id":"g","title":"Group","type":"group"},"2,1":{"id":"b","title":"B","url":"https://b"}}    1
+    # Инверс: insertGroupRow в пустую строку (нет сдвига).
+    Core Function Should Equal    removeGroupRow    {"0,0":{"id":"a","title":"A","url":"https://a"}}    {"0,0":{"id":"a","title":"A","url":"https://a"},"1,0":{"id":"g","title":"Group","type":"group"}}    1
+    # Удаление сдвигает содержимое ниже: group на 1, b ниже на 1 → b на 1.
+    Core Function Should Equal    removeGroupRow    {"0,0":{"id":"a","title":"A","url":"https://a"},"1,0":{"id":"b","title":"B","url":"https://b"}}    {"0,0":{"id":"a","title":"A","url":"https://a"},"1,0":{"id":"g","title":"Group","type":"group"},"2,0":{"id":"b","title":"B","url":"https://b"}}    1
+    # Если в row нет группы — без изменений.
+    Core Function Should Equal    removeGroupRow    {"0,0":{"id":"a","title":"A","url":"https://a"}}    {"0,0":{"id":"a","title":"A","url":"https://a"}}    0
+
+Sort Sheet Cells By Title / Сортировка закладок по названию
+    [Documentation]    sortSheetCells упаковывает закладки влево-вверх построчно.
+    Core Function Should Equal    sortSheetCells    {"0,0":{"id":"a","title":"A","url":"https://a"},"0,1":{"id":"z","title":"Z","url":"https://z"}}    {"0,0":{"id":"z","title":"Z","url":"https://z"},"0,1":{"id":"a","title":"A","url":"https://a"}}    2    title
+    Core Function Should Equal    sortSheetCells    {"0,0":{"id":"a","title":"A","url":"https://a"},"0,1":{"id":"z","title":"Z","url":"https://z"}}    {"0,2":{"id":"z","title":"Z","url":"https://z"},"1,1":{"id":"a","title":"A","url":"https://a"}}    3    title
+
+Sort Sheet Cells With Groups / Сортировка закладок с группами
+    [Documentation]    Разделители остаются на своих местах, закладки внутри секций
+    ...                сортируются; «мусор» в строках-группах сохраняется.
+    Core Function Should Equal    sortSheetCells    {"0,0":{"id":"g","title":"Sec1","type":"group"},"1,0":{"id":"a","title":"A","url":"https://a"},"1,1":{"id":"b","title":"B","url":"https://b"}}    {"0,0":{"id":"g","title":"Sec1","type":"group"},"1,0":{"id":"b","title":"B","url":"https://b"},"1,1":{"id":"a","title":"A","url":"https://a"}}    2    title
+    Core Function Should Equal    sortSheetCells    {"0,0":{"id":"g","title":"Sec","type":"group"},"0,2":{"id":"x","title":"X","url":"https://x"},"1,0":{"id":"a","title":"A","url":"https://a"},"1,1":{"id":"b","title":"B","url":"https://b"}}    {"0,0":{"id":"g","title":"Sec","type":"group"},"0,2":{"id":"x","title":"X","url":"https://x"},"1,0":{"id":"b","title":"B","url":"https://b"},"1,1":{"id":"a","title":"A","url":"https://a"}}    3    title
+
+Sort Sheet Cells By Domain / Сортировка закладок по домену
+    [Documentation]    Сравнение идёт по домену (без www), при равенстве — по названию.
+    Core Function Should Equal    sortSheetCells    {"0,0":{"id":"b","title":"B","url":"https://apple.com"},"0,1":{"id":"a","title":"A","url":"https://www.zebra.io"}}    {"0,0":{"id":"a","title":"A","url":"https://www.zebra.io"},"0,1":{"id":"b","title":"B","url":"https://apple.com"}}    2    domain
+
+Host Of / Домен без www
+    Core Function Should Equal    hostOf    zebra.io    https://www.zebra.io/a
+    Core Function Should Equal    hostOf    example.com    example.com
+    Core Function Should Equal    hostOf    ${EMPTY}    ${EMPTY}
+
+Today Key / Ключ даты «сегодня»
+    [Documentation]    todayKey(d) возвращает 'YYYY-MM-DD' для переданной даты;
+    ...                без аргумента — текущую дату устройства (формат тот же).
+    Core Function Should Equal    todayKey    2026-03-05    {"$date":"2026-03-05T12:00:00"}
+    Core Function Should Equal    todayKey    2026-12-31    {"$date":"2026-12-31T23:59:59"}
+    Core Function Should Equal    todayKey    2026-01-01    {"$date":"2026-01-01T00:00:00"}
+    # Дата без аргумента — реальные часы, формат YYYY-MM-DD.
+    ${k} =    Call Core Function    todayKey
+    Should Match Regexp    ${k}    ^\\d{4}-\\d{2}-\\d{2}$
+
+Pick For Date / Выбор обоев по дате (детерминизм)
+    [Documentation]    pickForDate(list, dateKey) — детерминированный выбор: одна и та же
+    ...                дата всегда даёт один и тот же элемент из списка.
+    Core Function Should Equal    pickForDate    url-a    ["url-a","url-b","url-c"]    2026-03-05
+    Core Function Should Equal    pickForDate    url-a    ["url-a","url-b","url-c"]    2026-03-05
+    Core Function Should Equal    pickForDate    url-b    ["url-a","url-b","url-c"]    2026-03-06
+    Core Function Should Equal    pickForDate    url-c    ["url-a","url-b","url-c"]    2026-03-07
+
+Pick For Date Edge Cases / Выбор обоев: граничные случаи
+    [Documentation]    Пустой список/не-массив возвращают пустую строку; одинарный
+    ...                элемент — всегда он; выбор ограничен длиной списка.
+    Core Function Should Equal    pickForDate    ${EMPTY}    []    2026-03-05
+    Core Function Should Equal    pickForDate    ${EMPTY}    ${None}    2026-03-05
+    Core Function Should Equal    pickForDate    only    ["only"]    2026-03-05
+    Core Function Should Equal    pickForDate    only    ["only"]    2026-12-31
+    Core Function Should Equal    pickForDate    a    ["a"]    2026-03-05
+
+Macos Wallpaper Title / Название обоев из URL
+    [Documentation]    macosWallpaperTitle вытаскивает слаг из ссылки на оригинал:
+    ...                /wallpapers/<slug>--<id>.jpg → название словами.
+    Core Function Should Equal    macosWallpaperTitle    macos big sur    https://4kwallpapers.com/images/wallpapers/macos-big-sur--1234.jpg
+    Core Function Should Equal    macosWallpaperTitle    macos ventura night    https://4kwallpapers.com/images/wallpapers/macos-ventura-night--5678.png
+    Core Function Should Equal    macosWallpaperTitle    ${EMPTY}    ${EMPTY}
+    Core Function Should Equal    macosWallpaperTitle    ${EMPTY}    ${None}
+    Core Function Should Equal    macosWallpaperTitle    ${EMPTY}    https://4kwallpapers.com/images/wallpapers/macos-big-sur-1920x1080-1234.jpg

@@ -36,7 +36,7 @@ import {
 import { sendPreview } from "./preview.js";
 import {
   updateBgTypeVisibility, updateUploadPreview, updateBingCopyright,
-  updateAllPreviews, bindAppearanceEvents
+  updateMacosInfo, updateAllPreviews, bindAppearanceEvents
 } from "./appearance.js";
 import { bindWidgetEvents, renderCityLists } from "./widgets.js";
 import { bindDataEvents } from "./data.js";
@@ -56,6 +56,7 @@ async function init() {
   updateBgTypeVisibility();
   updateUploadPreview();
   updateBingCopyright();
+  updateMacosInfo();
   updateAllPreviews();
   populateAbout();
 
@@ -68,6 +69,7 @@ async function init() {
       activeSheetId: next.activeSheetId || prev.activeSheetId,
       settings:      Object.assign({}, prev.settings, next.settings || {}),
       bingCache:     next.bingCache !== undefined ? next.bingCache : prev.bingCache,
+      macosCache:    next.macosCache !== undefined ? next.macosCache : prev.macosCache,
       weatherCaches: next.weatherCaches !== undefined ? next.weatherCaches : prev.weatherCaches
     });
     setLang(getState().settings.language || "ru");
@@ -77,6 +79,7 @@ async function init() {
     updateBgTypeVisibility();
     updateUploadPreview();
     updateBingCopyright();
+    updateMacosInfo();
     updateAllPreviews();
   });
 }

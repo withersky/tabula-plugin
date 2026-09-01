@@ -546,6 +546,15 @@ async function onSheetCtxAction(e) {
   } else if (act === "icon") {
     const tabEl = sheetTabsEl.querySelector('.sheet-tab[data-id="' + id + '"]');
     if (tabEl) beginRenameIcon(tabEl, sh);
+  } else if (act === "sort-title" || act === "sort-domain" || act === "sort-url") {
+    const mode = act === "sort-title" ? "title" : act === "sort-domain" ? "domain" : "url";
+    await Storage.update((d) => {
+      const cur = d.sheets.find(s => s.id === id);
+      if (cur) cur.cells = sortSheetCells(cur.cells, clampCols(state.settings.defaultColumns), mode);
+    });
+    setState(await Storage.get());
+    renderGrid();
+    toast(tx("sorted"));
   }
 }
 

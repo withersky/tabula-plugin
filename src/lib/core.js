@@ -50,6 +50,30 @@
     return null;
   }
 
+  // ---------- даты и выборка ----------
+
+  // Возвращает строку 'YYYY-MM-DD' для указанной или текущей даты.
+  function todayKey(d) {
+    const x = d || new Date();
+    return x.getFullYear() + "-" + String(x.getMonth() + 1).padStart(2, "0") + "-" + String(x.getDate()).padStart(2, "0");
+  }
+
+  // Выбирает элемент из списка детерминированно по ключу даты (хеш-функция).
+  // Один и тот же dateKey всегда даёт один и тот же индекс.
+  function pickForDate(list, dateKey) {
+    if (!Array.isArray(list) || list.length === 0) return "";
+    let h = 0;
+    for (let i = 0; i < dateKey.length; i++) h = ((h << 5) - h + dateKey.charCodeAt(i)) >>> 0;
+    return list[h % list.length];
+  }
+
+  // Извлекает название обоев из URL: /wallpapers/macos-big-sur--1234.jpg → "macos big sur"
+  function macosWallpaperTitle(url) {
+    const m = /wallpapers\/(.+)--\d+\.\w+$/.exec(url || "");
+    if (!m) return "";
+    return m[1].split("-").filter(Boolean).join(" ");
+  }
+
   // ---------- погода: иконки и описания ----------
 
   const WEATHER_ICON_EMOJI = {
@@ -331,6 +355,153 @@
     return null;
   }
 
+  // ---------- сетка: группы и сортировка ----------
+
+  // Группа (разделитель) — ячейка-заголовок во всю ширину строки.
+  function isGroupCell(cell) {
+    return !!(cell && cell.type === "group");
+  }
+
+  // Вставляет строку-разделитель в cells (чистая функция).
+  // Если строка row занята (в любой колонке), все ячейки с r >= row сдвигаются
+  // на строку вниз, чтобы разделитель никого не перекрывал. Если строка
+  // полностью пуста — сдвига нет, разделитель занимает свободное место.
+  // Разделитель не занимает строку закладок: сетка просто растёт на него
+  // (см. computeFillRows). Возвращает новый объект cells.
+  function insertGroupRow(cells, row, groupCell) {
+    let rowOccupied = false;
+    for (const k of Object.keys(cells || {})) {
+      const [r] = keyParts(k);
+      if (r === row) { rowOccupied = true; break; }
+    }
+    const out = {};
+    for (const k of Object.keys(cells || {})) {
+      const [r, c] = keyParts(k);
+      out[(rowOccupied && r >= row ? r + 1 : r) + "," + c] = cells[k];
+    }
+    if (groupCell) out[row + ",0"] = groupCell;
+    return out;
+  }
+
+  // Удаляет строку-разделитель в cells (чистая функция, инверсия вставки):
+  // убирает группу с row и поднимает все ячейки с r > row на строку вверх.
+  // Если в row нет группы — возвращает cells без изменений.
+  function removeGroupRow(cells, row) {
+    cells = cells || {};
+    const key = row + ",0";
+    if (!cells[key] || !isGroupCell(cells[key])) return cells;
+    const out = {};
+    for (const k of Object.keys(cells)) {
+      if (k === key) continue;
+      const [r, c] = keyParts(k);
+      out[(r > row ? r - 1 : r) + "," + c] = cells[k];
+    }
+    return out;
+  }
+
+  // Перемещает строку-разделитель в cells (чистая функция): убирает группу с
+  // fromRow, сдвигает промежуточные строки и вставляет группу на toRow.
+  // fromRow/toRow — номера строк в «старой» системе координат (до сдвига).
+  // Возвращает новый объект cells; данные не теряются.
+  function moveGroupRow(cells, fromRow, toRow) {
+    cells = cells || {};
+    const key = fromRow + ",0";
+    const group = cells[key];
+    if (!group || !isGroupCell(group)) return cells;
+    if (toRow === fromRow) return cells;
+    // Сдвиг без группы: все строки > fromRow поднимаются на одну вверх.
+    const out = {};
+    for (const k of Object.keys(cells)) {
+      const [r, c] = keyParts(k);
+      if (k === key) continue;
+      out[(r > fromRow ? r - 1 : r) + "," + c] = cells[k];
+    }
+    // Вставляем группу на toRow: строки >= toRow опускаются на одну вниз.
+    const shifted = {};
+    for (const k of Object.keys(out)) {
+      const [r, c] = keyParts(k);
+      shifted[(r >= toRow ? r + 1 : r) + "," + c] = out[k];
+    }
+    shifted[toRow + ",0"] = group;
+    return shifted;
+  }
+
+  // Хост без www — для сортировки по домену.
+  function hostOf(url) {
+    try {
+      return new URL(normalizeUrl(url)).hostname.replace(/^www\./, "");
+    } catch (_) {
+      return "";
+    }
+  }
+
+  // Сортирует закладки листа (чистая функция):
+  // - строки с разделителем (type:"group" в колонке 0) — фиксированные
+  //   границы секций; закладки внутри каждой секции сортируются и
+  //   упаковываются влево-вверх построчно;
+  // - режимы: title / domain / url;
+  // - «мусор» в строках-группах (колонка != 0) сохраняется как есть.
+  function sortSheetCells(cells, cols, mode) {
+    cells = cells || {};
+    const out = {};
+    const colCount = cols || 8;
+
+    // Определяем строки-группы (разделители в колонке 0).
+    const groupRows = [];
+    for (const k of Object.keys(cells)) {
+      const cell = cells[k];
+      if (cell && isGroupCell(cell)) {
+        const [r, c] = keyParts(k);
+        if (c === 0) groupRows.push(r);
+        else out[k] = cell; // «мусор» в групповой строке — не трогаем
+      }
+    }
+    groupRows.sort((a, b) => a - b);
+
+    // Функция сравнения для выбранного режима.
+    const cmp = mode === "domain"
+      ? (a, b) => hostOf(a.url).localeCompare(hostOf(b.url)) || String(a.title || "").localeCompare(String(b.title || ""))
+      : mode === "url"
+        ? (a, b) => String(a.url || "").localeCompare(String(b.url || ""))
+        : (a, b) => String(a.title || "").localeCompare(String(b.title || ""));
+
+    // Сохраняем все ячейки в строках-группах как есть (разделители и
+    // возможный мусор) — защита от потери данных.
+    for (const k of Object.keys(cells)) {
+      const [r] = keyParts(k);
+      if (groupRows.indexOf(r) !== -1) out[k] = cells[k];
+    }
+
+    // Границы секций: [start, end] включительно. end = null для последней.
+    const bounds = [];
+    let start = 0;
+    for (const g of groupRows) {
+      bounds.push([start, g - 1]);
+      start = g + 1;
+    }
+    bounds.push([start, null]);
+
+    for (const [r0, r1] of bounds) {
+      if (r0 > r1 && r1 != null) continue; // пустая секция
+      const items = [];
+      for (const k of Object.keys(cells)) {
+        const [r] = keyParts(k);
+        if (r < r0) continue;
+        if (r1 != null && r > r1) continue;
+        if (groupRows.indexOf(r) !== -1) continue;
+        items.push(cells[k]);
+      }
+      items.sort(cmp);
+      let i = 0;
+      for (let r = r0; (r1 == null || r <= r1) && i < items.length; r++) {
+        for (let c = 0; c < colCount && i < items.length; c++, i++) {
+          out[r + "," + c] = items[i];
+        }
+      }
+    }
+    return out;
+  }
+
   // ---------- фон (service worker) ----------
 
   // Полный маппинг символов met.no (https://api.met.no/weatherapi/weathericon/2.0/documentation)
@@ -559,7 +730,7 @@
   // (tests/suites/test_diff.robot).
   //
   // Возвращает { sheetsChanged, activeChanged, settingsChanged, weatherChanged,
-  // bingChanged, langChanged, nextSettings, prevSettings }.
+  // bingChanged, macosChanged, langChanged, nextSettings, prevSettings }.
   function diffTabulaData(prev, next, currentLang) {
     const prevData = (prev && typeof prev === "object") ? prev : {};
     const nextData = (next && typeof next === "object") ? next : {};
@@ -570,11 +741,13 @@
     const nextSheets = Array.isArray(nextData.sheets) ? nextData.sheets : prevData.sheets;
     const nextWeatherCaches = nextData.weatherCaches !== undefined ? nextData.weatherCaches : prevData.weatherCaches;
     const nextBingCache = nextData.bingCache !== undefined ? nextData.bingCache : prevData.bingCache;
+    const nextMacosCache = nextData.macosCache !== undefined ? nextData.macosCache : prevData.macosCache;
     const sheetsChanged = JSON.stringify(prevData.sheets) !== JSON.stringify(nextSheets);
     const activeChanged = !!nextData.activeSheetId && nextData.activeSheetId !== prevData.activeSheetId;
     const settingsChanged = JSON.stringify(prevSettings) !== JSON.stringify(nextSettings);
     const weatherChanged = JSON.stringify(nextWeatherCaches) !== JSON.stringify(prevData.weatherCaches);
     const bingChanged = JSON.stringify(nextBingCache) !== JSON.stringify(prevData.bingCache);
+    const macosChanged = JSON.stringify(nextMacosCache) !== JSON.stringify(prevData.macosCache);
     const langChanged = (nextSettings.language || "ru") !== (currentLang || "ru");
     return {
       sheetsChanged,
@@ -582,6 +755,7 @@
       settingsChanged,
       weatherChanged,
       bingChanged,
+      macosChanged,
       langChanged,
       nextSettings,
       prevSettings
@@ -605,11 +779,20 @@
     keyParts,
     rangeKeys,
     nextEmptyAfter,
+    isGroupCell,
+    insertGroupRow,
+    removeGroupRow,
+    moveGroupRow,
+    hostOf,
+    sortSheetCells,
     symbolToCode,
     num,
     buildDailyForecast,
     buildHourlyForecast,
     todayHourlyKey,
-    diffTabulaData
+    diffTabulaData,
+    todayKey,
+    pickForDate,
+    macosWallpaperTitle
   };
 });

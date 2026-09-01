@@ -99,7 +99,8 @@ spellcheck="false" />
 <label><span data-i18n="fieldTitle">Название</span><input name="title" type="text" required maxlength="80"
 data-i18n-placeholder="placeholderTitle" placeholder="Название" /></label>
 <label><span data-i18n="fieldUrl">URL</span><input name="url" type="text" required
-data-i18n-placeholder="placeholderUrl" placeholder="https://example.com" /></label>
+	data-i18n-placeholder="placeholderUrl" placeholder="https://example.com" /></label>
+<label class="full color-row"><span data-i18n="cellColorTitle">Цвет ячейки</span><div id="modalColorSwatches" class="swatch-row"></div></label>
 <div class="modal-actions">
 <button type="button" id="cancelBtn" class="btn" data-i18n="cancel">Отмена</button>
 <button type="submit" class="btn primary" data-i18n="save">Сохранить</button>
@@ -147,14 +148,31 @@ data-i18n-placeholder="promptSheetName" placeholder="Название листа
   <!-- Empty cell context menu -->
   <ul id="ctxMenuEmpty" class="ctx-menu" hidden>
     <li data-act="add"><span class="ctx-icon" data-i18n="iconAdd">➕</span><span data-i18n="addHere">Добавить сюда</span></li>
+    <li data-act="add-group"><span class="ctx-icon" data-i18n="iconGroup">▤</span><span data-i18n="addGroup">Добавить разделитель</span></li>
+  </ul>
+
+  <!-- Group cell context menu -->
+  <ul id="ctxMenuGroup" class="ctx-menu" hidden>
+    <li data-act="rename-group"><span class="ctx-icon" data-i18n="iconRename">✏️</span><span data-i18n="renameGroup">Переименовать</span></li>
+    <li data-act="color"><span class="ctx-icon" data-i18n="iconColor">🎨</span><span data-i18n="cellColorTitle">Цвет ячейки</span></li>
+    <li data-act="delete-group" class="danger"><span class="ctx-icon" data-i18n="iconDelete">🗑</span><span data-i18n="deleteGroup">Удалить разделитель</span></li>
   </ul>
 
   <!-- Sheet context menu -->
   <ul id="sheetCtx" class="ctx-menu" hidden>
     <li data-act="rename"><span class="ctx-icon" data-i18n="iconRename">✏️</span><span data-i18n="renameSheet">Переименовать лист</span></li>
     <li data-act="icon"><span class="ctx-icon" data-i18n="iconIcon">😀</span><span data-i18n="sheetIcon">Иконка листа</span></li>
+    <li class="ctx-sep"></li>
+    <li class="disabled sort-label"><span class="ctx-icon" data-i18n="iconSort">⇅</span><span data-i18n="sortLabel">Сортировка</span></li>
+    <li data-act="sort-title"><span class="ctx-icon" style="opacity:0">⇅</span><span data-i18n="sortByTitle">По названию</span></li>
+    <li data-act="sort-domain"><span class="ctx-icon" style="opacity:0">⇅</span><span data-i18n="sortByDomain">По домену</span></li>
+    <li data-act="sort-url"><span class="ctx-icon" style="opacity:0">⇅</span><span data-i18n="sortByUrl">По URL</span></li>
+    <li class="ctx-sep"></li>
     <li data-act="delete" class="danger"><span class="ctx-icon" data-i18n="iconDelete">🗑</span><span data-i18n="deleteSheet">Удалить лист</span></li>
   </ul>
+
+  <!-- Палитра выбора цвета ячейки -->
+  <div id="colorMenu" class="color-menu swatch-row" hidden></div>
 
   <!-- Палитра поиска: поиск закладок по всем листам (Ctrl+F) -->
   <div id="searcher" class="searcher" hidden>

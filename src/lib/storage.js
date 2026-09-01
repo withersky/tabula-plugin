@@ -210,6 +210,7 @@ function defaultData() {
       language: "ru"
     },
     bingCache: null,
+    macosCache: null,
     weatherCache: null,
     weatherCaches: {}
   };
@@ -270,6 +271,7 @@ function migrate(oldData) {
       activeSheetId: active,
       settings: cleanedSettings,
       bingCache: oldData.bingCache || null,
+      macosCache: oldData.macosCache || null,
       weatherCache: oldData.weatherCache || null,
       weatherCaches: (oldData.weatherCaches && typeof oldData.weatherCaches === "object")
         ? oldData.weatherCaches
@@ -304,6 +306,7 @@ function migrate(oldData) {
       activeSheetId: sheets[0].id,
       settings: cleanedSettings,
       bingCache: null,
+      macosCache: null,
       weatherCache: null,
       weatherCaches: {}
     };
@@ -326,6 +329,7 @@ function mergeWithDefaults(data) {
     if (!out.sheets.find(s => s.id === out.activeSheetId)) out.activeSheetId = out.sheets[0].id;
   }
   if (data && data.bingCache) out.bingCache = data.bingCache;
+  if (data && data.macosCache) out.macosCache = data.macosCache;
   if (data && data.weatherCaches && typeof data.weatherCaches === "object") {
     out.weatherCaches = Object.assign({}, data.weatherCaches);
   }

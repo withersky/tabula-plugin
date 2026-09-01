@@ -13,6 +13,7 @@ src/i18n/generated/
 Thumbs.db
 .vscode/
 .idea/
+.zed/
 
 # Local overrides
 *.local

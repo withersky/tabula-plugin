@@ -69,6 +69,7 @@
             <option value="imageUrl"    data-i18n="bgImageUrl">URL изображения</option>
             <option value="imageUpload" data-i18n="bgImageUpload">Загрузить своё изображение</option>
             <option value="bing"        data-i18n="bgBing">Bing: изображение дня</option>
+            <option value="macos"       data-i18n="bgMacos">macOS: обои дня</option>
           </select>
         </label>
 
@@ -132,6 +133,11 @@
             </select>
           </label>
           <p class="hint" id="bingCopyright"></p>
+        </div>
+
+        <div class="bg-only bg-macos">
+          <p class="hint" id="macosInfo"></p>
+          <button type="button" id="macosRefreshBtn" class="btn small" data-i18n="macosRefresh">Обновить список обоев</button>
         </div>
 
         <div class="preview-box bg-preview" id="bgPreview"></div>
@@ -420,7 +426,7 @@
                   <span class="hint" data-i18n="unitDay">дн.</span>
                   <output data-out="weatherForecastDays"></output>
                 </span>
-                <input type="range" name="weatherForecastDays" min="2" max="14" step="1" />
+                <input type="range" name="weatherForecastDays" min="2" max="10" step="1" />
               </label>
               <label>
                 <span class="row">
