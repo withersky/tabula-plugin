@@ -1,6 +1,6 @@
 {
-  "tag": "v2.9.0",
-  "chrome": "tabula-chrome-v2.9.0-unsign.zip",
-  "firefox": "tabula-firefox-v2.9.0-unsign.xpi",
-  "yandex": "tabula-yandex-v2.9.0-unsign.zip"
+  "tag": "v2.9.1",
+  "chrome": "tabula-chrome-v2.9.1-unsign.zip",
+  "firefox": "tabula-firefox-v2.9.1-unsign.xpi",
+  "yandex": "tabula-yandex-v2.9.1-unsign.zip"
 }
