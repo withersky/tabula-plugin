@@ -291,39 +291,3 @@ Host Of / Домен без www
     Core Function Should Equal    hostOf    zebra.io    https://www.zebra.io/a
     Core Function Should Equal    hostOf    example.com    example.com
     Core Function Should Equal    hostOf    ${EMPTY}    ${EMPTY}
-
-Today Key / Ключ даты «сегодня»
-    [Documentation]    todayKey(d) возвращает 'YYYY-MM-DD' для переданной даты;
-    ...                без аргумента — текущую дату устройства (формат тот же).
-    Core Function Should Equal    todayKey    2026-03-05    {"$date":"2026-03-05T12:00:00"}
-    Core Function Should Equal    todayKey    2026-12-31    {"$date":"2026-12-31T23:59:59"}
-    Core Function Should Equal    todayKey    2026-01-01    {"$date":"2026-01-01T00:00:00"}
-    # Дата без аргумента — реальные часы, формат YYYY-MM-DD.
-    ${k} =    Call Core Function    todayKey
-    Should Match Regexp    ${k}    ^\\d{4}-\\d{2}-\\d{2}$
-
-Pick For Date / Выбор обоев по дате (детерминизм)
-    [Documentation]    pickForDate(list, dateKey) — детерминированный выбор: одна и та же
-    ...                дата всегда даёт один и тот же элемент из списка.
-    Core Function Should Equal    pickForDate    url-a    ["url-a","url-b","url-c"]    2026-03-05
-    Core Function Should Equal    pickForDate    url-a    ["url-a","url-b","url-c"]    2026-03-05
-    Core Function Should Equal    pickForDate    url-b    ["url-a","url-b","url-c"]    2026-03-06
-    Core Function Should Equal    pickForDate    url-c    ["url-a","url-b","url-c"]    2026-03-07
-
-Pick For Date Edge Cases / Выбор обоев: граничные случаи
-    [Documentation]    Пустой список/не-массив возвращают пустую строку; одинарный
-    ...                элемент — всегда он; выбор ограничен длиной списка.
-    Core Function Should Equal    pickForDate    ${EMPTY}    []    2026-03-05
-    Core Function Should Equal    pickForDate    ${EMPTY}    ${None}    2026-03-05
-    Core Function Should Equal    pickForDate    only    ["only"]    2026-03-05
-    Core Function Should Equal    pickForDate    only    ["only"]    2026-12-31
-    Core Function Should Equal    pickForDate    a    ["a"]    2026-03-05
-
-Macos Wallpaper Title / Название обоев из URL
-    [Documentation]    macosWallpaperTitle вытаскивает слаг из ссылки на оригинал:
-    ...                /wallpapers/<slug>--<id>.jpg → название словами.
-    Core Function Should Equal    macosWallpaperTitle    macos big sur    https://4kwallpapers.com/images/wallpapers/macos-big-sur--1234.jpg
-    Core Function Should Equal    macosWallpaperTitle    macos ventura night    https://4kwallpapers.com/images/wallpapers/macos-ventura-night--5678.png
-    Core Function Should Equal    macosWallpaperTitle    ${EMPTY}    ${EMPTY}
-    Core Function Should Equal    macosWallpaperTitle    ${EMPTY}    ${None}
-    Core Function Should Equal    macosWallpaperTitle    ${EMPTY}    https://4kwallpapers.com/images/wallpapers/macos-big-sur-1920x1080-1234.jpg

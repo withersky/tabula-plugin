@@ -47,59 +47,6 @@ const METNO_TTL_MS = 10 * 60 * 1000; // 10 минут: met.no обновляет
 const METNO_CACHE_MAX = 8;           // предел записей кэша, чтобы не раздувать память воркера
 const _metnoCache = new Map();       // "lat,lon,lang,tz" → { at: Date.now(), data: результат }
 
-// macOS-обои с 4kwallpapers.com: коллекция подтягивается постранично (?page=N),
-// из HTML вытаскиваются прямые ссылки на оригинальные изображения
-// (https://4kwallpapers.com/images/wallpapers/<slug>--<id>.<ext>). Список кешируется
-// в памяти воркера, а новыйтаб хранит его в storage (macosCache.list), поэтому
-// повторная загрузка всех страниц случается редко.
-const MACOS_WALLPAPERS_URL = "https://4kwallpapers.com/macos-stock-wallpapers/";
-const MACOS_WALLPAPERS_TTL_MS = 6 * 60 * 60 * 1000; // 6 часов
-let _macosWallpapersCache = null;   // { at: Date.now(), list: [url, ...] }
-
-// Достаёт из HTML категории прямые ссылки на оригиналы обоев. Паттерн:
-// href="https://4kwallpapers.com/images/wallpapers/<slug>--<id>.jpg|png"
-// (одинарный дефис + разрешение — это уменьшенные версии, их не берём).
-function extractWallpaperUrls(html) {
-  const out = [];
-  const re = /href="(https:\/\/4kwallpapers\.com\/images\/wallpapers\/[^"]*?--\d+\.(?:jpg|jpeg|png))"/gi;
-  let m;
-  while ((m = re.exec(html))) out.push(m[1]);
-  return out;
-}
-
-// Максимальный номер страницы из пагинации ("?page=N").
-function extractPageCount(html) {
-  let max = 1;
-  const re = /[?&]page=(\d+)/g;
-  let m;
-  while ((m = re.exec(html))) max = Math.max(max, parseInt(m[1], 10));
-  return max;
-}
-
-async function scrapeMacosWallpapers() {
-  if (_macosWallpapersCache && Date.now() - _macosWallpapersCache.at < MACOS_WALLPAPERS_TTL_MS) {
-    return _macosWallpapersCache.list;
-  }
-  const resp = await fetch(MACOS_WALLPAPERS_URL);
-  if (!resp.ok) throw new Error("4kwallpapers http " + resp.status);
-  const html1 = await resp.text();
-  const urls = extractWallpaperUrls(html1);
-  const pageCount = extractPageCount(html1);
-  // Остальные страницы — параллельно, но не хардкодим лимит: берём то,
-  // что сказала пагинация. Сбои отдельной страницы не роняют всю коллекцию.
-  const pages = [];
-  for (let p = 2; p <= pageCount; p++) pages.push(p);
-  const results = await Promise.allSettled(pages.map(p => fetch(MACOS_WALLPAPERS_URL + "?page=" + p)));
-  for (const r of results) {
-    if (r.status === "fulfilled" && r.value && r.value.ok) {
-      try { urls.push(...extractWallpaperUrls(await r.value.text())); } catch (_) { /* ignore */ }
-    }
-  }
-  const list = [...new Set(urls)].sort();
-  _macosWallpapersCache = { at: Date.now(), list };
-  return list;
-}
-
 function metnoCacheKey(lat, lon, lang, tz) {
   // Округляем до 4 знаков (~11 м), чтобы координаты с шумом плавающей точки
   // не плодили дубликаты записей кэша.
@@ -284,21 +231,6 @@ ext.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         sendResponse({ url: fullUrl, copyright: img.copyright || "" });
       })
       .catch(err => sendResponse(bgError("bingDaily", err)));
-    return true;
-  }
-
-  if (msg && msg.type === "macosWallpapers") {
-    // refresh: true — пропустить кеш в памяти и заново выкачать коллекцию.
-    if (msg.refresh === true) _macosWallpapersCache = null;
-    scrapeMacosWallpapers()
-      .then(list => {
-        if (!Array.isArray(list) || list.length === 0) {
-          sendResponse({ error: "no-wallpapers" });
-          return;
-        }
-        sendResponse({ ok: true, list });
-      })
-      .catch(err => sendResponse(bgError("macosWallpapers", err)));
     return true;
   }
 

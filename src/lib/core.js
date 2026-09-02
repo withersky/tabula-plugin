@@ -50,30 +50,6 @@
     return null;
   }
 
-  // ---------- даты и выборка ----------
-
-  // Возвращает строку 'YYYY-MM-DD' для указанной или текущей даты.
-  function todayKey(d) {
-    const x = d || new Date();
-    return x.getFullYear() + "-" + String(x.getMonth() + 1).padStart(2, "0") + "-" + String(x.getDate()).padStart(2, "0");
-  }
-
-  // Выбирает элемент из списка детерминированно по ключу даты (хеш-функция).
-  // Один и тот же dateKey всегда даёт один и тот же индекс.
-  function pickForDate(list, dateKey) {
-    if (!Array.isArray(list) || list.length === 0) return "";
-    let h = 0;
-    for (let i = 0; i < dateKey.length; i++) h = ((h << 5) - h + dateKey.charCodeAt(i)) >>> 0;
-    return list[h % list.length];
-  }
-
-  // Извлекает название обоев из URL: /wallpapers/macos-big-sur--1234.jpg → "macos big sur"
-  function macosWallpaperTitle(url) {
-    const m = /wallpapers\/(.+)--\d+\.\w+$/.exec(url || "");
-    if (!m) return "";
-    return m[1].split("-").filter(Boolean).join(" ");
-  }
-
   // ---------- погода: иконки и описания ----------
 
   const WEATHER_ICON_EMOJI = {
@@ -730,7 +706,7 @@
   // (tests/suites/test_diff.robot).
   //
   // Возвращает { sheetsChanged, activeChanged, settingsChanged, weatherChanged,
-  // bingChanged, macosChanged, langChanged, nextSettings, prevSettings }.
+  // bingChanged, langChanged, nextSettings, prevSettings }.
   function diffTabulaData(prev, next, currentLang) {
     const prevData = (prev && typeof prev === "object") ? prev : {};
     const nextData = (next && typeof next === "object") ? next : {};
@@ -741,13 +717,11 @@
     const nextSheets = Array.isArray(nextData.sheets) ? nextData.sheets : prevData.sheets;
     const nextWeatherCaches = nextData.weatherCaches !== undefined ? nextData.weatherCaches : prevData.weatherCaches;
     const nextBingCache = nextData.bingCache !== undefined ? nextData.bingCache : prevData.bingCache;
-    const nextMacosCache = nextData.macosCache !== undefined ? nextData.macosCache : prevData.macosCache;
     const sheetsChanged = JSON.stringify(prevData.sheets) !== JSON.stringify(nextSheets);
     const activeChanged = !!nextData.activeSheetId && nextData.activeSheetId !== prevData.activeSheetId;
     const settingsChanged = JSON.stringify(prevSettings) !== JSON.stringify(nextSettings);
     const weatherChanged = JSON.stringify(nextWeatherCaches) !== JSON.stringify(prevData.weatherCaches);
     const bingChanged = JSON.stringify(nextBingCache) !== JSON.stringify(prevData.bingCache);
-    const macosChanged = JSON.stringify(nextMacosCache) !== JSON.stringify(prevData.macosCache);
     const langChanged = (nextSettings.language || "ru") !== (currentLang || "ru");
     return {
       sheetsChanged,
@@ -755,7 +729,6 @@
       settingsChanged,
       weatherChanged,
       bingChanged,
-      macosChanged,
       langChanged,
       nextSettings,
       prevSettings
@@ -790,9 +763,6 @@
     buildDailyForecast,
     buildHourlyForecast,
     todayHourlyKey,
-    diffTabulaData,
-    todayKey,
-    pickForDate,
-    macosWallpaperTitle
+    diffTabulaData
   };
 });

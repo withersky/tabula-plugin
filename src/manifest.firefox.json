@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Tabula",
-  "version": "2.9.0",
+  "version": "2.9.1",
   "description": "Customizable spreadsheet-style speed-dial new tab page with sheets, themes, and a Bing daily image option.",
 "browser_specific_settings": {
 "gecko": {
@@ -30,8 +30,7 @@
     "https://geocoding-api.open-meteo.com/*",
     "https://suggestqueries.google.com/*",
     "https://suggest.yandex.ru/*",
-    "https://api.bing.com/*",
-    "https://4kwallpapers.com/*"
+    "https://api.bing.com/*"
   ],
   "background": {
     "scripts": [

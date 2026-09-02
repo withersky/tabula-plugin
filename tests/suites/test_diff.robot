@@ -137,22 +137,3 @@ Diff Next Null / next отсутствует — отменяет обработ
     Should Be Equal    ${res}[settingsChanged]    ${False}
     Should Be Equal    ${res}[weatherChanged]    ${False}
     Should Be Equal    ${res}[bingChanged]    ${False}
-
-Diff Macos Cache Changed / Обновился кэш macOS-обоев
-    [Documentation]    Фоновое обновление macosCache: только macosChanged.
-    ${prev} =    Set Variable    {"sheets":[],"activeSheetId":"s1","settings":{"language":"ru"},"weatherCaches":{},"bingCache":null,"macosCache":{"date":"2026-08-12","url":"https://a.jpg","list":["https://a.jpg"]}}
-    ${next} =    Set Variable    {"sheets":[],"activeSheetId":"s1","settings":{"language":"ru"},"weatherCaches":{},"bingCache":null,"macosCache":{"date":"2026-08-13","url":"https://b.jpg","list":["https://a.jpg","https://b.jpg"]}}
-    ${res} =    Call Core Function    diffTabulaData    ${prev}    ${next}    ru
-    Should Be Equal    ${res}[macosChanged]    ${True}
-    Should Be Equal    ${res}[bingChanged]    ${False}
-    Should Be Equal    ${res}[weatherChanged]    ${False}
-    Should Be Equal    ${res}[sheetsChanged]    ${False}
-    Should Be Equal    ${res}[activeChanged]    ${False}
-
-Diff Macos Cache Not Changed / macosCache не изменился
-    [Documentation]    Идентичные macosCache в prev и next: macosChanged false.
-    ${prev} =    Set Variable    {"sheets":[],"activeSheetId":"s1","settings":{"language":"ru"},"weatherCaches":{},"bingCache":null,"macosCache":{"date":"2026-08-12","url":"https://a.jpg","list":["https://a.jpg"]}}
-    ${next} =    Set Variable    {"sheets":[],"activeSheetId":"s1","settings":{"language":"ru"},"weatherCaches":{},"bingCache":null,"macosCache":{"date":"2026-08-12","url":"https://a.jpg","list":["https://a.jpg"]}}
-    ${res} =    Call Core Function    diffTabulaData    ${prev}    ${next}    ru
-    Should Be Equal    ${res}[macosChanged]    ${False}
-    Should Be Equal    ${res}[bingChanged]    ${False}

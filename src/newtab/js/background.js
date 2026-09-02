@@ -25,8 +25,6 @@ import { getState, setState } from "./state.js";
 import { tx } from "./i18n.js";
 import { toast, cssEscape } from "./utils.js";
 
-const PREVIEW_MODE = location.search.includes("preview=1");
-
 const bgEl = document.getElementById("bg");
 
 export function todayKey() {
@@ -41,13 +39,6 @@ export function applyBackground() {
     const cached = state.bingCache;
     if (cached && cached.url && cached.date === todayKey()) {
       bgEl.style.background = `url("${cssEscape(cached.url)}") center / cover no-repeat, ${s.backgroundColor}`;
-    } else {
-      bgEl.style.background = s.backgroundColor;
-    }
-  } else if (s.backgroundType === "macos") {
-    const cached = state.macosCache;
-    if (cached && cached.url && cached.date === todayKey()) {
-      bgEl.style.background = `url("${cssEscape(cached.preview || cached.url)}") center / cover no-repeat, ${s.backgroundColor}`;
     } else {
       bgEl.style.background = s.backgroundColor;
     }
@@ -75,11 +66,6 @@ function accentSourceKey() {
   if (s.backgroundType === "bing") {
     const cached = state.bingCache;
     if (cached && cached.url && cached.date === todayKey()) return "img:" + cached.url;
-    return null;
-  }
-  if (s.backgroundType === "macos") {
-    const cached = state.macosCache;
-    if (cached && cached.url && cached.date === todayKey()) return "img:" + (cached.preview || cached.url);
     return null;
   }
   if ((s.backgroundType === "imageUrl" || s.backgroundType === "imageUpload") && s.backgroundImage) {
@@ -312,108 +298,5 @@ export async function maybeLoadBingBackground() {
     applySelectionColor();
   } catch (err) {
     toast(tx("bingFailed"), true);
-  }
-}
-
-export async function maybeLoadMacosBackground() {
-  const state = getState();
-  const s = state.settings;
-  if (s.backgroundType !== "macos") return;
-  const cached = state.macosCache;
-  // Уже выбраны обои на сегодня — просто применяем.
-  if (cached && cached.url && cached.date === todayKey()) {
-    applyBackground();
-    applySelectionColor();
-    // Одноразовая миграция: если превью ещё не построено — генерируем в фоне,
-    // Storage.onChanged переприменит фон, когда оно появится.
-    if (!PREVIEW_MODE && !cached.preview) ensureMacosPreview(cached.url);
-    return;
-  }
-  // Коллекция уже в storage (список обоев) — выбираем по дате без сети.
-  if (cached && Array.isArray(cached.list) && cached.list.length) {
-    const url = globalThis.pickForDate(cached.list, todayKey());
-    const preview = PREVIEW_MODE ? null : await makeMacosPreview(url).catch(() => null);
-    await Storage.update((d) => { d.macosCache = { date: todayKey(), url, list: cached.list, preview }; });
-    setState(await Storage.get());
-    applyBackground();
-    applySelectionColor();
-    return;
-  }
-  try {
-    toast(tx("macosLoading"));
-    const resp = await ext.runtime.sendMessage({ type: "macosWallpapers" });
-    if (!resp || resp.error || !Array.isArray(resp.list) || !resp.list.length) {
-      throw new Error(resp && resp.error || "no list");
-    }
-    const list = resp.list;
-    const url = globalThis.pickForDate(list, todayKey());
-    const preview = PREVIEW_MODE ? null : await makeMacosPreview(url).catch(() => null);
-    await Storage.update((d) => { d.macosCache = { date: todayKey(), url, list, preview }; });
-    setState(await Storage.get());
-    applyBackground();
-    applySelectionColor();
-  } catch (err) {
-    toast(tx("macosFailed"), true);
-  }
-}
-
-// ---------- macOS-обои: превью 1600px для мгновенной загрузки ----------
-// Оригиналы обоев — 4K/5K (5–20 МБ): браузерный HTTP-кеш их регулярно
-// вытесняет, и фон перекачивался при каждом открытии вкладки. При первом
-// скачивании обоев дня строим уменьшенную JPEG-копию (data URL) и храним её
-// в macosCache.preview: data URL применяется мгновенно без сети, а оригинальный
-// URL остаётся в macosCache.url (выбор по дате + fallback).
-const MACOS_PREVIEW_MAX = 1600;
-
-function macosPreviewSrc(src) {
-  const scale = Math.min(1, MACOS_PREVIEW_MAX / Math.max(src.width, src.height));
-  const w = Math.max(1, Math.round(src.width * scale));
-  const h = Math.max(1, Math.round(src.height * scale));
-  const canvas = document.createElement("canvas");
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext("2d");
-  ctx.drawImage(src, 0, 0, w, h);
-  return canvas.toDataURL("image/jpeg", 0.75);
-}
-
-async function makeMacosPreview(url) {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error("macos preview http " + res.status);
-  const blob = await res.blob();
-  let src;
-  if (typeof createImageBitmap === "function") {
-    src = await createImageBitmap(blob);
-  } else {
-    const objUrl = URL.createObjectURL(blob);
-    src = new Image();
-    await new Promise((resolve, reject) => {
-      src.onload = resolve;
-      src.onerror = () => reject(new Error("macos preview decode failed"));
-      src.src = objUrl;
-    });
-    URL.revokeObjectURL(objUrl);
-  }
-  try {
-    return macosPreviewSrc(src);
-  } finally {
-    if (src && typeof src.close === "function") src.close();
-  }
-}
-
-// Достраивает недостающее превью в фоне (миграция старых кешей): применяет фон
-// с оригиналом, затем асинхронно генерирует превью; запись в storage поднимет
-// Storage.onChanged, который переприменит фон уже с превью.
-async function ensureMacosPreview(url) {
-  try {
-    const preview = await makeMacosPreview(url);
-    if (!preview) return;
-    await Storage.update((d) => {
-      if (d.macosCache && d.macosCache.url === url && !d.macosCache.preview) {
-        d.macosCache = { ...d.macosCache, preview };
-      }
-    });
-  } catch (_) {
-    // Превью не удалось — остаётся оригинальный URL (4K), как раньше.
   }
 }

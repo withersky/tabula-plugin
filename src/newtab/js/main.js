@@ -31,7 +31,7 @@ import { startClock, bindClockEvents, toggleClockPopup, closeClockPopupOutside, 
 import { startWeather, renderWeather, bindWeatherEvents, bindWeatherCityMenu, toggleWeatherPopup, closeWeatherPopupOutside } from "./weather.js";
 import { weatherWidget } from "./weather.js";
 import { renderQuickGoIcon, bindSearchEvents } from "./search.js";
-import { applyBackground, applySelectionColor, maybeLoadBingBackground, maybeLoadMacosBackground } from "./background.js";
+import { applyBackground, applySelectionColor, maybeLoadBingBackground } from "./background.js";
 import { renderGrid, closeModal, onSubmitBookmark, bindGridEvents, hideSheetCtx } from "./grid.js";
 import { renderSheetBar, updateSheetBarActive, refreshSheetCtx, bindSheetEvents, switchSheetBySwipe } from "./sheets.js";
 import { initFavicons, prefetchFavicons } from "./favicons.js";
@@ -192,7 +192,6 @@ async function init() {
     bindEvents();
   }
   maybeLoadBingBackground();
-  maybeLoadMacosBackground();
   startClock();
   startWeather();
 
@@ -259,7 +258,6 @@ async function init() {
     const settingsChanged = d.settingsChanged;
     const weatherChanged  = d.weatherChanged;
     const bingChanged     = d.bingChanged;
-    const macosChanged    = d.macosChanged;
     const langChanged     = d.langChanged;
     const prevSettings    = d.prevSettings;
     const nextSettings    = d.nextSettings;
@@ -269,7 +267,6 @@ async function init() {
       activeSheetId: next.activeSheetId || prev.activeSheetId,
       settings:      d.nextSettings,
       bingCache:     next.bingCache !== undefined ? next.bingCache : prev.bingCache,
-      macosCache:    next.macosCache !== undefined ? next.macosCache : prev.macosCache,
       weatherCaches: next.weatherCaches !== undefined ? next.weatherCaches : prev.weatherCaches
     });
     setLang(d.nextSettings.language || "ru");
@@ -317,9 +314,9 @@ async function init() {
       renderWeather();
     }
 
-    // Фон обновился (Bing/macOS-обои, превью) — перекрашиваем фон и акцент,
+    // Фон обновился (Bing, превью) — перекрашиваем фон и акцент,
     // сетку не трогаем.
-    if (bingChanged || macosChanged) {
+    if (bingChanged) {
       applyBackground();
       applySelectionColor();
     }
