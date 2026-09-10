@@ -17,7 +17,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
  * Entry-модуль страницы настроек: инициализация, общие слушатели формы
- * (автосохранение + живой превью) и подписка на изменения storage.
+ * (автосохранение) и подписка на изменения storage.
  *
  * Глобалы lib/browser.js (ext) и lib/storage.js (Storage, t, resolveFont,
  * FONT_FAMILIES, makeBlankSheet, clampCols, cryptoId, ...) остаются
@@ -33,7 +33,7 @@ import {
   refreshRangeOutputs, persistSettings, RANGE_KEYS, DATEFMT_KEYS,
   updateDateFmtCustomVisibility
 } from "./form.js";
-import { sendPreview } from "./preview.js";
+
 import {
   updateBgTypeVisibility, updateUploadPreview, updateBingCopyright,
   updateAllPreviews, bindAppearanceEvents
@@ -41,6 +41,7 @@ import {
 import { bindWidgetEvents, renderCityLists } from "./widgets.js";
 import { bindDataEvents } from "./data.js";
 import { populateAbout } from "./about.js";
+import { initHoverPreview } from "./hover-preview.js";
 import { flashSaved, $$ } from "./utils.js";
 
 async function init() {
@@ -53,6 +54,7 @@ async function init() {
   wireEvents();
   wireTabs();
   wireSearch();
+  initHoverPreview();
   updateBgTypeVisibility();
   updateUploadPreview();
   updateBingCopyright();
@@ -90,18 +92,16 @@ function wireEvents() {
   const uploadInput = document.getElementById("uploadInput");
   const importFile  = document.getElementById("importFile");
   const searchInput = document.getElementById("settingsSearch");
-  const previewFrame = document.getElementById("previewFrame");
 
-  // Автосохранение с дебаунсом + мгновенная отправка в iframe-превью.
-  // Контролы модалок (гео-поиск, выбор папки закладок) не относятся к настройкам
-  // оформления — ввод в них не должен обновлять превью и сохранять настройки.
+  // Автосохранение с дебаунсом. Контролы модалок (гео-поиск, выбор папки
+  // закладок) не относятся к настройкам оформления — ввод в них не должен
+  // сохранять настройки.
   let t;
   const allControls = $$("input, select").filter(el =>
     el !== uploadInput && el !== importFile && el !== searchInput &&
     !(el.closest && el.closest(".modal")));
   allControls.forEach((el) => {
     const handler = () => {
-      sendPreview(collectSettings());
       clearTimeout(t);
       t = setTimeout(async () => {
         await persistSettings();
@@ -126,12 +126,6 @@ function wireEvents() {
       if (out) out.textContent = el.value;
     });
   });
-
-  // Превью: синхронизируемся с iframe после его загрузки (и после каждой
-  // перезагрузки, например при изменении языка страница пересоздаётся).
-  if (previewFrame) {
-    previewFrame.addEventListener("load", () => sendPreview(collectSettings()));
-  }
 
   // Мгновенно сворачивать/разворачивать блок виджета по клику на тоггл.
   ["showClock", "showQuickGo", "showWeather"].forEach(k => {

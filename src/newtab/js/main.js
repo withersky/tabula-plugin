@@ -17,8 +17,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
  * Entry-модуль страницы новой вкладки: инициализация, применение настроек,
- * общие слушатели (модалки, клавиатура, resize), режим предпросмотра
- * (newtab.html?preview=1 в iframe настроек).
+ * общие слушатели (модалки, клавиатура, resize).
  *
  * Глобалы lib/browser.js (ext), lib/core.js (t, withTimeout, normalizeUrl,
  * faviconUrl, ...) и lib/storage.js (Storage, clampCols, colLetter, cryptoId, ...)
@@ -38,10 +37,6 @@ import { initFavicons, prefetchFavicons } from "./favicons.js";
 import { bindSearcherEvents, openSearcher } from "./searcher.js";
 import { bindShortcutEvents } from "./shortcuts.js";
 import { bindHotkeyEvents } from "./hotkeys.js";
-
-// Режим предпросмотра: newtab.html?preview=1 открывается в iframe настроек.
-// Применяет настройки из options по postMessage и ничего не пишет в storage.
-const PREVIEW_MODE = new URLSearchParams(location.search).get("preview") === "1";
 
 // Общие DOM-ссылки для слушателей (модули владеют своими ссылками отдельно).
 // Ссылки модалок и подсказок живут в модулях, которые ими владеют
@@ -168,17 +163,6 @@ async function init() {
   // Кэш фавиконок читается до первого рендера, чтобы ячейки сразу получили
   // data URL из storage (офлайн) вместо letter-бейджей.
   await initFavicons();
-  if (PREVIEW_MODE) {
-    // Превью ничего не пишет в chrome.storage: все «сохранения» (погода, фон,
-    // активный лист) мутируют state в памяти и исчезают при закрытии настроек.
-    Storage.update = async (mutator) => { mutator(getState()); };
-    // Метка режима превью на body + глобальный флаг, чтобы виджеты
-    // (weather.js/clock.js) могли позиционировать попапы через position:fixed
-    // с явными координатами. Внутри iframe absolute/top:100% ведёт себя в
-    // Firefox иначе, чем в Chrome — попапы «уезжают» за пределы вьюпорта.
-    document.body.classList.add("preview");
-    window.TabulaPreview = true;
-  }
   setLang(getState().settings.language || "ru");
   applySettings();
   applyLayoutFlags();
@@ -186,31 +170,25 @@ async function init() {
   renderGrid();
   renderSheetBar();
   applySheetBarHeight();
-  if (PREVIEW_MODE) {
-    bindPreview();
-  } else {
-    bindEvents();
-  }
+  bindEvents();
   maybeLoadBingBackground();
   startClock();
   startWeather();
 
   // Фоновая догрузка фавиконок новых хостов — только вне предпросмотра
   // (в iframe настроек не дёргаем сеть при каждом движении ползунков).
-  if (!PREVIEW_MODE && getState() && getState().settings.showFavicon) {
+  if (getState() && getState().settings.showFavicon) {
     prefetchFavicons(collectVisibleUrls());
   }
 
   // Сброс кэша иконок из настроек: чистим память (сделал слушатель в
   // favicons.js) и перезагружаем видимые иконки текущего листа.
-  if (!PREVIEW_MODE) {
-    window.addEventListener("tabula:favicons-reset", () => {
-      renderGrid();
-      if (getState() && getState().settings.showFavicon) {
-        prefetchFavicons(collectVisibleUrls());
-      }
-    });
-  }
+  window.addEventListener("tabula:favicons-reset", () => {
+    renderGrid();
+    if (getState() && getState().settings.showFavicon) {
+      prefetchFavicons(collectVisibleUrls());
+    }
+  });
 
   // Запись CSS-переменных откладывается в rAF: ResizeObserver доставляется до
   // отрисовки, и синхронная запись свойств на <html> внутри колбэка снова
@@ -240,11 +218,6 @@ async function init() {
     ro2.observe(sb);
   }
   requestAnimationFrame(() => { applyTopbarHeight(); applySheetBarHeight(); });
-
-  if (PREVIEW_MODE) {
-    window.addEventListener("message", onPreviewMessage);
-    return;
-  }
 
   Storage.onChanged((next) => {
     if (!next) return;
@@ -323,115 +296,9 @@ async function init() {
   });
 }
 
-// ---------- preview mode (newtab.html?preview=1 inside options iframe) ----------
-function onPreviewMessage(e) {
-  const d = e.data;
-  if (!d || d.type !== "tabula-preview-settings") return;
-  const incoming = d.settings;
-  if (!incoming || typeof incoming !== "object") return;
-  const prev = getState().settings || {};
-  const merged = Object.assign({}, prev, incoming);
-  const langChanged = (merged.language || "ru") !== getLang();
-  const state = getState();
-  state.settings = merged;
-  setLang(merged.language || "ru");
-  applySettings();
-  applyLayoutFlags();
-  if (langChanged) applyI18nStatic();
-  else applyPageTitle();
-  renderGrid();
-  renderSheetBar();
-  refreshSheetCtx();
-  startClock();
-  const weatherSettingsChanged =
-    merged.showWeather       !== prev.showWeather       ||
-    merged.weatherLat        !== prev.weatherLat        ||
-    merged.weatherLon        !== prev.weatherLon        ||
-    merged.weatherCity       !== prev.weatherCity       ||
-    merged.weatherRefreshMin !== prev.weatherRefreshMin;
-  if (weatherSettingsChanged) startWeather();
-  else renderWeather();
-  requestAnimationFrame(() => { applyTopbarHeight(); applySheetBarHeight(); });
-}
 
-function bindPreview() {
-  // Превью неинтерактивно: не открываем закладки, листы и меню,
-  // но оставляем hover-состояния и всплывающие окна погоды/часов.
-  document.addEventListener("click", (e) => {
-    const t = e.target;
-    if (t && t.closest &&
-        t.closest(".cell, .sheet-tab, .sheet-add, .sheet-scroll, .quick-go, .icon-btn, .opts-fab")) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-  }, true);
-  // НЕ блокируем contextmenu глобально (иначе не открыть меню ячейки/закладки
-  // в превью). Блокируем ПКМ только по вкладкам листов — в превью они
-  // неинтерактивны, и контекстное меню листа (переименовать/удалить) там не нужно.
-  document.addEventListener("auxclick", (e) => e.preventDefault(), true);
-  if (quickGo) quickGo.addEventListener("submit", (e) => e.preventDefault());
-  if (weatherWidget) {
-    weatherWidget.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      // В превью нет bindWeatherEvents — вешаем локальный обработчик попапа.
-      toggleWeatherPopup();
-    });
-  }
-  // В превью нет bindWeatherEvents — привязываем меню городов отдельно,
-  // чтобы клик по городу в шапке попапа раскрывал список (а не закрывал попап).
-  bindWeatherCityMenu();
-  // В превью нет bindSheetEvents — привязываем его отдельно, чтобы
-  // заблокировать ПКМ по вкладкам листов (они неинтерактивны в превью) и
-  // не открывать контекстное меню листа (переименовать/удалить).
-  bindSheetEvents();
-  if (clockWidget) {
-    clockWidget.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      // В превью нет bindClockEvents — вешаем локальный обработчик попапа.
-      toggleClockPopup();
-    });
-  }
-  // В превью нет bindClockEvents/bindWeatherEvents, поэтому навешиваем
-  // закрытие попапов по клику/тапу вне них отдельно (как в реальной вкладке).
-  document.addEventListener("mousedown", (e) => {
-    closeWeatherPopupOutside(e);
-    closeClockPopupOutside(e);
-  });
-  // В превью не вызывается bindGridEvents (где висит закрытие меню листа по
-  // клику вне), поэтому закрываем sheetCtx отдельно — иначе оно остаётся
-  // открытым после ПКМ по вкладке листа.
-  document.addEventListener("mousedown", (e) => {
-    const sheetCtx = document.getElementById("sheetCtx");
-    if (sheetCtx && !sheetCtx.hidden && !sheetCtx.contains(e.target)) hideSheetCtx();
-  });
-  // Превью должно реагировать на изменения storage, сделанные в другой
-  // вкладке (например, смена активного города в попапе часов/погоды на
-  // реальной новой вкладке). Перечитываем storage и применяем актуальные
-  // настройки локально, без записи в storage (как в onPreviewMessage).
-  Storage.onChanged(async (next) => {
-    if (!next || !next.settings) return;
-    const s = await Storage.get();
-    if (!s || !s.settings) return;
-    const prev = getState().settings || {};
-    const merged = Object.assign({}, prev, s.settings);
-    const langChanged = (merged.language || "ru") !== getLang();
-    const state = getState();
-    state.settings = merged;
-    setLang(merged.language || "ru");
-    applySettings();
-    applyLayoutFlags();
-    if (langChanged) applyI18nStatic();
-    else applyPageTitle();
-    renderGrid();
-    renderSheetBar();
-    refreshSheetCtx();
-    startClock();
-    startWeather();
-    requestAnimationFrame(() => { applyTopbarHeight(); applySheetBarHeight(); });
-  });
-}
+
+
 
 // ---------- общие слушатели ----------
 

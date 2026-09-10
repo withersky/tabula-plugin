@@ -327,12 +327,6 @@ export function toggleWeatherPopup() {
   weatherPopupEl.classList.remove("closing");
   _weatherPopupClosing = false;
   weatherPopupEl.hidden = false;
-  // В режиме превью (iframe) position:absolute/top:100% работает в Firefox
-  // иначе, чем в Chrome: попап уезжает за пределы вьюпорта. Позиционируем
-  // явно через position:fixed и координаты виджета из getBoundingClientRect().
-  if (window.TabulaPreview && weatherWidget) {
-    positionPopupInIframe(weatherPopupEl, weatherWidget, "right");
-  }
 }
 
 /** Список городов погоды из настроек (если есть). */
@@ -340,44 +334,7 @@ function weatherCitiesList(s) {
   return Array.isArray(s && s.weatherCities) ? s.weatherCities : [];
 }
 
-/**
- * Позиционирует попап внутри iframe-превью (режим Firefox-совместимости).
- * При position:absolute + top:100% внутри <iframe> Firefox привязывает
- * top:100% к другому containing block, и попап «уезжает» за нижнюю границу
- * вьюпорта. Решение — position:fixed + явные координаты из
- * getBoundingClientRect() виджета (внутри iframe clientRect уже в координатах
- * вьюпорта, поэтому fixed работает одинаково в Chrome и Firefox).
- * align: "right" — прижать правый край попапа к правому краю виджета
- * (для виджета погоды справа в топбаре), иначе — по левому краю.
- */
-function positionPopupInIframe(popup, anchor, align) {
-  if (!popup || !anchor) return;
-  const r = anchor.getBoundingClientRect();
-  const rtl = (document.documentElement.dir || document.documentElement.getAttribute("dir") || "").toLowerCase() === "rtl";
-  popup.style.position = "fixed";
-  popup.style.top = (r.bottom + 6) + "px";
-  const pw = popup.offsetWidth || 240;
-  // В LTR виджет погоды справа (align "right") — прижимаем правый край попапа
-  // к правому краю виджета, попап раскрывается влево. В RTL топбар зеркалится,
-  // виджет оказывается слева, поэтому «right» означает левый (start) край
-  // экрана — прижимаем левый край попапа к виджету, попап раскрывается вправо.
-  if (align === "right" && !rtl) {
-    popup.style.left = "auto";
-    popup.style.right = Math.max(8, window.innerWidth - r.right) + "px";
-  } else if (align === "right" && rtl) {
-    popup.style.right = "auto";
-    popup.style.left = Math.max(8, r.left) + "px";
-  } else if (align !== "right" && rtl) {
-    popup.style.left = "auto";
-    popup.style.right = Math.max(8, window.innerWidth - r.left) + "px";
-  } else {
-    popup.style.right = "auto";
-    popup.style.left = Math.max(8, r.left) + "px";
-  }
-  // Не выпускаем попап за нижний край вьюпорта (прокрутка внутри попапа).
-  const maxH = Math.max(120, window.innerHeight - r.bottom - 12);
-  popup.style.maxHeight = maxH + "px";
-}
+
 
 /** Открыто ли выпадающее меню городов. */
 function weatherCityMenuOpen() {

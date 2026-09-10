@@ -61,7 +61,7 @@
         <h2 data-i18n="sectionAppearance">Оформление</h2>
 
         <span class="group-title" data-i18n="groupBackground">Фон</span>
-        <label class="full">
+        <label class="full" data-preview-key="backgroundType">
           <span class="row"><span data-i18n="labelBgType">Тип фона</span></span>
           <select name="backgroundType" id="bgTypeSelect">
             <option value="color"       data-i18n="bgColor">Сплошной цвет</option>
@@ -73,7 +73,7 @@
         </label>
 
         <div class="bg-only bg-color">
-          <label class="full">
+          <label class="full" data-preview-key="backgroundColor">
             <span class="row"><span data-i18n="labelBgColor">Цвет фона</span></span>
             <input type="color" name="backgroundColor" />
           </label>
@@ -138,11 +138,11 @@
 
         <span class="group-title" data-i18n="groupColors">Цвета и прозрачность</span>
         <div class="grid-2">
-          <label>
+          <label data-preview-key="textColor">
             <span class="row"><span data-i18n="labelTextColor">Цвет текста</span></span>
             <input type="color" name="textColor" />
           </label>
-          <div class="radio-box">
+          <div class="radio-box" data-preview-key="cellSelectedColor">
             <span class="row"><span data-i18n="labelCellSelectedColor">Цвет выделения</span></span>
             <span class="radio-row">
               <label class="radio-chip">
@@ -157,7 +157,7 @@
             </span>
             <p class="hint" id="cellSelectedAutoColorHint" data-i18n="selColorAutoColorHint" hidden></p>
           </div>
-          <label class="full">
+          <label class="full" data-preview-key="uiOpacity">
             <span class="row">
               <span data-i18n="labelUiOpacity">Прозрачность панелей и ячеек</span>
               <span class="hint" data-i18n="labelUiOpacityHint"></span>
@@ -165,7 +165,7 @@
             </span>
             <input type="range" name="uiOpacity" min="0" max="100" step="5" />
           </label>
-          <label class="full cell-blur-row" id="cellBlurRow">
+          <label class="full cell-blur-row" id="cellBlurRow" data-preview-key="cellBlurPx">
             <span class="row">
               <span data-i18n="labelCellBlur">Сила блюра ячеек</span>
               <span class="hint" data-i18n="labelCellBlurHint"></span>
@@ -177,15 +177,15 @@
 
         <span class="group-title" data-i18n="groupGrid">Сетка</span>
         <div class="checks">
-          <label class="check"><input type="checkbox" name="showGrid"       /> <span data-i18n="optShowGrid">Показывать линии сетки</span></label>
-          <label class="check"><input type="checkbox" name="showRowNumbers" /> <span data-i18n="optShowRowNumbers">Показывать номера строк</span></label>
-          <label class="check"><input type="checkbox" name="showColLetters" /> <span data-i18n="optShowColLetters">Показывать буквы колонок</span></label>
-          <label class="check"><input type="checkbox" name="showSheetTabs"  /> <span data-i18n="optShowSheetTabs">Показывать вкладки листов</span></label>
-          <label class="check"><input type="checkbox" name="showFavicon"    /> <span data-i18n="optShowFavicon">Показывать иконки сайтов</span></label>
-          <label class="check"><input type="checkbox" name="touchGestures" /> <span data-i18n="optTouchGestures">Сенсорные жесты (свайпы и долгое нажатие)</span></label>
+          <label class="check" data-preview-key="showGrid"><input type="checkbox" name="showGrid"       /> <span data-i18n="optShowGrid">Показывать линии сетки</span></label>
+          <label class="check" data-preview-key="showRowNumbers"><input type="checkbox" name="showRowNumbers" /> <span data-i18n="optShowRowNumbers">Показывать номера строк</span></label>
+          <label class="check" data-preview-key="showColLetters"><input type="checkbox" name="showColLetters" /> <span data-i18n="optShowColLetters">Показывать буквы колонок</span></label>
+          <label class="check" data-preview-key="showSheetTabs"><input type="checkbox" name="showSheetTabs"  /> <span data-i18n="optShowSheetTabs">Показывать вкладки листов</span></label>
+          <label class="check" data-preview-key="showFavicon"><input type="checkbox" name="showFavicon"    /> <span data-i18n="optShowFavicon">Показывать иконки сайтов</span></label>
+          <label class="check" data-preview-key="touchGestures"><input type="checkbox" name="touchGestures" /> <span data-i18n="optTouchGestures">Сенсорные жесты (свайпы и долгое нажатие)</span></label>
         </div>
         <div class="grid-2">
-          <div class="radio-box">
+          <div class="radio-box" data-preview-key="cellTextAlign">
             <span class="row"><span data-i18n="labelCellAlign">Выравнивание надписей в ячейках</span></span>
             <span class="radio-row">
               <label class="radio-chip">
@@ -202,7 +202,7 @@
               </label>
             </span>
           </div>
-          <div class="radio-box">
+          <div class="radio-box" data-preview-key="faviconPosition">
             <span class="row"><span data-i18n="labelFaviconPosition">Расположение иконки в ячейке</span></span>
             <span class="radio-row">
               <label class="radio-chip">
@@ -225,14 +225,14 @@
           </div>
         </div>
         <div class="grid-2">
-          <label>
+          <label data-preview-key="defaultColumns">
             <span class="row">
               <span data-i18n="labelDefaultColumns">Колонок по умолчанию</span>
               <output data-out="defaultColumns"></output>
             </span>
             <input type="range" name="defaultColumns" min="3" max="12" step="1" />
           </label>
-          <label>
+          <label data-preview-key="gridRows">
             <span class="row">
               <span data-i18n="labelGridRows">Строк по умолчанию</span>
               <output data-out="gridRows"></output>
@@ -243,7 +243,7 @@
 
         <span class="group-title" data-i18n="groupTypography">Текст</span>
         <div class="grid-2">
-          <label class="full">
+          <label class="full" data-preview-key="fontFamilyKey">
             <span class="row">
               <span data-i18n="labelFontFamily">Шрифт</span>
               <span class="hint" data-i18n="labelFontFamilyHint">Шрифт системный</span>
@@ -259,7 +259,7 @@
             </span>
             <input type="text" name="fontFamily" placeholder='system-ui, sans-serif' />
           </label>
-          <label class="full">
+          <label class="full" data-preview-key="fontSize">
             <span class="row">
               <span data-i18n="labelFontSize">Размер шрифта</span>
               <span class="hint" data-i18n="unitPx">пикс.</span>
@@ -273,9 +273,9 @@
 
         <span class="group-title" data-i18n="groupBehaviour">Поведение</span>
         <div class="checks">
-          <label class="check"><input type="checkbox" name="openInNewTab" /> <span data-i18n="optOpenInNewTab">Открывать закладки в новой вкладке</span></label>
+          <label class="check" data-preview-key="openInNewTab"><input type="checkbox" name="openInNewTab" /> <span data-i18n="optOpenInNewTab">Открывать закладки в новой вкладке</span></label>
         </div>
-        <label class="full page-title-field">
+        <label class="full page-title-field" data-preview-key="pageTitle">
           <span class="row">
             <span data-i18n="labelPageTitle">Заголовок вкладки</span>
             <span class="hint" data-i18n="pageTitleHint">Используется как заголовок окна и вкладки</span>
@@ -289,7 +289,7 @@
         <h2 data-i18n="sectionWidgets">Виджеты</h2>
 
         <div class="grid-2">
-          <label class="full">
+          <label class="full" data-preview-key="uiScale">
             <span class="row">
               <span data-i18n="optUiScale">Общий масштаб виджетов и нижнего бара</span>
               <span class="hint" data-i18n="unitPercent">%</span>
@@ -302,7 +302,7 @@
         <div class="widget-block" id="widget-clock">
           <div class="widget-block-head">
             <span class="widget-block-title" data-i18n="widgetClockTitle">Часы</span>
-            <label class="check widget-toggle">
+            <label class="check widget-toggle" data-preview-key="showClock">
               <input type="checkbox" name="showClock" />
               <span data-i18n="optShowClock">Показывать часы</span>
             </label>
@@ -323,7 +323,7 @@
           <div class="widget-subsection">
             <span class="widget-subsection-title" data-i18n="widgetSubsectionAppearance">Внешний вид</span>
             <div class="grid-2">
-              <label>
+              <label data-preview-key="clockDateFmt">
                 <span class="row">
                   <span data-i18n="optClockDateFmt">Формат даты в часах</span>
                 </span>
@@ -352,13 +352,13 @@
         <div class="widget-block" id="widget-search">
           <div class="widget-block-head">
             <span class="widget-block-title" data-i18n="widgetSearchTitle">Поиск</span>
-            <label class="check widget-toggle">
+            <label class="check widget-toggle" data-preview-key="showQuickGo">
               <input type="checkbox" name="showQuickGo" />
               <span data-i18n="optShowQuickGo">Показывать поисковую строку</span>
             </label>
           </div>
 
-          <div class="widget-subsection">
+          <div class="widget-subsection" data-preview-key="searchEngine">
             <span class="widget-subsection-title" data-i18n="optSearchEngine">Поисковая машина</span>
             <div class="lang-grid se-grid">
               <label class="lang-card">
@@ -383,7 +383,7 @@
                 </div>
               </label>
             </div>
-            <label class="check">
+            <label class="check" data-preview-key="quickGoSuggest">
               <input type="checkbox" name="quickGoSuggest" />
               <span data-i18n="optQuickGoSuggest">Подсказки поиска</span>
             </label>
@@ -393,7 +393,7 @@
         <div class="widget-block" id="widget-weather">
           <div class="widget-block-head">
             <span class="widget-block-title" data-i18n="widgetWeatherTitle">Погода</span>
-            <label class="check widget-toggle">
+            <label class="check widget-toggle" data-preview-key="showWeather">
               <input type="checkbox" name="showWeather" />
               <span data-i18n="optShowWeather">Показывать погоду</span>
             </label>
@@ -414,7 +414,7 @@
           <div class="widget-subsection">
             <span class="widget-subsection-title" data-i18n="widgetSubsectionAppearance">Внешний вид</span>
             <div class="grid-2">
-              <label>
+              <label data-preview-key="weatherForecastDays">
                 <span class="row">
                   <span data-i18n="optWeatherForecastDays">Дней в прогнозе</span>
                   <span class="hint" data-i18n="unitDay">дн.</span>
@@ -422,7 +422,7 @@
                 </span>
                 <input type="range" name="weatherForecastDays" min="2" max="10" step="1" />
               </label>
-              <label>
+              <label data-preview-key="weatherRefreshMin">
                 <span class="row">
                   <span data-i18n="optWeatherRefreshMin">Интервал обновления погоды</span>
                   <span class="hint" data-i18n="unitMin">мин.</span>
@@ -430,7 +430,7 @@
                 </span>
                 <input type="range" name="weatherRefreshMin" min="5" max="180" step="5" />
               </label>
-              <label>
+              <label data-preview-key="weatherDateFmt">
                 <span class="row">
                   <span data-i18n="optWeatherDateFmt">Формат даты в прогнозе</span>
                 </span>
@@ -581,25 +581,6 @@
       </section>
     </main>
 
-    <!-- Живой предпросмотр новой вкладки: iframe запускает настоящую newtab-страницу
-         в режиме preview=1, которая применяет настройки из options по postMessage. -->
-    <aside class="preview-pane">
-      <div class="preview-window">
-        <div class="preview-browser">
-          <div class="preview-bar">
-            <div class="preview-dots" aria-hidden="true">
-              <span class="dot dot-red"></span>
-              <span class="dot dot-yellow"></span>
-              <span class="dot dot-green"></span>
-            </div>
-            <div class="preview-url">tabula://newtab</div>
-          </div>
-          <div class="preview-frame">
-            <iframe id="previewFrame" src="../newtab/newtab.html?preview=1" title="Tabula preview"></iframe>
-          </div>
-        </div>
-      </div>
-    </aside>
   </div>
 
   <div id="status" class="status" hidden></div>

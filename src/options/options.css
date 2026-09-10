@@ -250,7 +250,7 @@ body:not(.i18n-ready) .settings-head {
   margin: 0 auto;
   padding: 0 22px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 460px;
+  grid-template-columns: minmax(0, 1fr);
   gap: 24px;
   align-items: start;
 }
@@ -260,110 +260,7 @@ main {
   min-width: 0;
 }
 
-/* ---------- live preview pane ---------- */
-/* Правый блок статичен: фиксированная высота, всегда вписан в экран. */
-.preview-pane {
-  position: sticky;
-  top: calc(var(--topbar-h) + 56px);
-  /* Выравниваем верх превью с первой карточкой настроек:
-     main padding-top 22px + margin первого панеля 22px. */
-  margin-top: 44px;
-  display: flex;
-  flex-direction: column;
-  height: calc(100vh - var(--topbar-h) - 68px);
-  min-height: 320px;
-  border-radius: var(--radius);
-  overflow: hidden;
-}
-/* Декоративный «рабочий стол» под окном браузера */
-.preview-window {
-  position: relative;
-  flex: 1 1 0;
-  min-height: 0;
-  display: flex;
-  padding: 12px;
-  background:
-    radial-gradient(500px 260px at 50% -20%, rgba(120,140,255,0.22), transparent 70%),
-    linear-gradient(140deg, #3b4054 0%, #282c3a 55%, #1c1f29 100%);
-  overflow: hidden;
-}
-/* Окно браузера */
-.preview-browser {
-  position: relative;
-  flex: 1 1 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  border-radius: 10px;
-  overflow: hidden;
-  box-shadow:
-    0 18px 40px rgba(0,0,0,0.5),
-    0 4px 14px rgba(0,0,0,0.35),
-    inset 0 0 0 1px rgba(255,255,255,0.08);
-}
-.preview-bar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 11px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0.04));
-  border-bottom: 1px solid rgba(255,255,255,0.10);
-  flex: 0 0 auto;
-}
-.preview-dots {
-  display: flex;
-  gap: 6px;
-  flex-shrink: 0;
-}
-.preview-dots .dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-}
-.dot-red    { background: #ff5f57; }
-.dot-yellow { background: #febc2e; }
-.dot-green  { background: #28c840; }
-.preview-url {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 0;
-  margin-right: 42px; /* балансирует три точки слева */
-  padding: 3px 12px;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.12);
-  color: rgba(255,255,255,0.72);
-  font-size: 11px;
-  letter-spacing: 0.3px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.preview-frame {
-  position: relative;
-  flex: 1 1 0;
-  min-height: 0;
-  background: #000;
-}
-.preview-frame iframe {
-  display: block;
-  width: 100%;
-  height: 100%;
-  border: 0;
-}
 
-@media (max-width: 1080px) {
-  .layout {
-    grid-template-columns: 1fr;
-  }
-  .preview-pane {
-    position: static;
-    max-height: none;
-    height: 520px;
-    margin-top: 0;
-  }
-}
 
 .panel {
   background: var(--bg-elev);
@@ -1004,6 +901,56 @@ select { cursor: pointer; }
 .about-link-icon { display: inline-flex; }
 .about-link-arrow { opacity: 0.7; font-size: 12px; }
 .about-thanks { margin-top: 14px; text-align: center; color: var(--muted); }
+
+/* ---------- hover preview popups (описание настройки + скрин) ----------
+   Один переиспользуемый попап, позиция задаётся JS (hover-preview.js). */
+.hover-preview {
+  position: fixed;
+  z-index: 9000;
+  width: 268px;
+  max-width: calc(100vw - 24px);
+  background: var(--surface-2, #1c1f2b);
+  border: 1px solid var(--border, rgba(255,255,255,0.12));
+  border-radius: 12px;
+  box-shadow: 0 18px 48px rgba(0,0,0,0.55), 0 2px 10px rgba(0,0,0,0.35);
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+.hover-preview:not([hidden]) {
+  opacity: 1;
+  transform: translateY(0);
+}
+.hover-preview .hp-imgwrap {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #0f1118;
+  border-bottom: 1px solid var(--border, rgba(255,255,255,0.10));
+}
+.hover-preview .hp-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.hover-preview .hp-body {
+  padding: 10px 13px 12px;
+}
+.hover-preview .hp-title {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text, #e8eaf2);
+}
+.hover-preview .hp-desc {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted, rgba(232,234,242,0.66));
+}
 
 /* ---------- status ---------- */
 .status {

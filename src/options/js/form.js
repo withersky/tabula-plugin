@@ -22,7 +22,6 @@
  */
 
 import { getState } from "./state.js";
-import { sendPreview } from "./preview.js";
 
 export const RANGE_KEYS = ["defaultColumns", "uiOpacity", "uiScale", "fontSize", "weatherRefreshMin", "weatherForecastDays", "cellSelectedColor", "gridRows", "cellBlurPx"];
 
@@ -51,7 +50,6 @@ export function fillForm() {
   syncCellSelectedMode();
   refreshRangeOutputs();
   syncWidgetCollapsed();
-  sendPreview(collectSettings());
 }
 
 // Показывает/прячет кастомное поле формата даты и заполняет его значением из
