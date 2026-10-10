@@ -93,6 +93,10 @@ function applySettings() {
   const usc = Number(s.uiScale);
   const uscV = (isFinite(usc) && usc > 0) ? Math.min(1.5, Math.max(0.5, usc / 100)) : 1;
   root.setProperty("--ui-scale", String(uscV));
+  // Скорость анимаций: 25..500% (0.25..5.0), множитель для CSS-переменных
+  const asp = Number(s.animationSpeed);
+  const aspV = (isFinite(asp) && asp > 0) ? Math.min(5, Math.max(0.25, asp / 100)) : 1;
+  root.setProperty("--anim-speed", String(aspV));
   applyBackground();
   renderQuickGoIcon();
   requestAnimationFrame(applyTopbarHeight);

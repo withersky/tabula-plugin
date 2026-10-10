@@ -369,5 +369,8 @@
   "previewDesc_showWeather": "Widget del tiempo con temperatura y pronóstico.",
   "previewDesc_weatherForecastDays": "Número de días de pronóstico en la ventana del tiempo.",
   "previewDesc_weatherRefreshMin": "Frecuencia de actualización de los datos del tiempo, en minutos.",
-  "previewDesc_weatherDateFmt": "Formato de fecha en el pronóstico del tiempo."
+  "previewDesc_weatherDateFmt": "Formato de fecha en el pronóstico del tiempo.",
+  "previewDesc_animationSpeed": "Multiplicador de velocidad de animación de la interfaz: transiciones y apariciones. 25% más lento, 500% más rápido.",
+  "labelAnimationSpeed": "Velocidad de animación",
+  "labelAnimationSpeedHint": "Animaciones más lentas son más cómodas si eres sensible al movimiento."
 }

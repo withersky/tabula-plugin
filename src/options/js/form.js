@@ -23,7 +23,7 @@
 
 import { getState } from "./state.js";
 
-export const RANGE_KEYS = ["defaultColumns", "uiOpacity", "uiScale", "fontSize", "weatherRefreshMin", "weatherForecastDays", "cellSelectedColor", "gridRows", "cellBlurPx"];
+export const RANGE_KEYS = ["defaultColumns", "uiOpacity", "uiScale", "animationSpeed", "fontSize", "weatherRefreshMin", "weatherForecastDays", "cellSelectedColor", "gridRows", "cellBlurPx"];
 
 // Ключи настроек, у которых есть «свой формат» (value="__custom__" в селекте +
 // скрытое текстовое поле <key>Custom с шаблоном, хранящимся как "custom:<тmpl>").

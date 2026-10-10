@@ -369,5 +369,8 @@
   "previewDesc_showWeather": "显示温度和天气预报的天气控件。",
   "previewDesc_weatherForecastDays": "天气弹窗中的预报天数。",
   "previewDesc_weatherRefreshMin": "天气数据的刷新频率（分钟）。",
-  "previewDesc_weatherDateFmt": "天气预报中的日期格式。"
+  "previewDesc_weatherDateFmt": "天气预报中的日期格式。",
+  "previewDesc_animationSpeed": "UI 动画速度倍率：过渡和出现效果。25% 更慢，500% 更快。",
+  "labelAnimationSpeed": "动画速度",
+  "labelAnimationSpeedHint": "动效更慢时对运动敏感的用户更友好。"
 }

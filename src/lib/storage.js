@@ -168,6 +168,7 @@ function defaultData() {
       defaultColumns: cols,
       uiOpacity: 90,
       uiScale: 100,
+      animationSpeed: 100,
       cellSelectedColor: "#788cff",
       cellSelectedMode: "custom",
       gridRows: 6,

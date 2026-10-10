@@ -32,7 +32,6 @@
   "shQuickGo": "Focus search bar (also / and Ctrl+E)",
   "shHelp": "Keyboard shortcuts help",
   "shClose": "Close dialogs and menus",
-
   "sectionWidgets": "Widgets",
   "navWidgets": "Widgets",
   "widgetClockTitle": "Clock",
@@ -83,11 +82,39 @@
   "weatherLoading": "Loading weather…",
   "weatherOpenExternal": "Open detailed forecast",
   "close": "Close",
-  "clockDays": ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],
-  "clockDaysShort": ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],
-  "clockMonths": ["January","February","March","April","May","June","July","August","September","October","November","December"],
+  "clockDays": [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday"
+  ],
+  "clockDaysShort": [
+    "Sun",
+    "Mon",
+    "Tue",
+    "Wed",
+    "Thu",
+    "Fri",
+    "Sat"
+  ],
+  "clockMonths": [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December"
+  ],
   "hintWeatherCity": "e.g., Moscow, Berlin, Tokyo",
-
   "optWeatherLat": "Latitude",
   "optWeatherLon": "Longitude",
   "optWeatherCityAuto": "Get coordinates by city",
@@ -133,7 +160,6 @@
   "geoError": "Search failed. Check your connection.",
   "geoNoCityTimezone": "That is a country, not a city — pick a specific place so the forecast uses local time.",
   "geoPickHint": "Click to select",
-
   "optShowGrid": "Show grid lines",
   "sheetIcon": "Sheet icon",
   "promptSheetIcon": "Icon (emoji), e.g. 📋",
@@ -355,5 +381,8 @@
   "previewDesc_showWeather": "Weather widget with temperature and forecast.",
   "previewDesc_weatherForecastDays": "Number of forecast days in the weather popup.",
   "previewDesc_weatherRefreshMin": "How often weather data refreshes, in minutes.",
-  "previewDesc_weatherDateFmt": "Date format in the weather forecast."
+  "previewDesc_weatherDateFmt": "Date format in the weather forecast.",
+  "previewDesc_animationSpeed": "Animation speed multiplier for UI transitions and entrance effects. 25% is slower, 500% is faster.",
+  "labelAnimationSpeed": "Animation speed",
+  "labelAnimationSpeedHint": "Slower animations are easier on motion sensitivity."
 }
