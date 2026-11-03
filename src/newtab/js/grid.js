@@ -23,7 +23,7 @@
 import { getState, setState, activeSheet } from "./state.js";
 import { tx } from "./i18n.js";
 import { toast, cssEscape, keyCode } from "./utils.js";
-import { cachedSrc, onFaviconLoaded } from "./favicons.js";
+import { cachedSrc, onFaviconLoaded, getAutoAdjustColor, computeAutoAdjustColor } from "./favicons.js";
 
 const gridEl     = document.getElementById("grid");
 const modalEl    = document.getElementById("modal");
@@ -222,6 +222,20 @@ function createCellEl(key, bm) {
     if (bm.bg) {
       cell.style.setProperty("--cell-bg", cellBgGradient(bm.bg));
     }
+    // AutoAdjust: цвет ячейки из доминирующего цвета фавикона сайта.
+    // Цвет кэшируется по хосту в favicons.js (hostAutoColorCache), поэтому
+    // при повторном рендере не пересчитывается. При первом показе для хоста
+    // запускается асинхронный расчёт — цвет применяется при готовности.
+    if (getState().settings.cellAutoAdjust) {
+      const autoColor = getAutoAdjustColor(bm.url);
+      if (autoColor) {
+        cell.style.setProperty("--cell-bg", cellBgGradient(autoColor));
+      } else {
+        computeAutoAdjustColor(bm.url).then((color) => {
+          if (color) cell.style.setProperty("--cell-bg", cellBgGradient(color));
+        });
+      }
+    }
   }
   return cell;
 }
@@ -270,6 +284,12 @@ function updateFaviconCells(host) {
     img.src = src;
     img.onerror = () => { fav.replaceChildren(letterBadge(bm.title)); };
     fav.replaceChildren(img);
+    // AutoAdjust: цвет ячейки из доминирующего цвета фавикона.
+    if (getState().settings.cellAutoAdjust) {
+      computeAutoAdjustColor(bm.url).then((color) => {
+        if (color) cell.style.setProperty("--cell-bg", cellBgGradient(color));
+      });
+    }
   }
 }
 

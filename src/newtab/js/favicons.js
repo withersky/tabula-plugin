@@ -71,6 +71,7 @@ function bindCacheClearListener() {
     if (!nv) {
       cache = new Map();
       fallbackUrls.clear();
+      resetAutoAdjustColorCache();
       try { window.dispatchEvent(new CustomEvent("tabula:favicons-reset")); } catch (_) {}
     }
   });
@@ -111,6 +112,84 @@ export function cachedSrc(url) {
   const fb = fallbackUrls.get(host);
   if (fb) return fb;
   return "";
+}
+
+/**
+ * Извлекает средний (доминирующий) цвет из data URL изображения фавикона.
+ * Пропускает полупрозрачные пиксели. Возвращает строку "rgba(r,g,b,a)"
+ * или "" при ошибке / отсутствии непрозрачных пикселей.
+ */
+export function dominantColorFromDataUrl(dataUrl) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        ctx.drawImage(img, 0, 0);
+        const d = ctx.getImageData(0, 0, img.width, img.height).data;
+        let r = 0, g = 0, b = 0, count = 0;
+        // Каждый 4-й пиксель достаточно для representative sampling 64x64.
+        for (let i = 0; i < d.length; i += 16) {
+          const alpha = d[i + 3];
+          if (alpha < 128) continue;
+          r += d[i];
+          g += d[i + 1];
+          b += d[i + 2];
+          count++;
+        }
+        if (count === 0) { resolve(""); return; }
+        const a = 0.30; // полупрозрачный фон ячейки
+        resolve(`rgba(${Math.round(r / count)},${Math.round(g / count)},${Math.round(b / count)},${a})`);
+      } catch (_) {
+        resolve("");
+      }
+    };
+    img.onerror = () => resolve("");
+    img.src = dataUrl;
+  });
+}
+
+// Кэш вычисленных цветов авторегулировки по хосту (в памяти, на сессию).
+// host -> "rgba(r,g,b,a)" | null (null = попробовали, не получилось / нет данных)
+const hostAutoColorCache = new Map();
+
+/**
+ * Синхронно возвращает закэшированный цвет авторегулировки для URL, или null,
+ * если ещё не вычислен / не получилось.
+ */
+export function getAutoAdjustColor(url) {
+  const host = faviconHost(url);
+  if (!host) return null;
+  return hostAutoColorCache.has(host) ? hostAutoColorCache.get(host) : null;
+}
+
+/**
+ * Асинхронно вычисляет и кэширует цвет авторегулировки для URL.
+ * Возвращает цвет или null. Если цвет уже в кэше — возвращает его сразу.
+ * Не data-URL (fallback иконки без CORS) не поддерживаются — возвращает null.
+ */
+export async function computeAutoAdjustColor(url) {
+  const host = faviconHost(url);
+  if (!host) return null;
+  if (hostAutoColorCache.has(host)) return hostAutoColorCache.get(host);
+
+  const src = cachedSrc(url);
+  if (!src || !src.startsWith("data:")) {
+    hostAutoColorCache.set(host, null);
+    return null;
+  }
+
+  const color = await dominantColorFromDataUrl(src);
+  hostAutoColorCache.set(host, color || null);
+  return color || null;
+}
+
+/** Сбрасывает кэш цветов авторегулировки (вызывать при сбросе кэша фавиконок). */
+export function resetAutoAdjustColorCache() {
+  hostAutoColorCache.clear();
 }
 
 /** Фоновая загрузка фавиконок для списка URL (дедупликация по хосту). */
