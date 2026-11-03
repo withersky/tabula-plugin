@@ -1,0 +1,1338 @@
+{
+  "nodes": [
+    {
+      "id": "file:src/lib/browser.js",
+      "type": "file",
+      "path": "src/lib/browser.js",
+      "name": "browser.js",
+      "description": "Cross-browser extension API wrapper: unified ext.* namespace for chrome.* (Chromium) and browser.* (Firefox) MV3. Promisifies storage, runtime.sendMessage, bookmarks, action.",
+      "tags": ["lib", "browser", "api-wrapper", "cross-browser"]
+    },
+    {
+      "id": "file:src/lib/core.js",
+      "type": "file",
+      "path": "src/lib/core.js",
+      "name": "core.js",
+      "description": "Pure logic module (no DOM/browser API): weather icon mapping, URL normalization, favicon helpers, grid cell keys, sheet group rows, sorting, met.no forecast folding (buildDailyForecast/buildHourlyForecast), diffTabulaData for storage onChanged.",
+      "tags": ["lib", "core", "pure-logic", "weather", "grid", "diff"]
+    },
+    {
+      "id": "file:src/lib/storage.js",
+      "type": "file",
+      "path": "src/lib/storage.js",
+      "description": "Storage API (Storage.get/set/update/reset/onChanged), default data (defaultData), migration v1→v2→v3 (migrate), mergeWithDefaults, i18n t() function, FONT_FAMILIES presets, cryptoId, colLetter, makeBlankSheet, getActiveSheet. Default settings include cellAutoAdjust (auto cell color from favicon).",
+      "tags": ["lib", "storage", "migration", "i18n", "defaults"]
+    },
+    {
+      "id": "file:src/lib/timezone.js",
+      "type": "file",
+      "path": "src/lib/timezone.js",
+      "description": "Unified timezone module: partsInTz (Intl.DateTimeFormat with cache), resolveTimezoneByName (open-meteo geocoding), ensureCityTimezone. Used by core.js (lazy), background.js, clock.js, weather.js.",
+      "tags": ["lib", "timezone", "time", "weather", "clock"]
+    },
+    {
+      "id": "file:src/lib/i18n-shared.js",
+      "type": "file",
+      "path": "src/lib/i18n-shared.js",
+      "description": "Shared data-i18n* attribute binding for static HTML translation (used by newtab and options pages).",
+      "tags": ["lib", "i18n", "dom-binding"]
+    },
+    {
+      "id": "file:src/background.js",
+      "type": "file",
+      "path": "src/background.js",
+      "name": "background.js",
+      "description": "Service worker / event page. CORS proxy for Bing daily image and met.no weather. Handles runtime.onMessage: bingDaily, suggest, weatherGeocode, weatherReverseGeocode, weather. Met.no cache (TTL 10 min, max 8 cities, LRU). action.onClicked opens newtab for Yandex build.",
+      "tags": ["background", "service-worker", "weather", "bing", "proxy", "cors"]
+    },
+    {
+      "id": "file:src/manifest.json",
+      "type": "file",
+      "path": "src/manifest.json",
+      "name": "manifest.json",
+      "description": "Chrome MV3 manifest (version 2.11.0). chrome_url_overrides newtab, background service_worker, host_permissions for bing/met.no/suggest APIs, options_ui, storage+bookmarks permissions.",
+      "tags": ["manifest", "chrome", "mv3"]
+    },
+    {
+      "id": "file:src/manifest.firefox.json",
+      "type": "file",
+      "path": "src/manifest.firefox.json",
+      "name": "manifest.firefox.json",
+      "description": "Firefox MV3 manifest. background.scripts (includes lib/timezone.js), gecko.id, browser_specific_settings.gecko.update_url → site/updates.json.",
+      "tags": ["manifest", "firefox", "mv3"]
+    },
+    {
+      "id": "file:src/manifest.yandex.json",
+      "type": "file",
+      "path": "src/manifest.yandex.json",
+      "name": "manifest.yandex.json",
+      "description": "Yandex Browser MV3 manifest. NO chrome_url_overrides (Yandex doesn't allow newtab override). Extension runs from toolbar panel; action.onClicked opens newtab/newtab.html.",
+      "tags": ["manifest", "yandex", "mv3"]
+    },
+    {
+      "id": "file:src/newtab/js/main.js",
+      "type": "file",
+      "path": "src/newtab/js/main.js",
+      "name": "main.js (newtab)",
+      "description": "New tab page entry point. init(): Storage.get → setState, initFavicons, setLang, applySettings, renderGrid, renderSheetBar, startClock, startWeather. Storage.onChanged listener with diffTabulaData. Global DOM listeners (resize, modal, shortcuts).",
+      "tags": ["newtab", "entry", "init", "storage-listener"]
+    },
+    {
+      "id": "file:src/newtab/js/state.js",
+      "type": "file",
+      "path": "src/newtab/js/state.js",
+      "name": "state.js (newtab)",
+      "description": "Shared app state for newtab page: getState/setState/getLang/setLang/activeSheet. Modules read/write via getters/setters.",
+      "tags": ["newtab", "state"]
+    },
+    {
+      "id": "file:src/newtab/js/grid.js",
+      "type": "file",
+      "path": "src/newtab/js/grid.js",
+      "name": "grid.js",
+      "description": "Grid rendering: renderGrid, cell bookmarks, context menu, drag-and-drop reorder/swap, insertGroupRow/removeGroupRow/moveGroupRow from core.js, sortSheetCells. AutoAdjust: derives cell background color from favicon dominant color when settings.cellAutoAdjust is enabled.",
+      "tags": ["newtab", "grid", "render", "dnd"]
+    },
+    {
+      "id": "file:src/newtab/js/sheets.js",
+      "type": "file",
+      "path": "src/newtab/js/sheets.js",
+      "name": "sheets.js",
+      "description": "Sheet tab bar: renderSheetBar, updateSheetBarActive, switchSheetBySwipe, sheet context menu, rename, reorder, delete.",
+      "tags": ["newtab", "sheets", "tab-bar"]
+    },
+    {
+      "id": "file:src/newtab/js/weather.js",
+      "type": "file",
+      "path": "src/newtab/js/weather.js",
+      "name": "weather.js",
+      "description": "Weather widget: startWeather, renderWeather, hourly/daily forecast via ext.runtime.sendMessage('weather'), dayLabel/formatDateFmt from core.js, partsInTz from timezone.js, weather popup (7-day + hourly).",
+      "tags": ["newtab", "widget", "weather", "met.no"]
+    },
+    {
+      "id": "file:src/newtab/js/clock.js",
+      "type": "file",
+      "path": "src/newtab/js/clock.js",
+      "name": "clock.js",
+      "name": "clock.js",
+      "description": "Clock widget: startClock, render clock for multiple cities, partsInTz from timezone.js, clock popup with forecast, date formatting via formatDateFmt from core.js.",
+      "tags": ["newtab", "widget", "clock", "timezone"]
+    },
+    {
+      "id": "file:src/newtab/js/search.js",
+      "type": "file",
+      "path": "src/newtab/js/search.js",
+      "name": "search.js",
+      "description": "Quick search bar: renderQuickGoIcon, bindSearchEvents, search engine selection (Google/Yandex/Bing), suggest via ext.runtime.sendMessage('suggest').",
+      "tags": ["newtab", "widget", "search", "suggest"]
+    },
+    {
+      "id": "file:src/newtab/js/favicons.js",
+      "type": "file",
+      "path": "src/newtab/js/favicons.js",
+      "name": "favicons.js",
+      "name": "favicons.js",
+      "description": "Favicon cache: initFavicons, prefetchFavicons, data URL cache in chrome.storage.local (LRU ~400 hosts, ~8 MB). Also exports dominantColorFromDataUrl for AutoAdjust cell color derivation. Uses pruneFaviconCache/faviconHost/faviconUrl/letterChar from core.js.",
+      "tags": ["newtab", "widget", "favicon", "cache"]
+    },
+    {
+      "id": "file:src/newtab/js/searcher.js",
+      "type": "file",
+      "path": "src/newtab/js/searcher.js",
+      "name": "searcher.js",
+      "description": "Search palette (Ctrl+F): openSearcher, search across all sheets by title/URL, navigate to found cell.",
+      "tags": ["newtab", "widget", "search", "palette"]
+    },
+    {
+      "id": "file:src/newtab/js/shortcuts.js",
+      "type": "file",
+      "path": "src/newtab/js/shortcuts.js",
+      "name": "shortcuts.js",
+      "description": "Keyboard shortcuts (physical keys, layout-independent): arrow navigation, F2 edit, Insert add, Delete remove, Ctrl+D duplicate, Ctrl+F search, F1 help, Esc close, etc.",
+      "tags": ["newtab", "widget", "hotkeys", "keyboard"]
+    },
+    {
+      "id": "file:src/newtab/js/hotkeys.js",
+      "type": "file",
+      "path": "src/newtab/js/hotkeys.js",
+      "name": "hotkeys.js",
+      "description": "Hotkey event binding (bindHotkeyEvents): global keydown listener, modal/spreadsheet key handling.",
+      "tags": ["newtab", "widget", "hotkeys"]
+    },
+    {
+      "id": "file:src/newtab/js/i18n.js",
+      "type": "file",
+      "path": "src/newtab/js/i18n.js",
+      "name": "i18n.js (newtab)",
+      "description": "Newtab i18n: tx() translation function, applyI18nStatic, applyPageTitle, language switching.",
+      "tags": ["newtab", "i18n"]
+    },
+    {
+      "id": "file:src/newtab/js/utils.js",
+      "type": "file",
+      "path": "src/newtab/js/utils.js",
+      "name": "utils.js",
+      "description": "Utility functions for newtab page.",
+      "tags": ["newtab", "utils"]
+    },
+    {
+      "id": "file:src/options/js/main.js",
+      "type": "file",
+      "path": "src/options/js/main.js",
+      "name": "main.js (options)",
+      "description": "Options page entry point: init, tab navigation, live preview iframe, settings persistence, import/export.",
+      "tags": ["options", "entry"]
+    },
+    {
+      "id": "file:src/options/js/form.js",
+      "type": "file",
+      "path": "src/options/js/form.js",
+      "name": "form.js",
+      "description": "Settings form: render form fields, bind inputs, apply settings to preview, validate.",
+      "tags": ["options", "form", "settings"]
+    },
+    {
+      "id": "file:src/options/js/data.js",
+      "type": "file",
+      "path": "src/options/js/data.js",
+      "name": "data.js",
+      "description": "Import/export all data as JSON, reset, backup/restore.",
+      "tags": ["options", "data", "import-export"]
+    },
+    {
+      "id": "file:src/options/js/widgets.js",
+      "type": "file",
+      "path": "src/options/js/widgets.js",
+      "name": "widgets.js",
+      "description": "Widget settings: clock cities, weather cities, refresh period, forecast days, widget scale.",
+      "tags": ["options", "widgets"]
+    },
+    {
+      "id": "file:src/options/js/appearance.js",
+      "type": "file",
+      "path": "src/options/js/appearance.js",
+      "name": "appearance.js",
+      "description": "Appearance settings: theme, grid lines, font, background (color/gradient/image/bing), opacity, cell blur, selection color, favicons.",
+      "tags": ["options", "appearance", "theme"]
+    },
+    {
+      "id": "file:src/options/js/search.js",
+      "type": "file",
+      "path": "src/options/js/search.js",
+      "name": "search.js (options)",
+      "description": "Search settings: search engine, suggestions, quick go bar.",
+      "tags": ["options", "search"]
+    },
+    {
+      "id": "file:src/options/js/i18n.js",
+      "type": "file",
+      "path": "src/options/js/i18n.js",
+      "name": "i18n.js (options)",
+      "description": "Options page i18n: translation, language radio cards.",
+      "tags": ["options", "i18n"]
+    },
+    {
+      "id": "file:src/options/js/i18n-boot.js",
+      "type": "file",
+      "path": "src/options/js/i18n-boot.js",
+      "name": "i18n-boot.js",
+      "description": "Options i18n boot: loads generated i18n script, sets initial language.",
+      "tags": ["options", "i18n", "boot"]
+    },
+    {
+      "id": "file:src/options/js/state.js",
+      "type": "file",
+      "path": "src/options/js/state.js",
+      "name": "state.js (options)",
+      "description": "Options page shared state.",
+      "tags": ["options", "state"]
+    },
+    {
+      "id": "file:src/options/js/utils.js",
+      "type": "file",
+      "path": "src/options/js/utils.js",
+      "name": "utils.js (options)",
+      "description": "Options page utility functions.",
+      "tags": ["options", "utils"]
+    },
+    {
+      "id": "file:src/options/js/confirm.js",
+      "type": "file",
+      "path": "src/options/js/confirm.js",
+      "name": "confirm.js",
+      "description": "Confirm dialogs for destructive actions (delete sheet, reset data, etc.).",
+      "tags": ["options", "dialog"]
+    },
+    {
+      "id": "file:src/options/js/about.js",
+      "type": "file",
+      "path": "src/options/js/about.js",
+      "name": "about.js",
+      "description": "About page: version, links to site and repository.",
+      "tags": ["options", "about"]
+    },
+    {
+      "id": "file:src/options/js/tabs.js",
+      "type": "file",
+      "path": "src/options/js/tabs.js",
+      "name": "tabs.js",
+      "description": "Options page tab navigation (appearance, widgets, language, data, about).",
+      "tags": ["options", "tabs"]
+    },
+    {
+      "id": "file:src/options/js/hover-preview.js",
+      "type": "file",
+      "path": "src/options/js/hover-preview.js",
+      "name": "hover-preview.js",
+      "description": "Live preview hover logic for options page.",
+      "tags": ["options", "preview"]
+    },
+    {
+      "id": "file:scripts/gen-i18n.mjs",
+      "type": "file",
+      "path": "scripts/gen-i18n.mjs",
+      "name": "gen-i18n.mjs",
+      "description": "Generator: reads src/i18n/*.json (ru.json, en.json, symbols.*.json) and writes src/i18n/generated/*.js (browser globals I18N_DATA, I18N_SYMBOLS). Run before build.",
+      "tags": ["script", "i18n", "generator", "build"]
+    },
+    {
+      "id": "file:build.sh",
+      "type": "file",
+      "path": "build.sh",
+      "name": "build.sh",
+      "description": "Build script: runs gen-i18n.mjs, copies src/ to dist/{chrome,firefox,yandex} using the appropriate manifest.",
+      "tags": ["script", "build", "dist"]
+    },
+    {
+      "id": "file:worker.js",
+      "type": "file",
+      "path": "worker.js",
+      "name": "worker.js",
+      "description": "Cloudflare Workers entry: serves site/ static assets (ASSETS binding) for tabula.withersky.workers.dev.",
+      "tags": ["site", "cloudflare", "worker"]
+    },
+    {
+      "id": "file:wrangler.toml",
+      "type": "file",
+      "path": "wrangler.toml",
+      "name": "wrangler.toml",
+      "description": "Cloudflare Workers config: name=tabula, main=worker.js, assets.directory=site.",
+      "tags": ["site", "cloudflare", "config"]
+    },
+    {
+      "id": "file:tests/lib/TabulaCoreLibrary.py",
+      "type": "file",
+      "path": "tests/lib/TabulaCoreLibrary.py",
+      "name": "TabulaCoreLibrary.py",
+      "description": "Robot Framework test library: wraps core.js (via core_runner.js / Node) for unit tests of pure logic (diff, grid, weather folding, date formatting).",
+      "tags": ["tests", "robot-framework", "library"]
+    },
+    {
+      "id": "file:tests/lib/core_runner.js",
+      "type": "file",
+      "path": "tests/lib/core_runner.js",
+      "name": "core_runner.js",
+      "description": "Node runner for core.js unit tests: requires core.js, exposes functions for Robot Framework.",
+      "tags": ["tests", "node", "runner"]
+    },
+    {
+      "id": "module:lib",
+      "type": "module",
+      "path": "src/lib/",
+      "name": "lib",
+      "description": "Shared library: cross-browser API, pure logic, storage/migration/i18n, timezone. Used by background, newtab, and options.",
+      "tags": ["module", "shared", "lib"]
+    },
+    {
+      "id": "module:newtab",
+      "type": "module",
+      "path": "src/newtab/",
+      "name": "newtab",
+      "description": "New tab page: spreadsheet grid, sheets, weather, clock, search, favicons, shortcuts ES modules.",
+      "tags": ["module", "newtab", "ui"]
+    },
+    {
+      "id": "module:options",
+      "type": "module",
+      "path": "src/options/",
+      "name": "options",
+      "name": "options",
+      "description": "Options page: settings form, appearance, widgets, import/export, about ES modules.",
+      "tags": ["module", "options", "ui"]
+    },
+    {
+      "id": "module:background",
+      "type": "module",
+      "path": "src/",
+      "name": "background",
+      "description": "Service worker: CORS proxy for Bing image and met.no weather, message handlers.",
+      "tags": ["module", "background", "service-worker"]
+    },
+    {
+      "id": "concept:storage",
+      "type": "concept",
+      "path": "src/lib/storage.js",
+      "name": "Storage (chrome.storage.local tabula_data)",
+      "description": "Persistent extension data under key 'tabula_data', format v3: sheets[], activeSheetId, settings, bingCache, weatherCaches. Migration v1→v2→v3 on read.",
+      "tags": ["concept", "storage", "data-model"]
+    },
+    {
+      "id": "concept:i18n",
+      "type": "concept",
+      "path": "src/i18n/",
+      "name": "Internationalization",
+      "description": "ru/en translations in src/i18n/*.json, generated to src/i18n/generated/*.js by gen-i18n.mjs. t() formatter with {name}/{n} placeholders.",
+      "tags": ["concept", "i18n", "translation"]
+    },
+    {
+      "id": "concept:weather",
+      "type": "concept",
+      "path": "src/background.js",
+      "name": "Weather (met.no)",
+      "description": "met.no locationforecast API proxied via service worker (CORS). 10-min TTL cache, max 8 cities, LRU. Forecast folded in local timezone via timezone.js.",
+      "tags": ["concept", "weather", "api", "cache"]
+    },
+    {
+      "id": "concept:favicon",
+      "type": "concept",
+      "path": "src/newtab/js/favicons.js",
+      "name": "Favicon cache",
+      "description": "Site favicons fetched as /favicon.ico, cached as data URLs in chrome.storage.local (~8 MB, ~400 hosts, LRU by timestamp). Fallback: letter badge.",
+      "tags": ["concept", "favicon", "cache", "privacy"]
+    },
+    {
+      "id": "concept:grid",
+      "type": "concept",
+      "path": "src/newtab/js/grid.js",
+      "name": "Spreadsheet grid",
+      "description": "Cells keyed 'row,col', bookmarks with id/title/url, group separator rows (type:'group'), drag-and-drop move/swap, sorting by title/domain/url.",
+      "tags": ["concept", "grid", "bookmarks"]
+    },
+    {
+      "id": "concept:sheet",
+      "type": "concept",
+      "path": "src/newtab/js/sheets.js",
+      "name": "Sheets (tabs)",
+      "description": "Multiple sheets like Excel tabs: emoji icons, rename, reorder, delete, context menu. Global defaultColumns applies to all sheets.",
+      "tags": ["concept", "sheet", "tabs"]
+    },
+    {
+      "id": "concept:manifest",
+      "type": "concept",
+      "path": "src/manifest.json",
+      "name": "Extension manifests",
+      "description": "Three MV3 manifests: Chrome (newtab override), Firefox (background.scripts, update_url), Yandex (no newtab override, action.onClicked launch).",
+      "tags": ["concept", "manifest", "mv3", "build"]
+    },
+    {
+      "id": "concept:background",
+      "type": "concept",
+      "path": "src/background.js",
+      "name": "Background service worker",
+      "description": "CORS proxy for Bing daily image + met.no weather. Message-based API for newtab/options. action.onClicked handler for Yandex build.",
+      "tags": ["concept", "background", "service-worker", "proxy"]
+    },
+    {
+      "id": "module:site",
+      "type": "module",
+      "path": "site/",
+      "name": "site",
+      "description": "Cloudflare Workers static site: landing page with download buttons, latest.json, updates.json for Firefox auto-update.",
+      "tags": ["module", "site", "cloudflare"]
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "from": "file:src/background.js",
+      "to": "file:src/lib/browser.js",
+      "type": "imports",
+      "path": "src/background.js",
+      "line": 37,
+      "confidence": 1.0
+    },
+    {
+      "id": "e2",
+      "from": "file:src/background.js",
+      "to": "file:src/lib/i18n-shared.js",
+      "type": "imports",
+      "path": "src/background.js",
+      "line": 39,
+      "confidence": 1.0
+    },
+    {
+      "id": "e3",
+      "from": "file:src/background.js",
+      "to": "file:src/lib/core.js",
+      "type": "imports",
+      "path": "src/background.js",
+      "line": 41,
+      "confidence": 1.0
+    },
+    {
+      "id": "e4",
+      "from": "file:src/background.js",
+      "to": "file:src/lib/timezone.js",
+      "type": "imports",
+      "path": "src/background.js",
+      "line": 44,
+      "confidence": 1.0
+    },
+    {
+      "id": "e5",
+      "from": "file:src/background.js",
+      "to": "file:src/lib/core.js",
+      "type": "calls",
+      "path": "src/background.js",
+      "line": 110,
+      "confidence": 0.95
+    },
+    {
+      "id": "e6",
+      "from": "file:src/background.js",
+      "to": "file:src/lib/core.js",
+      "type": "calls",
+      "path": "src/background.js",
+      "line": 118,
+      "confidence": 0.95
+    },
+    {
+      "id": "e7",
+      "from": "file:src/background.js",
+      "to": "file:src/lib/core.js",
+      "type": "calls",
+      "path": "src/background.js",
+      "line": 119,
+      "confidence": 0.95
+    },
+    {
+      "id": "e8",
+      "from": "file:src/background.js",
+      "to": "file:src/lib/timezone.js",
+      "type": "calls",
+      "path": "src/background.js",
+      "line": 78,
+      "confidence": 0.95
+    },
+    {
+      "id": "e9",
+      "from": "file:src/background.js",
+      "to": "file:src/lib/timezone.js",
+      "type": "calls",
+      "path": "src/background.js",
+      "line": 262,
+      "confidence": 0.95
+    },
+    {
+      "id": "e10",
+      "from": "file:src/newtab/js/main.js",
+      "to": "file:src/lib/storage.js",
+      "type": "uses",
+      "path": "src/newtab/js/main.js",
+      "line": 166,
+      "confidence": 1.0
+    },
+    {
+      "id": "e11",
+      "from": "file:src/newtab/js/main.js",
+      "to": "file:src/lib/core.js",
+      "type": "uses",
+      "path": "src/newtab/js/main.js",
+      "line": 232,
+      "confidence": 1.0
+    },
+    {
+      "id": "e12",
+      "from": "file:src/newtab/js/main.js",
+      "to": "file:src/newtab/js/state.js",
+      "type": "imports",
+      "path": "src/newtab/js/main.js",
+      "line": 27,
+      "confidence": 1.0
+    },
+    {
+      "id": "e13",
+      "from": "file:src/newtab/js/main.js",
+      "to": "file:src/newtab/js/i18n.js",
+      "type": "imports",
+      "path": "src/newtab/js/main.js",
+      "line": 28,
+      "confidence": 1.0
+    },
+    {
+      "id": "e14",
+      "from": "file:src/newtab/js/main.js",
+      "to": "file:src/newtab/js/clock.js",
+      "type": "imports",
+      "path": "src/newtab/js/main.js",
+      "line": 29,
+      "confidence": 1.0
+    },
+    {
+      "id": "e15",
+      "from": "file:src/newtab/js/main.js",
+      "to": "file:src/newtab/js/weather.js",
+      "type": "imports",
+      "path": "src/newtab/js/main.js",
+      "line": 30,
+      "confidence": 1.0
+    },
+    {
+      "id": "e16",
+      "from": "file:src/newtab/js/main.js",
+      "to": "file:src/newtab/js/search.js",
+      "type": "imports",
+      "path": "src/newtab/js/main.js",
+      "line": 32,
+      "confidence": 1.0
+    },
+    {
+      "id": "e17",
+      "from": "file:src/newtab/js/main.js",
+      "to": "file:src/newtab/js/grid.js",
+      "type": "imports",
+      "path": "src/newtab/js/main.js",
+      "line": 34,
+      "confidence": 1.0
+    },
+    {
+      "id": "e18",
+      "from": "file:src/newtab/js/main.js",
+      "to": "file:src/newtab/js/sheets.js",
+      "type": "imports",
+      "path": "src/newtab/js/main.js",
+      "line": 35,
+      "confidence": 1.0
+    },
+    {
+      "id": "e19",
+      "from": "file:src/newtab/js/main.js",
+      "to": "file:src/newtab/js/favicons.js",
+      "type": "imports",
+      "path": "src/newtab/js/main.js",
+      "line": 36,
+      "confidence": 1.0
+    },
+    {
+      "id": "e20",
+      "from": "file:src/newtab/js/main.js",
+      "to": "file:src/newtab/js/searcher.js",
+      "type": "imports",
+      "path": "src/newtab/js/main.js",
+      "line": 37,
+      "confidence": 1.0
+    },
+    {
+      "id": "e21",
+      "from": "file:src/newtab/js/main.js",
+      "to": "file:src/newtab/js/shortcuts.js",
+      "type": "imports",
+      "path": "src/newtab/js/main.js",
+      "line": 38,
+      "confidence": 1.0
+    },
+    {
+      "id": "e22",
+      "from": "file:src/newtab/js/main.js",
+      "to": "file:src/newtab/js/hotkeys.js",
+      "type": "imports",
+      "path": "src/newtab/js/main.js",
+      "line": 39,
+      "confidence": 1.0
+    },
+    {
+      "id": "e23",
+      "from": "file:src/newtab/js/grid.js",
+      "to": "file:src/lib/core.js",
+      "type": "uses",
+      "path": "src/newtab/js/grid.js",
+      "line": 0,
+      "confidence": 0.9
+    },
+    {
+      "id": "e24",
+      "from": "file:src/newtab/js/sheets.js",
+      "to": "file:src/newtab/js/state.js",
+      "type": "uses",
+      "path": "src/newtab/js/sheets.js",
+      "line": 0,
+      "confidence": 0.9
+    },
+    {
+      "id": "e25",
+      "from": "file:src/newtab/js/weather.js",
+      "to": "file:src/lib/core.js",
+      "type": "uses",
+      "path": "src/newtab/js/weather.js",
+      "line": 0,
+      "confidence": 0.9
+    },
+    {
+      "id": "e26",
+      "from": "file:src/newtab/js/weather.js",
+      "to": "file:src/lib/timezone.js",
+      "type": "uses",
+      "path": "src/newtab/js/weather.js",
+      "line": 0,
+      "confidence": 0.9
+    },
+    {
+      "id": "e27",
+      "from": "file:src/newtab/js/clock.js",
+      "to": "file:src/lib/timezone.js",
+      "type": "uses",
+      "path": "src/newtab/js/clock.js",
+      "line": 0,
+      "confidence": 0.9
+    },
+    {
+      "id": "e28",
+      "from": "file:src/newtab/js/clock.js",
+      "to": "file:src/lib/core.js",
+      "type": "uses",
+      "path": "src/newtab/js/clock.js",
+      "line": 0,
+      "confidence": 0.9
+    },
+    {
+      "id": "e29",
+      "from": "file:src/newtab/js/favicons.js",
+      "to": "file:src/lib/core.js",
+      "type": "uses",
+      "path": "src/newtab/js/favicons.js",
+      "line": 0,
+      "confidence": 0.9
+    },
+    {
+      "id": "e30",
+      "from": "file:src/newtab/js/favicons.js",
+      "to": "file:src/lib/storage.js",
+      "type": "uses",
+      "path": "src/newtab/js/favicons.js",
+      "line": 0,
+      "confidence": 0.9
+    },
+    {
+      "id": "e31",
+      "from": "file:src/newtab/js/search.js",
+      "to": "file:src/lib/storage.js",
+      "type": "uses",
+      "path": "src/newtab/js/search.js",
+      "line": 0,
+      "confidence": 0.9
+    },
+    {
+      "id": "e32",
+      "from": "file:src/newtab/js/main.js",
+      "to": "concept:storage",
+      "type": "depends_on",
+      "path": "src/newtab/js/main.js",
+      "line": 166,
+      "confidence": 1.0
+    },
+    {
+      "id": "e33",
+      "from": "file:src/lib/core.js",
+      "to": "file:src/lib/timezone.js",
+      "type": "uses",
+      "path": "src/lib/core.js",
+      "line": 48,
+      "confidence": 1.0
+    },
+    {
+      "id": "e34",
+      "from": "file:src/lib/storage.js",
+      "to": "file:src/i18n/",
+      "type": "uses",
+      "path": "src/lib/storage.js",
+      "line": 104,
+      "confidence": 1.0
+    },
+    {
+      "id": "e35",
+      "from": "file:scripts/gen-i18n.mjs",
+      "to": "file:src/i18n/",
+      "type": "reads",
+      "path": "scripts/gen-i18n.mjs",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e36",
+      "from": "file:scripts/gen-i18n.mjs",
+      "to": "file:src/i18n/generated/",
+      "type": "writes",
+      "path": "scripts/gen-i18n.mjs",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e37",
+      "from": "file:build.sh",
+      "to": "file:scripts/gen-i18n.mjs",
+      "type": "calls",
+      "path": "build.sh",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e38",
+      "from": "file:build.sh",
+      "to": "file:src/manifest.json",
+      "type": "uses",
+      "path": "build.sh",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e39",
+      "from": "file:build.sh",
+      "to": "file:src/manifest.firefox.json",
+      "type": "uses",
+      "path": "build.sh",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e40",
+      "from": "file:build.sh",
+      "to": "file:src/manifest.yandex.json",
+      "type": "uses",
+      "path": "build.sh",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e41",
+      "from": "file:worker.js",
+      "to": "module:site",
+      "type": "serves",
+      "path": "worker.js",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e42",
+      "from": "file:wrangler.toml",
+      "to": "file:worker.js",
+      "type": "configures",
+      "path": "wrangler.toml",
+      "line": 2,
+      "confidence": 1.0
+    },
+    {
+      "id": "e43",
+      "from": "file:wrangler.toml",
+      "to": "module:site",
+      "type": "configures",
+      "path": "wrangler.toml",
+      "line": 8,
+      "confidence": 1.0
+    },
+    {
+      "id": "e44",
+      "from": "file:tests/lib/TabulaCoreLibrary.py",
+      "to": "file:tests/lib/core_runner.js",
+      "type": "uses",
+      "path": "tests/lib/TabulaCoreLibrary.py",
+      "line": 0,
+      "confidence": 0.9
+    },
+    {
+      "id": "e45",
+      "from": "file:tests/lib/core_runner.js",
+      "to": "file:src/lib/core.js",
+      "type": "tests",
+      "path": "tests/lib/core_runner.js",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e46",
+      "from": "file:tests/lib/core_runner.js",
+      "to": "file:src/lib/storage.js",
+      "type": "tests",
+      "path": "tests/lib/core_runner.js",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e47",
+      "from": "file:tests/lib/core_runner.js",
+      "to": "file:src/lib/timezone.js",
+      "type": "tests",
+      "path": "tests/lib/core_runner.js",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e48",
+      "from": "file:src/lib/browser.js",
+      "to": "module:lib",
+      "type": "contains",
+      "path": "src/lib/browser.js",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e49",
+      "from": "file:src/lib/core.js",
+      "to": "module:lib",
+      "type": "contains",
+      "path": "src/lib/core.js",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e50",
+      "from": "file:src/lib/storage.js",
+      "to": "module:lib",
+      "type": "contains",
+      "path": "src/lib/storage.js",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e51",
+      "from": "file:src/lib/timezone.js",
+      "to": "module:lib",
+      "type": "contains",
+      "path": "src/lib/timezone.js",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e52",
+      "from": "file:src/lib/i18n-shared.js",
+      "to": "module:lib",
+      "type": "contains",
+      "path": "src/lib/i18n-shared.js",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e53",
+      "from": "file:src/newtab/js/main.js",
+      "to": "module:newtab",
+      "type": "contains",
+      "path": "src/newtab/js/main.js",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e54",
+      "from": "file:src/newtab/js/state.js",
+      "to": "module:newtab",
+      "type": "contains",
+      "path": "src/newtab/js/state.js",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e55",
+      "from": "file:src/newtab/js/grid.js",
+      "to": "module:newtab",
+      "type": "contains",
+      "path": "src/newtab/js/grid.js",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e56",
+      "from": "file:src/newtab/js/sheets.js",
+      "to": "module:newtab",
+      "type": "contains",
+      "path": "src/newtab/js/sheets.js",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e57",
+      "from": "file:src/newtab/js/weather.js",
+      "to": "module:newtab",
+      "type": "contains",
+      "path": "src/newtab/js/weather.js",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e58",
+      "from": "file:src/newtab/js/clock.js",
+      "to": "module:newtab",
+      "type": "contains",
+      "path": "src/newtab/js/clock.js",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e59",
+      "from": "file:src/newtab/js/search.js",
+      "to": "module:newtab",
+      "type": "contains",
+      "path": "src/newtab/js/search.js",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e60",
+      "from": "file:src/newtab/js/favicons.js",
+      "to": "module:newtab",
+      "type": "contains",
+      "path": "src/newtab/js/favicons.js",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e61",
+      "from": "file:src/newtab/js/searcher.js",
+      "to": "module:newtab",
+      "type": "contains",
+      "path": "src/newtab/js/searcher.js",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e62",
+      "from": "file:src/newtab/js/shortcuts.js",
+      "to": "module:newtab",
+      "type": "contains",
+      "path": "src/newtab/js/shortcuts.js",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e63",
+      "from": "file:src/newtab/js/hotkeys.js",
+      "to": "module:newtab",
+      "type": "contains",
+      "path": "src/newtab/js/hotkeys.js",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e64",
+      "from": "file:src/newtab/js/i18n.js",
+      "to": "module:newtab",
+      "type": "contains",
+      "path": "src/newtab/js/i18n.js",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e65",
+      "from": "file:src/newtab/js/utils.js",
+      "to": "module:newtab",
+      "type": "contains",
+      "path": "src/newtab/js/utils.js",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e66",
+      "from": "file:src/options/js/main.js",
+      "to": "module:options",
+      "type": "contains",
+      "path": "src/options/js/main.js",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e67",
+      "from": "file:src/options/js/form.js",
+      "to": "module:options",
+      "type": "contains",
+      "path": "src/options/js/form.js",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e68",
+      "from": "file:src/options/js/data.js",
+      "to": "module:options",
+      "type": "contains",
+      "path": "src/options/js/data.js",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e69",
+      "from": "file:src/options/js/widgets.js",
+      "to": "module:options",
+      "type": "contains",
+      "path": "src/options/js/widgets.js",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e70",
+      "from": "file:src/options/js/appearance.js",
+      "to": "module:options",
+      "type": "contains",
+      "path": "src/options/js/appearance.js",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e71",
+      "from": "file:src/options/js/search.js",
+      "to": "module:options",
+      "type": "contains",
+      "path": "src/options/js/search.js",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e72",
+      "from": "file:src/options/js/i18n.js",
+      "to": "module:options",
+      "type": "contains",
+      "path": "src/options/js/i18n.js",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e73",
+      "from": "file:src/options/js/i18n-boot.js",
+      "to": "module:options",
+      "type": "contains",
+      "path": "src/options/js/i18n-boot.js",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e74",
+      "from": "file:src/options/js/state.js",
+      "to": "module:options",
+      "type": "contains",
+      "path": "src/options/js/state.js",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e75",
+      "from": "file:src/options/js/utils.js",
+      "to": "module:options",
+      "type": "contains",
+      "path": "src/options/js/utils.js",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e76",
+      "from": "file:src/options/js/confirm.js",
+      "to": "module:options",
+      "type": "contains",
+      "path": "src/options/js/confirm.js",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e77",
+      "from": "file:src/options/js/about.js",
+      "to": "module:options",
+      "type": "contains",
+      "path": "src/options/js/about.js",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e78",
+      "from": "file:src/options/js/tabs.js",
+      "to": "module:options",
+      "type": "contains",
+      "path": "src/options/js/tabs.js",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e79",
+      "from": "file:src/options/js/hover-preview.js",
+      "to": "module:options",
+      "type": "contains",
+      "path": "src/options/js/hover-preview.js",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e80",
+      "from": "file:src/background.js",
+      "to": "module:background",
+      "type": "contains",
+      "path": "src/background.js",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e81",
+      "from": "module:lib",
+      "to": "concept:storage",
+      "type": "implements",
+      "path": "src/lib/storage.js",
+      "line": 415,
+      "confidence": 1.0
+    },
+    {
+      "id": "e82",
+      "from": "module:lib",
+      "to": "concept:i18n",
+      "type": "implements",
+      "path": "src/lib/storage.js",
+      "line": 104,
+      "confidence": 1.0
+    },
+    {
+      "id": "e83",
+      "from": "module:lib",
+      "to": "concept:weather",
+      "type": "implements",
+      "path": "src/lib/core.js",
+      "line": 541,
+      "confidence": 0.9
+    },
+    {
+      "id": "e84",
+      "from": "module:lib",
+      "to": "concept:favicon",
+      "type": "implements",
+      "path": "src/lib/core.js",
+      "line": 265,
+      "confidence": 0.9
+    },
+    {
+      "id": "e85",
+      "from": "module:newtab",
+      "to": "concept:grid",
+      "type": "implements",
+      "path": "src/newtab/js/grid.js",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e86",
+      "from": "module:newtab",
+      "to": "concept:sheet",
+      "type": "implements",
+      "path": "src/newtab/js/sheets.js",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e87",
+      "from": "module:newtab",
+      "to": "concept:weather",
+      "type": "uses",
+      "path": "src/newtab/js/weather.js",
+      "line": 0,
+      "confidence": 0.9
+    },
+    {
+      "id": "e88",
+      "from": "module:newtab",
+      "to": "concept:favicon",
+      "type": "uses",
+      "path": "src/newtab/js/favicons.js",
+      "line": 0,
+      "confidence": 0.9
+    },
+    {
+      "id": "e89",
+      "from": "module:background",
+      "to": "concept:weather",
+      "type": "implements",
+      "path": "src/background.js",
+      "line": 64,
+      "confidence": 1.0
+    },
+    {
+      "id": "e90",
+      "from": "module:background",
+      "to": "concept:background",
+      "type": "implements",
+      "path": "src/background.js",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e91",
+      "from": "module:site",
+      "to": "concept:manifest",
+      "type": "uses",
+      "path": "site/updates.json",
+      "line": 0,
+      "confidence": 0.9
+    },
+    {
+      "id": "e92",
+      "from": "file:src/newtab/js/main.js",
+      "to": "file:src/lib/browser.js",
+      "type": "uses",
+      "path": "src/newtab/js/main.js",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e93",
+      "from": "file:src/newtab/js/main.js",
+      "to": "file:src/lib/i18n-shared.js",
+      "type": "uses",
+      "path": "src/newtab/js/main.js",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e94",
+      "from": "file:src/background.js",
+      "to": "concept:storage",
+      "type": "uses",
+      "path": "src/background.js",
+      "line": 0,
+      "confidence": 0.9
+    },
+    {
+      "id": "e95",
+      "from": "file:src/lib/storage.js",
+      "to": "concept:storage",
+      "type": "defines",
+      "path": "src/lib/storage.js",
+      "line": 215,
+      "confidence": 1.0
+    },
+    {
+      "id": "e96",
+      "from": "file:src/newtab/js/favicons.js",
+      "to": "file:src/newtab/js/grid.js",
+      "type": "exports",
+      "path": "src/newtab/js/favicons.js",
+      "line": 121,
+      "confidence": 1.0
+    },
+    {
+      "id": "e97",
+      "from": "file:src/newtab/js/grid.js",
+      "to": "file:src/newtab/js/favicons.js",
+      "type": "imports",
+      "path": "src/newtab/js/grid.js",
+      "line": 26,
+      "confidence": 1.0
+    },
+    {
+      "id": "e98",
+      "from": "file:src/newtab/js/grid.js",
+      "to": "concept:storage",
+      "type": "uses",
+      "path": "src/newtab/js/grid.js",
+      "line": 227,
+      "confidence": 1.0
+    },
+    {
+      "id": "e99",
+      "from": "file:src/options/options.html",
+      "to": "concept:storage",
+      "type": "binds",
+      "path": "src/options/options.html",
+      "line": 0,
+      "confidence": 1.0
+    }
+  ],
+  "updatedAt": "2026-11-03T00:00:00Z"
+}

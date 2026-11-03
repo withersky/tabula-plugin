@@ -113,6 +113,44 @@ export function cachedSrc(url) {
   return "";
 }
 
+/**
+ * Извлекает средний (доминирующий) цвет из data URL изображения фавикона.
+ * Пропускает полупрозрачные пиксели. Возвращает строку "rgba(r,g,b,a)"
+ * или "" при ошибке / отсутствии непрозрачных пикселей.
+ */
+export function dominantColorFromDataUrl(dataUrl) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        ctx.drawImage(img, 0, 0);
+        const d = ctx.getImageData(0, 0, img.width, img.height).data;
+        let r = 0, g = 0, b = 0, count = 0;
+        // Каждый 4-й пиксель достаточно для representative sampling 64x64.
+        for (let i = 0; i < d.length; i += 16) {
+          const alpha = d[i + 3];
+          if (alpha < 128) continue;
+          r += d[i];
+          g += d[i + 1];
+          b += d[i + 2];
+          count++;
+        }
+        if (count === 0) { resolve(""); return; }
+        const a = 0.30; // полупрозрачный фон ячейки
+        resolve(`rgba(${Math.round(r / count)},${Math.round(g / count)},${Math.round(b / count)},${a})`);
+      } catch (_) {
+        resolve("");
+      }
+    };
+    img.onerror = () => resolve("");
+    img.src = dataUrl;
+  });
+}
+
 /** Фоновая загрузка фавиконок для списка URL (дедупликация по хосту). */
 export function prefetchFavicons(urls) {
   if (!Array.isArray(urls)) return;

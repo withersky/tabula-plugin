@@ -259,6 +259,8 @@
   "selColorCustom": "لون مخصص",
   "selColorAutoColor": "لون تلقائي (حسب الخلفية)",
   "selColorAutoColorHint": "يُحدَّد لون التحديد تلقائيًا من الخلفية الحالية: صورة أو تدرج أو لون ثابت",
+  "cellAutoAdjust": "AutoAdjust (لون من الفavicon)",
+  "cellAutoAdjustHint": "يُحدَّد لون الخلية تلقائيًا من اللون السائد في أيقونة الموقع (favicon)",
   "labelFontFamily": "خط الجدول",
   "labelFontFamilyHint": "اسم الخط أو قائمة CSS",
   "labelFontSize": "حجم خط الخلية",

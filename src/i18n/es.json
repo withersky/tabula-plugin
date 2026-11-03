@@ -259,6 +259,8 @@
   "selColorCustom": "Color personalizado",
   "selColorAutoColor": "AutoColor (según el fondo)",
   "selColorAutoColorHint": "El color de selección se elige automáticamente según el fondo actual: imagen, degradado o color sólido",
+  "cellAutoAdjust": "AutoAdjust (color del favicon)",
+  "cellAutoAdjustHint": "El color de la celda se elige automáticamente del color dominante del favicon del sitio",
   "labelFontFamily": "Fuente de la tabla",
   "labelFontFamilyHint": "Nombre de fuente o lista CSS",
   "labelFontSize": "Tamaño de fuente de la celda",

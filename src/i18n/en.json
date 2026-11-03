@@ -271,6 +271,8 @@
   "selColorCustom": "Custom color",
   "selColorAutoColor": "AutoColor (from background)",
   "selColorAutoColorHint": "Selection color is picked automatically from the current background: image, gradient or solid color",
+  "cellAutoAdjust": "AutoAdjust (color from favicon)",
+  "cellAutoAdjustHint": "Cell color is picked automatically from the dominant color of the site favicon",
   "labelFontFamily": "Tab font",
   "labelFontFamilyHint": "Font name or CSS font list",
   "labelFontSize": "Cell font size",

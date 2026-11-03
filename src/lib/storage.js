@@ -208,7 +208,8 @@ function defaultData() {
       weatherForecastDays: 5,
       weatherDateFmt: "dd.mm",
       clockDateFmt: "custom:DD.MM.YYYY",
-      language: "ru"
+      language: "ru",
+      cellAutoAdjust: false
     },
     bingCache: null,
     weatherCache: null,
