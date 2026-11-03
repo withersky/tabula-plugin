@@ -375,5 +375,6 @@
   "previewDesc_weatherDateFmt": "天气预报中的日期格式。",
   "previewDesc_animationSpeed": "UI 动画速度倍率：过渡和出现效果。25% 更慢，500% 更快。",
   "labelAnimationSpeed": "动画速度",
-  "labelAnimationSpeedHint": "动效更慢时对运动敏感的用户更友好。"
+  "labelAnimationSpeedHint": "动效更慢时对运动敏感的用户更友好。",
+  "sectionThanks": "致谢"
 }

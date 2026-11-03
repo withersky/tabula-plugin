@@ -387,5 +387,6 @@
   "previewDesc_weatherDateFmt": "Date format in the weather forecast.",
   "previewDesc_animationSpeed": "Animation speed multiplier for UI transitions and entrance effects. 25% is slower, 500% is faster.",
   "labelAnimationSpeed": "Animation speed",
-  "labelAnimationSpeedHint": "Slower animations are easier on motion sensitivity."
+  "labelAnimationSpeedHint": "Slower animations are easier on motion sensitivity.",
+  "sectionThanks": "Thanks"
 }

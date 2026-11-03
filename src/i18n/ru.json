@@ -387,5 +387,6 @@
   "previewDesc_weatherDateFmt": "Формат даты в прогнозе погоды.",
   "previewDesc_animationSpeed": "Множитель скорости анимации UI: переходы и появления. 25% — медленнее, 500% — быстрее.",
   "labelAnimationSpeed": "Скорость анимации",
-  "labelAnimationSpeedHint": "Медленнее при повышенной чувствительности к движению."
+  "labelAnimationSpeedHint": "Медленнее при повышенной чувствительности к движению.",
+  "sectionThanks": "Благодарности"
 }

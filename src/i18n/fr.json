@@ -375,5 +375,6 @@
   "previewDesc_weatherDateFmt": "Format de date dans les prévisions météo.",
   "previewDesc_animationSpeed": "Multiplicateur de vitesse d’animation de l’interface : transitions et apparitions. 25% plus lent, 500% plus rapide.",
   "labelAnimationSpeed": "Vitesse d’animation",
-  "labelAnimationSpeedHint": "Des animations plus lentes sont plus confortables en cas de sensibilité au mouvement."
+  "labelAnimationSpeedHint": "Des animations plus lentes sont plus confortables en cas de sensibilité au mouvement.",
+  "sectionThanks": "Remerciements"
 }

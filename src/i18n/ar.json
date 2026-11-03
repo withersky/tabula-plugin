@@ -375,5 +375,6 @@
   "previewDesc_weatherDateFmt": "تنسيق التاريخ في توقعات الطقس.",
   "previewDesc_animationSpeed": "مضاعف سرعة حركات واجهة المستخدم للانتقالات وتأثيرات الظهور. 25% أبطأ، 500% أسرع.",
   "labelAnimationSpeed": "سرعة الحركة",
-  "labelAnimationSpeedHint": "الحركات البطيئة أسهل على حساسية الحركة."
+  "labelAnimationSpeedHint": "الحركات البطيئة أسهل على حساسية الحركة.",
+  "sectionThanks": "الشكر والتقدير"
 }

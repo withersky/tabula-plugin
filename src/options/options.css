@@ -909,6 +909,11 @@ select { cursor: pointer; }
   gap: 12px;
 }
 
+h2[data-i18n="sectionThanks"] {
+  margin-top: 24px;
+}
+
+
 /* ---------- hover preview popups (описание настройки + скрин) ----------
    Один переиспользуемый попап, позиция задаётся JS (hover-preview.js). */
 .hover-preview {
