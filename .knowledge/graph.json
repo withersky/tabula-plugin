@@ -441,6 +441,30 @@
       "tags": ["concept", "cache", "favicon", "color"]
     },
     {
+      "id": "file:src/options/js/tabs.js",
+      "type": "file",
+      "path": "src/options/js/tabs.js",
+      "name": "tabs.js (options)",
+      "description": "Options page tab navigation. TAB_IDS includes thanks between data and about.",
+      "tags": ["options", "tabs", "navigation"]
+    },
+    {
+      "id": "file:src/options/options.html",
+      "type": "file",
+      "path": "src/options/options.html",
+      "name": "options.html",
+      "description": "Options page HTML. Contains tabs navigation and all settings panels including new thanks panel (data-tab=thanks).",
+      "tags": ["options", "html", "ui"]
+    },
+    {
+      "id": "concept:thanks",
+      "type": "concept",
+      "path": "src/options/options.html",
+      "name": "Thanks / Acknowledgments section",
+      "description": "Thanks / Acknowledgments section — simple list of GitHub friend links. Located between Data and About.",
+      "tags": ["concept", "ui", "thanks", "options"]
+    },
+    {
       "id": "module:site",
       "type": "module",
       "path": "site/",
@@ -1369,12 +1393,30 @@
       "confidence": 1.0
     },
     {
-      "id": "e103",
-      "from": "file:src/newtab/js/grid.js",
-      "to": "concept:cellAutoAdjustCache",
+      "id": "e104",
+      "from": "file:src/options/js/tabs.js",
+      "to": "concept:thanks",
+      "type": "defines",
+      "path": "src/options/js/tabs.js",
+      "line": 23,
+      "confidence": 1.0
+    },
+    {
+      "id": "e105",
+      "from": "file:src/options/options.html",
+      "to": "concept:thanks",
+      "type": "contains",
+      "path": "src/options/options.html",
+      "line": 0,
+      "confidence": 1.0
+    },
+    {
+      "id": "e106",
+      "from": "file:src/options/options.html",
+      "to": "file:src/options/js/tabs.js",
       "type": "uses",
-      "path": "src/newtab/js/grid.js",
-      "line": 227,
+      "path": "src/options/options.html",
+      "line": 53,
       "confidence": 1.0
     }
   ],
