@@ -376,5 +376,20 @@
   "previewDesc_animationSpeed": "UI 动画速度倍率：过渡和出现效果。25% 更慢，500% 更快。",
   "labelAnimationSpeed": "动画速度",
   "labelAnimationSpeedHint": "动效更慢时对运动敏感的用户更友好。",
-  "sectionThanks": "致谢"
+  "sectionThanks": "致谢",
+  "widgetShortcutsTitle": "快捷方式",
+  "optShowShortcuts": "显示快捷方式",
+  "optShortcutsPosition": "快捷方式位置",
+  "optShortcutsPositionBefore": "搜索栏前",
+  "optShortcutsPositionAfter": "搜索栏后显示快捷方式",
+  "optShortcutsPositionHint": "关闭 — 快捷方式在搜索栏前，开启 — 在搜索栏后。",
+  "optShortcutsCount": "快捷方式数量",
+  "unitShortcut": "个",
+  "optShortcutsAdd": "添加快捷方式",
+  "optShortcutsDelete": "删除快捷方式",
+  "placeholderShortcutTitle": "标题",
+  "placeholderShortcutUrl": "https://示例.com",
+  "previewDesc_showShortcuts": "顶栏上的快捷方式按钮（搜索栏前或后）。",
+  "previewDesc_shortcutsPosition": "相对于搜索栏显示快捷方式的位置。",
+  "previewDesc_shortcutsCount": "在栏上显示的快捷方式数量。"
 }

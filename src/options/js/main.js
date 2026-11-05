@@ -39,6 +39,7 @@ import {
   updateAllPreviews, bindAppearanceEvents
 } from "./appearance.js";
 import { bindWidgetEvents, renderCityLists } from "./widgets.js";
+import { bindShortcutsEvents, renderShortcutsList } from "./shortcuts.js";
 import { bindDataEvents } from "./data.js";
 import { populateAbout } from "./about.js";
 import { initHoverPreview } from "./hover-preview.js";
@@ -51,6 +52,7 @@ async function init() {
   applyI18nStatic();
   fillForm();
   renderCityLists();
+  renderShortcutsList();
   wireEvents();
   wireTabs();
   wireSearch();
@@ -76,6 +78,7 @@ async function init() {
     if (langChanged) applyI18nStatic();
     fillForm();
     renderCityLists();
+    renderShortcutsList();
     updateBgTypeVisibility();
     updateUploadPreview();
     updateBingCopyright();
@@ -87,6 +90,7 @@ async function init() {
 function wireEvents() {
   bindAppearanceEvents();
   bindWidgetEvents();
+  bindShortcutsEvents();
   bindDataEvents();
 
   const uploadInput = document.getElementById("uploadInput");
@@ -128,7 +132,7 @@ function wireEvents() {
   });
 
   // Мгновенно сворачивать/разворачивать блок виджета по клику на тоггл.
-  ["showClock", "showQuickGo", "showWeather"].forEach(k => {
+  ["showClock", "showQuickGo", "showWeather", "showShortcuts"].forEach(k => {
     const el = document.querySelector('input[name="' + k + '"]');
     if (!el) return;
     el.addEventListener("change", syncWidgetCollapsed);

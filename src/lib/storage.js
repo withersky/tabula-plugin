@@ -209,7 +209,9 @@ function defaultData() {
       weatherDateFmt: "dd.mm",
       clockDateFmt: "custom:DD.MM.YYYY",
       language: "ru",
-      cellAutoAdjust: false
+      cellAutoAdjust: false,
+      showShortcuts: true,
+      shortcuts: []
     },
     bingCache: null,
     weatherCache: null,

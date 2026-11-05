@@ -376,5 +376,20 @@
   "previewDesc_animationSpeed": "Multiplicador de velocidad de animación de la interfaz: transiciones y apariciones. 25% más lento, 500% más rápido.",
   "labelAnimationSpeed": "Velocidad de animación",
   "labelAnimationSpeedHint": "Animaciones más lentas son más cómodas si eres sensible al movimiento.",
-  "sectionThanks": "Agradecimientos"
+  "sectionThanks": "Agradecimientos",
+  "widgetShortcutsTitle": "Accesos directos",
+  "optShowShortcuts": "Mostrar accesos directos",
+  "optShortcutsPosition": "Posición de accesos directos",
+  "optShortcutsPositionBefore": "Antes de la búsqueda",
+  "optShortcutsPositionAfter": "Mostrar accesos directos después de la búsqueda",
+  "optShortcutsPositionHint": "Desactivado — accesos directos antes de la barra de búsqueda, activado — después.",
+  "optShortcutsCount": "Número de accesos directos",
+  "unitShortcut": "uds.",
+  "optShortcutsAdd": "Añadir acceso directo",
+  "optShortcutsDelete": "Eliminar acceso directo",
+  "placeholderShortcutTitle": "Título",
+  "placeholderShortcutUrl": "https://ejemplo.com",
+  "previewDesc_showShortcuts": "Botones de acceso directo en la barra superior (antes o después de la barra de búsqueda).",
+  "previewDesc_shortcutsPosition": "Dónde mostrar los accesos directos respecto a la barra de búsqueda.",
+  "previewDesc_shortcutsCount": "Cuántos accesos directos mostrar en la barra."
 }

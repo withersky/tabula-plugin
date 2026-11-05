@@ -376,5 +376,20 @@
   "previewDesc_animationSpeed": "Multiplicateur de vitesse d’animation de l’interface : transitions et apparitions. 25% plus lent, 500% plus rapide.",
   "labelAnimationSpeed": "Vitesse d’animation",
   "labelAnimationSpeedHint": "Des animations plus lentes sont plus confortables en cas de sensibilité au mouvement.",
-  "sectionThanks": "Remerciements"
+  "sectionThanks": "Remerciements",
+  "widgetShortcutsTitle": "Raccourcis",
+  "optShowShortcuts": "Afficher les raccourcis",
+  "optShortcutsPosition": "Position des raccourcis",
+  "optShortcutsPositionBefore": "Avant la recherche",
+  "optShortcutsPositionAfter": "Afficher les raccourcis après la recherche",
+  "optShortcutsPositionHint": "Désactivé — raccourcis avant la barre de recherche, activé — après.",
+  "optShortcutsCount": "Nombre de raccourcis",
+  "unitShortcut": "pcs",
+  "optShortcutsAdd": "Ajouter un raccourci",
+  "optShortcutsDelete": "Supprimer un raccourci",
+  "placeholderShortcutTitle": "Titre",
+  "placeholderShortcutUrl": "https://exemple.com",
+  "previewDesc_showShortcuts": "Boutons raccourcis dans la barre supérieure (avant ou après la barre de recherche).",
+  "previewDesc_shortcutsPosition": "Où afficher les raccourcis par rapport à la barre de recherche.",
+  "previewDesc_shortcutsCount": "Combien de raccourcis afficher sur la barre."
 }

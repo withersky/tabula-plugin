@@ -157,8 +157,9 @@
             </span>
             <p class="hint" id="cellSelectedAutoColorHint" data-i18n="selColorAutoColorHint" hidden></p>
           </div>
-          <label class="check" data-preview-key="cellAutoAdjust">
-            <input type="checkbox" name="cellAutoAdjust" /> <span data-i18n="cellAutoAdjust">AutoAdjust (цвет из фавикона)</span>
+          <label class="toggle-switch" data-preview-key="cellAutoAdjust">
+            <input type="checkbox" name="cellAutoAdjust" title="AutoAdjust (цвет из фавикона)" />
+            <span class="toggle-slider"></span>
           </label>
           <label class="full" data-preview-key="uiOpacity">
             <span class="row">
@@ -313,9 +314,9 @@
         <div class="widget-block" id="widget-clock">
           <div class="widget-block-head">
             <span class="widget-block-title" data-i18n="widgetClockTitle">Часы</span>
-            <label class="check widget-toggle" data-preview-key="showClock">
-              <input type="checkbox" name="showClock" />
-              <span data-i18n="optShowClock">Показывать часы</span>
+            <label class="toggle-switch" data-preview-key="showClock">
+              <input type="checkbox" name="showClock" title="Показывать часы" />
+              <span class="toggle-slider"></span>
             </label>
           </div>
 
@@ -363,9 +364,9 @@
         <div class="widget-block" id="widget-search">
           <div class="widget-block-head">
             <span class="widget-block-title" data-i18n="widgetSearchTitle">Поиск</span>
-            <label class="check widget-toggle" data-preview-key="showQuickGo">
-              <input type="checkbox" name="showQuickGo" />
-              <span data-i18n="optShowQuickGo">Показывать поисковую строку</span>
+            <label class="toggle-switch" data-preview-key="showQuickGo">
+              <input type="checkbox" name="showQuickGo" title="Показывать поисковую строку" />
+              <span class="toggle-slider"></span>
             </label>
           </div>
 
@@ -394,9 +395,9 @@
                 </div>
               </label>
             </div>
-            <label class="check" data-preview-key="quickGoSuggest">
-              <input type="checkbox" name="quickGoSuggest" />
-              <span data-i18n="optQuickGoSuggest">Подсказки поиска</span>
+            <label class="toggle-switch" data-preview-key="quickGoSuggest">
+              <input type="checkbox" name="quickGoSuggest" title="Подсказки поиска" />
+              <span class="toggle-slider"></span>
             </label>
           </div>
         </div>
@@ -404,9 +405,9 @@
         <div class="widget-block" id="widget-weather">
           <div class="widget-block-head">
             <span class="widget-block-title" data-i18n="widgetWeatherTitle">Погода</span>
-            <label class="check widget-toggle" data-preview-key="showWeather">
-              <input type="checkbox" name="showWeather" />
-              <span data-i18n="optShowWeather">Показывать погоду</span>
+            <label class="toggle-switch" data-preview-key="showWeather">
+              <input type="checkbox" name="showWeather" title="Показывать погоду" />
+              <span class="toggle-slider"></span>
             </label>
           </div>
 
@@ -462,6 +463,27 @@
                 </span>
                 <input type="text" name="weatherDateFmtCustom" placeholder="DD.MM.YYYY" />
               </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="widget-block" id="widget-shortcuts">
+          <div class="widget-block-head">
+            <span class="widget-block-title" data-i18n="widgetShortcutsTitle">Ярлыки</span>
+            <label class="toggle-switch" data-preview-key="showShortcuts">
+              <input type="checkbox" name="showShortcuts" title="Показывать ярлыки" />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="widget-subsection">
+            <span class="widget-subsection-title" data-i18n="widgetShortcutsTitle">Список ярлыков</span>
+            <div id="shortcutsList" class="shortcuts-list"></div>
+            <div class="city-list-actions" style="margin-top:8px">
+              <button type="button" id="shortcutAddBtn" class="btn">
+                <span class="btn-icon" aria-hidden="true">＋</span>
+                <span data-i18n="optShortcutsAdd">Добавить ярлык</span>
+              </button>
             </div>
           </div>
         </div>

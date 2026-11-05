@@ -464,7 +464,8 @@ select { cursor: pointer; }
   border-color: var(--text);
 }
 .widget-block.is-collapsed .widget-block-title { color: var(--muted); }
-.widget-block.is-collapsed .widget-toggle { opacity: 0.55; }
+.widget-block.is-collapsed .widget-toggle,
+.widget-block.is-collapsed .toggle-switch { opacity: 0.55; }
 .widget-toggle { margin: 0; cursor: pointer; position: relative; z-index: 1; }
 .widget-subsection {
   display: flex;
@@ -557,6 +558,73 @@ select { cursor: pointer; }
   display: flex;
   gap: 8px;
   margin-top: 2px;
+}
+
+/* ---------- список ярлыков (виджета) ---------- */
+.shortcuts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.shortcut-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.02);
+}
+.shortcut-row input {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 13px;
+  padding: 6px 10px;
+}
+.shortcut-row .city-list-delete {
+  flex: 0 0 auto;
+}
+
+/* ---------- toggle switch (iOS-стиль) ---------- */
+.toggle-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  position: relative;
+}
+.toggle-switch input[type="checkbox"] {
+  display: none;
+}
+.toggle-slider {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  background: rgba(255,255,255,0.10);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  transition: background 200ms ease, border-color 200ms ease;
+}
+.toggle-switch input[type="checkbox"]:checked + .toggle-slider {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+.toggle-slider::after {
+  content: "";
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 18px; height: 18px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 200ms ease;
+}
+.toggle-switch input[type="checkbox"]:checked + .toggle-slider::after {
+  transform: translateX(20px);
+}
+.toggle-switch span:last-child {
+  font-size: 13px;
+  color: var(--text);
+  white-space: nowrap;
 }
 
 /* ---------- checks ---------- */

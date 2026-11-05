@@ -33,6 +33,7 @@ import { renderQuickGoIcon, bindSearchEvents } from "./search.js";
 import { applyBackground, applySelectionColor, maybeLoadBingBackground } from "./background.js";
 import { renderGrid, closeModal, onSubmitBookmark, bindGridEvents, hideSheetCtx } from "./grid.js";
 import { renderSheetBar, updateSheetBarActive, refreshSheetCtx, bindSheetEvents, switchSheetBySwipe } from "./sheets.js";
+import { renderShortcuts, applyShortcutsPosition, scheduleRender } from "./shortcuts-widget.js";
 import { initFavicons, prefetchFavicons } from "./favicons.js";
 import { bindSearcherEvents, openSearcher } from "./searcher.js";
 import { bindShortcutEvents } from "./shortcuts.js";
@@ -49,11 +50,19 @@ const quickGo = document.getElementById("quickGo");
 
 function collectVisibleUrls() {
   const sheet = activeSheet();
-  if (!sheet || !sheet.cells) return [];
   const urls = [];
-  for (const key of Object.keys(sheet.cells)) {
-    const bm = sheet.cells[key];
-    if (bm && typeof bm.url === "string" && bm.url) urls.push(bm.url);
+  if (sheet && sheet.cells) {
+    for (const key of Object.keys(sheet.cells)) {
+      const bm = sheet.cells[key];
+      if (bm && typeof bm.url === "string" && bm.url) urls.push(bm.url);
+    }
+  }
+  // URL ярлыков верхней панели — их фавиконы тоже кэшируем.
+  const state = getState();
+  const s = state && state.settings;
+  const list = Array.isArray(s && s.shortcuts) ? s.shortcuts : [];
+  for (const sc of list) {
+    if (sc && typeof sc.url === "string" && sc.url) urls.push(sc.url);
   }
   return urls;
 }
@@ -127,6 +136,8 @@ function applyLayoutFlags() {
   // Скрываем только визуально через CSS-класс is-off.
   if (clockWidget)   clockWidget.classList.toggle("is-off",   !s.showClock);
   if (weatherWidget) weatherWidget.classList.toggle("is-off", !s.showWeather);
+  renderShortcuts();
+  applyShortcutsPosition();
   applyTopbarHeight();
   applySheetBarHeight();
 }

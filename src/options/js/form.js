@@ -21,7 +21,7 @@
  * (persistSettings). Никаких слушателей — их вешает main.wireEvents().
  */
 
-import { getState } from "./state.js";
+import { getState, tx } from "./state.js";
 
 export const RANGE_KEYS = ["defaultColumns", "uiOpacity", "uiScale", "animationSpeed", "fontSize", "weatherRefreshMin", "weatherForecastDays", "cellSelectedColor", "gridRows", "cellBlurPx"];
 
@@ -119,6 +119,21 @@ export function collectSettings() {
     settings[key] = v;
   }
   DATEFMT_KEYS.forEach(k => collectDateFmtCustom(k, settings));
+
+  // Список ярлыков: пары полей shortcutTitle / shortcutUrl из DOM.
+  const titles = $$('[name="shortcutTitle"]');
+  const urls   = $$('[name="shortcutUrl"]');
+  const n      = Math.min(titles.length, urls.length);
+  const shortcuts = [];
+  for (let i = 0; i < n; i++) {
+    const prev = (getState().settings.shortcuts || [])[i];
+    shortcuts.push({
+      id: (prev && prev.id) || cryptoId(),
+      title: titles[i].value.trim(),
+      url: urls[i].value.trim()
+    });
+  }
+  settings.shortcuts = shortcuts;
   return settings;
 }
 
@@ -136,7 +151,8 @@ export function syncWidgetCollapsed() {
   const map = [
     ["showClock",   "#widget-clock"],
     ["showQuickGo", "#widget-search"],
-    ["showWeather", "#widget-weather"]
+    ["showWeather", "#widget-weather"],
+    ["showShortcuts", "#widget-shortcuts"]
   ];
   for (const [key, sel] of map) {
     const block = $(sel);

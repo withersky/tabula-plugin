@@ -145,7 +145,7 @@ html, body {
 /* ---------- topbar ---------- */
 .topbar {
   display: grid;
-  grid-template-columns: auto 1fr auto auto auto;
+  grid-template-columns: auto 1fr auto auto;
   align-items: center;
   column-gap: calc(12px * var(--ui-scale));
   padding: calc(12px * var(--ui-scale)) calc(16px * var(--ui-scale));
@@ -164,6 +164,7 @@ body.no-clock.no-quick-go.no-weather .topbar { display: none; }
   visibility: visible;
 }
 
+/* 5 колонок: часы | ярлыки | поиск | погода | кнопки */
 .clock-widget {
   grid-column: 1;
   justify-self: start;
@@ -291,8 +292,7 @@ body.no-clock.no-quick-go.no-weather .topbar { display: none; }
 }
 
 .weather-widget {
-  grid-column: 3;
-  justify-self: end;
+  justify-self: center;
   display: flex; align-items: center; gap: calc(var(--weather-size, 13px) * 0.75 * var(--ui-scale));
   min-width: 0;
   width: clamp(calc(180px * var(--ui-scale)), 22vw, calc(260px * var(--ui-scale)));
@@ -315,6 +315,16 @@ body.no-clock.no-quick-go.no-weather .topbar { display: none; }
 .weather-text {
   flex: 1 1 auto;
   min-width: 0;
+}
+
+/* Узкие экраны: погода только иконкой, текст скрыт, чтобы сэкономить место. */
+@media (max-width: 640px) {
+  .weather-widget .weather-text { display: none; }
+  .weather-widget { width: auto; min-width: 44px; padding: calc(var(--weather-size, 13px) * 0.45 * var(--ui-scale)); }
+  .topbar { column-gap: calc(8px * var(--ui-scale)); padding: calc(10px * var(--ui-scale)) calc(12px * var(--ui-scale)); }
+  .quick-go { min-width: 120px; max-width: calc(480px * var(--ui-scale)); }
+  .topbar-shortcuts { gap: calc(4px * var(--ui-scale)); }
+}
   display: flex;
   flex-direction: column;
   gap: calc(1px * var(--ui-scale));
@@ -586,7 +596,66 @@ body.no-clock.no-quick-go.no-weather .topbar { display: none; }
 }
 body.no-quick-go .quick-go { display: none; }
 
-.quick-go { position: relative; grid-column: 2; justify-self: stretch; min-width: 0; max-width: calc(720px * var(--ui-scale)); width: 100%; margin: 0 auto; animation: fadeIn var(--anim-240) ease; }
+/* Ярлыки — своя компактная колонка перед поиском, прижаты к часам. */
+.topbar-shortcuts {
+  grid-column: 2;
+  justify-self: start;
+  display: flex;
+  align-items: center;
+  gap: calc(6px * var(--ui-scale));
+  width: 100%;
+}
+.topbar-shortcuts.is-off {
+  display: none !important;
+}
+
+/* Виджет ярлыков: кнопки в стиле иконок-топбара (search-palette / opts). */
+.shortcut-btn {
+  width: calc(36px * var(--ui-scale));
+  height: calc(36px * var(--ui-scale));
+  border-radius: calc(10px * var(--ui-scale));
+  border: 1px solid var(--input-border);
+  background: var(--topbar-bg);
+  color: var(--text-color);
+  font-size: calc(15px * var(--ui-scale));
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: background var(--anim-160) ease, transform var(--anim-160) ease, border-color var(--anim-160) ease;
+}
+.shortcut-btn:hover { background: var(--topbar-bg-hover); transform: translateY(-1px); }
+.shortcut-btn:active { transform: translateY(0) scale(0.97); }
+
+.shortcut-btn .shortcut-favicon {
+  width: 100%; height: 100%;
+  display: grid; place-items: center;
+}
+.shortcut-btn .shortcut-favicon img {
+  width: 60%; height: 60%;
+  max-width: calc(18px * var(--ui-scale));
+  max-height: calc(18px * var(--ui-scale));
+  object-fit: contain;
+  border-radius: calc(4px * var(--ui-scale));
+}
+.shortcut-btn .shortcut-letter {
+  width: 100%; height: 100%;
+  display: grid; place-items: center;
+  font-weight: 700;
+  font-size: calc(14px * var(--ui-scale));
+  line-height: 1;
+}
+
+/* Поиск — как в исходной версии, растягивается на всю колонку. */
+.quick-go {
+  grid-column: 2;
+  position: relative;
+  justify-self: stretch;
+  min-width: 0;
+  max-width: calc(720px * var(--ui-scale));
+  width: 100%;
+  margin: 0 auto;
+  animation: fadeIn var(--anim-240) ease;
+}
 .quick-go-icon {
   position: absolute;
   top: 50%;
@@ -620,6 +689,23 @@ body.no-quick-go .quick-go { display: none; }
 }
 .quick-go input::placeholder { color: rgba(255,255,255,0.45); }
 .quick-go input:focus { background: var(--panel-bg-hover); border-color: rgba(255,255,255,0.3); }
+
+/* Погода — своя колонка. */
+#weatherWidget {
+  grid-column: 3;
+  justify-self: center;
+  max-width: 220px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Кнопки справа — своя колонка. */
+.topbar-actions {
+  grid-column: 5;
+  justify-self: end;
+  display: flex;
+  gap: calc(8px * var(--ui-scale));
+}
 
 .quick-suggest {
   position: absolute;
@@ -711,8 +797,6 @@ white-space: nowrap;
 .icon-btn.small { width: calc(26px * var(--ui-scale)); height: calc(26px * var(--ui-scale)); font-size: calc(13px * var(--ui-scale)); border-radius: calc(8px * var(--ui-scale)); }
 
 .opts-fab {
-  grid-column: 5;
-  justify-self: end;
   width: calc(40px * var(--ui-scale));
   height: calc(40px * var(--ui-scale));
   border-radius: 50%;
@@ -729,8 +813,6 @@ white-space: nowrap;
 .opts-fab:hover { background: var(--topbar-bg-hover); transform: scale(1.06); }
 
 .search-palette-fab {
-  grid-column: 4;
-  justify-self: end;
   width: calc(40px * var(--ui-scale));
   height: calc(40px * var(--ui-scale));
   border-radius: 50%;

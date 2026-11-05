@@ -376,5 +376,20 @@
   "previewDesc_animationSpeed": "مضاعف سرعة حركات واجهة المستخدم للانتقالات وتأثيرات الظهور. 25% أبطأ، 500% أسرع.",
   "labelAnimationSpeed": "سرعة الحركة",
   "labelAnimationSpeedHint": "الحركات البطيئة أسهل على حساسية الحركة.",
-  "sectionThanks": "الشكر والتقدير"
+  "sectionThanks": "الشكر والتقدير",
+  "widgetShortcutsTitle": "اختصارات",
+  "optShowShortcuts": "إظهار الاختصارات",
+  "optShortcutsPosition": "موضع الاختصارات",
+  "optShortcutsPositionBefore": "قبل البحث",
+  "optShortcutsPositionAfter": "إظهار الاختصارات بعد البحث",
+  "optShortcutsPositionHint": "معطل — الاختصارات قبل شريط البحث، مفعل — بعده.",
+  "optShortcutsCount": "عدد الاختصارات",
+  "unitShortcut": "قطعة",
+  "optShortcutsAdd": "إضافة اختصار",
+  "optShortcutsDelete": "حذف اختصار",
+  "placeholderShortcutTitle": "العنوان",
+  "placeholderShortcutUrl": "https://مثال.com",
+  "previewDesc_showShortcuts": "أزرار الاختصارات في الشريط العلوي (قبل أو بعد شريط البحث).",
+  "previewDesc_shortcutsPosition": "أين تظهر الاختصارات بالنسبة إلى شريط البحث.",
+  "previewDesc_shortcutsCount": "عدد الاختصارات المعروضة على الشريط."
 }
